@@ -3,7 +3,7 @@ import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { Badge } from './ui/badge'
 import { Separator } from './ui/separator'
-import { projectId, publicAnonKey } from '../utils/supabase/info'
+import { convex, useMutation } from '../convexClient'
 
 interface GameCard {
   suit: string
@@ -43,125 +43,38 @@ export function CardGame() {
   }, [gameId, playerId])
 
   const pollGameState = async () => {
-    if (!gameId || !playerId) return
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/game/${gameId}?playerId=${playerId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-          },
-        }
-      )
-
-      if (response.ok) {
-        const data = await response.json()
-        setGameState(data.gameState)
-      }
-    } catch (error) {
-      console.log('Error polling game state:', error)
-    }
-  }
+    if (!gameId || !playerId) return;
+    // TODO: Replace with Convex query or local mock
+    setTimeout(() => {
+      setGameState((prev) => prev || { id: gameId, players: [playerId], playerHands: { [playerId]: [] }, currentTurn: 0, currentTrick: [], scores: { [playerId]: 0 }, status: 'waiting' });
+    }, 200);
+  };
 
   const joinGame = async () => {
-    if (!playerId || isJoining) return
-
-    setIsJoining(true)
-    setError('')
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/join-game`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({ playerId }),
-        }
-      )
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setGameId(data.gameId)
-        setGameState(data.gameState)
-      } else {
-        setError(data.error || 'Failed to join game')
-      }
-    } catch (error) {
-      console.log('Error joining game:', error)
-      setError('Connection error. Please try again.')
-    } finally {
-      setIsJoining(false)
-    }
-  }
+    if (!playerId || isJoining) return;
+    setIsJoining(true);
+    setError('');
+    // TODO: Replace with Convex mutation
+    setTimeout(() => {
+      setGameId('mock-game-id');
+      setGameState({ id: 'mock-game-id', players: [playerId], playerHands: { [playerId]: [] }, currentTurn: 0, currentTrick: [], scores: { [playerId]: 0 }, status: 'waiting' });
+      setIsJoining(false);
+    }, 200);
+  };
 
   const playCard = async (cardId: string) => {
-    if (!gameId || !playerId || !gameState) return
-
-    const currentPlayerIndex = gameState.currentTurn % gameState.players.length
-    const currentPlayerId = gameState.players[currentPlayerIndex]
-    
-    if (playerId !== currentPlayerId) return
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/play-card`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({ gameId, playerId, cardId }),
-        }
-      )
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setGameState(data.gameState)
-      } else {
-        setError(data.error || 'Failed to play card')
-      }
-    } catch (error) {
-      console.log('Error playing card:', error)
-      setError('Failed to play card')
-    }
-  }
+    if (!gameId || !playerId || !gameState) return;
+    // TODO: Replace with Convex mutation
+    setGameState((prev) => ({ ...prev, currentTrick: [...(prev?.currentTrick || []), { id: cardId, suit: 'hearts', rank: 'A' }] }));
+    setError('');
+  };
 
   const resetGame = async () => {
-    if (!gameId) return
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/reset-game`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({ gameId }),
-        }
-      )
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setGameState(data.gameState)
-        setError('')
-      } else {
-        setError(data.error || 'Failed to reset game')
-      }
-    } catch (error) {
-      console.log('Error resetting game:', error)
-      setError('Failed to reset game')
-    }
-  }
+    if (!gameId) return;
+    // TODO: Replace with Convex mutation
+    setGameState(null);
+    setError('');
+  };
 
   const getSuitSymbol = (suit: string) => {
     switch (suit) {

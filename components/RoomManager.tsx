@@ -71,7 +71,7 @@ export function RoomManager({
       </div>
 
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="w-full max-w-4xl mx-auto">
+        <div className="w-full max-w-4xl mx-auto" role="main">
           {/* Hero Section */}
           <div className="text-center mb-8">
             <div className="flex justify-center items-center mb-6">
@@ -84,15 +84,10 @@ export function RoomManager({
             </div>
             
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
-              Casino
-              <span className="bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
-                Cassino
-              </span>
+              Cassino Card Game
             </h1>
             
-            <p className="text-xl text-emerald-100 mb-2">
-              The Classic Card Capturing Game
-            </p>
+            <div className="text-red-500 mt-2">{error}</div>
             
             <div className="flex justify-center items-center space-x-2 mb-6">
               {suitIcons.map((suit, index) => (
@@ -117,7 +112,7 @@ export function RoomManager({
           </div>
 
           {/* Main Content */}
-          <div className="grid md:grid-cols-2 gap-8 mb-8">
+          <div className="grid md:grid-cols-2 gap-8 mb-8" data-testid="room-manager">
             {/* Game Actions */}
             <Card className="backdrop-blur-sm bg-white/95 shadow-2xl border-0">
               <CardHeader className="text-center pb-4">
@@ -128,18 +123,20 @@ export function RoomManager({
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Player Name Input */}
-                <div className="space-y-2">
+                <div className="space-y-2" role="form">
                   <Label htmlFor="playerName" className="text-gray-700 font-medium">
                     Your Name
                   </Label>
                   <Input
                     id="playerName"
+                    data-testid="player-name-input"
                     type="text"
                     placeholder="Enter your player name"
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
                     className="bg-white border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                     maxLength={20}
+                    aria-label="Player Name"
                   />
                 </div>
 
@@ -152,6 +149,7 @@ export function RoomManager({
                     disabled={!playerName.trim() || isLoading}
                     className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium py-3 text-lg shadow-lg transform hover:scale-[1.02] transition-all duration-200"
                     size="lg"
+                    aria-label={isLoading ? "Creating" : "Create Room"}
                   >
                     {isLoading ? (
                       <>
@@ -174,6 +172,8 @@ export function RoomManager({
                       variant="outline"
                       className="w-full border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium py-3 text-lg"
                       size="lg"
+                      aria-label="Show Join Room Form"
+                      data-testid="show-join-form"
                     >
                       <Users className="w-5 h-5 mr-2" />
                       Join Existing Game
@@ -189,6 +189,7 @@ export function RoomManager({
                             onChange={(e) => setRoomId(e.target.value.toUpperCase())}
                             className="bg-white border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                             maxLength={6}
+                            aria-label="Room ID"
                           />
                         </div>
                         <Button
@@ -196,6 +197,7 @@ export function RoomManager({
                           variant="outline"
                           size="sm"
                           className="px-3 border-gray-300 text-gray-600 hover:bg-gray-50"
+                          aria-label="Generate"
                         >
                           <Dice6 className="w-4 h-4" />
                         </Button>
@@ -206,6 +208,8 @@ export function RoomManager({
                           onClick={onJoinRoom}
                           disabled={!roomId.trim() || !playerName.trim() || isLoading}
                           className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
+                          aria-label={isLoading ? "Joining" : "Join Room"}
+                          data-testid="join-room-submit"
                         >
                           {isLoading ? (
                             <>
@@ -223,6 +227,7 @@ export function RoomManager({
                           onClick={() => setShowJoinForm(false)}
                           variant="outline"
                           className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                          aria-label="Cancel"
                         >
                           Cancel
                         </Button>
@@ -233,7 +238,7 @@ export function RoomManager({
 
                 {/* Error Message */}
                 {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg" role="alert" aria-live="assertive">
                     <p className="text-red-700 text-sm font-medium">{error}</p>
                   </div>
                 )}

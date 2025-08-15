@@ -1,26 +1,66 @@
+import React from 'react';
+import * as testUtils from './test-utils';
+import { afterEach, vi } from 'vitest';
+// Mock convex/react globally for all tests
+vi.mock('convex/react', async () => {
+  const actual = await vi.importActual<any>('convex/react');
+  return {
+    ...actual,
+    ConvexProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    useMutation: (fn: any) => {
+      if (fn.name === 'createRoom') {
+        return async ({ playerName }: { playerName: string }) => {
+          const gameState = testUtils.createMockGameState({ roomId: 'new-room', players: [{ id: 1, name: playerName }] });
+          return {
+            roomId: 'new-room',
+            playerId: 1,
+            gameState: gameState && gameState.roomId ? gameState : { roomId: 'new-room', players: [{ id: 1, name: playerName }] }
+          };
+        };
+      }
+      if (fn.name === 'joinRoom') {
+        return async ({ roomId, playerName }: { roomId: string, playerName: string }) => {
+          const gameState = testUtils.createMockGameState({ roomId, players: [{ id: 1, name: playerName }] });
+          return {
+            playerId: 1,
+            gameState: gameState && gameState.roomId ? gameState : { roomId, players: [{ id: 1, name: playerName }] }
+          };
+        };
+      }
+      return vi.fn();
+    },
+  };
+});
+
 import '@testing-library/jest-dom'
+import { expect } from 'vitest'
+import * as matchers from '@testing-library/jest-dom/matchers'
+import { cleanup } from '@testing-library/react'
+
+expect.extend(matchers)
 
 // Mock fetch globally
-global.fetch = jest.fn()
+globalThis.fetch = vi.fn()
 
-// Mock Supabase info
-jest.mock('../utils/supabase/info', () => ({
-  projectId: 'test-project-id',
-  publicAnonKey: 'test-anon-key'
-}))
+// Clean up after each test
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+})
+
 
 // Mock sound system
 Object.defineProperty(window, 'AudioContext', {
   writable: true,
-  value: jest.fn().mockImplementation(() => ({
-    createGain: jest.fn(() => ({
-      connect: jest.fn(),
+  value: vi.fn().mockImplementation(() => ({
+    createGain: vi.fn(() => ({
+      connect: vi.fn(),
       gain: { value: 1 }
     })),
-    createOscillator: jest.fn(() => ({
-      connect: jest.fn(),
-      start: jest.fn(),
-      stop: jest.fn(),
+    createOscillator: vi.fn(() => ({
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
       frequency: { value: 440 }
     })),
     destination: {},
@@ -30,21 +70,21 @@ Object.defineProperty(window, 'AudioContext', {
 
 Object.defineProperty(window, 'Audio', {
   writable: true,
-  value: jest.fn().mockImplementation(() => ({
-    play: jest.fn().mockResolvedValue(undefined),
-    pause: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
+  value: vi.fn().mockImplementation(() => ({
+    play: vi.fn().mockResolvedValue(undefined),
+    pause: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
     volume: 1
   }))
 })
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
 }
 
 Object.defineProperty(window, 'localStorage', {
@@ -52,37 +92,37 @@ Object.defineProperty(window, 'localStorage', {
 })
 
 // Mock IntersectionObserver
-global.IntersectionObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
+globalThis.IntersectionObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
 }))
 
 // Mock ResizeObserver
-global.ResizeObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
+globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
 }))
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation(query => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
   })),
 })
 
 // Clean up after each test
 afterEach(() => {
-  jest.clearAllMocks()
+  vi.clearAllMocks()
   localStorageMock.getItem.mockClear()
   localStorageMock.setItem.mockClear()
   localStorageMock.removeItem.mockClear()
@@ -90,35 +130,42 @@ afterEach(() => {
 })
 
 // Global test utilities
-global.testUtils = {
-  createMockGameState: (overrides = {}) => ({
-    roomId: 'test-room',
-    players: [
-      { id: 1, name: 'Player 1' },
-      { id: 2, name: 'Player 2' }
-    ],
-    deck: [],
-    player1Hand: [],
-    player2Hand: [],
-    tableCards: [],
-    builds: [],
-    player1Captured: [],
-    player2Captured: [],
-    currentTurn: 1,
-    phase: 'waiting',
-    round: 0,
-    countdownStartTime: null,
-    gameStarted: false,
-    shuffleComplete: false,
-    cardSelectionComplete: false,
-    dealingComplete: false,
-    player1Score: 0,
-    player2Score: 0,
-    winner: null,
-    lastPlay: null,
-    lastUpdate: new Date().toISOString(),
-    ...overrides
-  }),
+globalThis.testUtils = {
+  createMockGameState: (overrides = {}) => {
+    const base = {
+      roomId: 'test-room',
+      players: [
+        { id: 1, name: 'Player 1' },
+        { id: 2, name: 'Player 2' }
+      ],
+      deck: [],
+      player1Hand: [],
+      player2Hand: [],
+      tableCards: [],
+      builds: [],
+      player1Captured: [],
+      player2Captured: [],
+      currentTurn: 1,
+      phase: 'waiting',
+      round: 0,
+      countdownStartTime: null,
+      gameStarted: false,
+      shuffleComplete: false,
+      cardSelectionComplete: false,
+      dealingComplete: false,
+      player1Score: 0,
+      player2Score: 0,
+      winner: null,
+      lastPlay: null,
+      lastUpdate: new Date().toISOString(),
+    };
+    const merged = { ...base, ...overrides };
+    if (!merged.roomId) merged.roomId = 'test-room';
+    if (!Array.isArray(merged.players) || merged.players.length === 0) {
+      merged.players = [ { id: 1, name: 'Player 1' } ];
+    }
+    return merged;
+  },
 
   createMockCard: (suit = 'hearts', rank = 'A') => ({
     id: `${suit}-${rank}`,
@@ -151,15 +198,24 @@ global.testUtils = {
   }),
 
   mockFetch: (response: any, ok = true) => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    // Always return an object with expected shape for error cases
+    const safeResponse = {
+      success: response && typeof response.success === 'boolean' ? response.success : true,
+      roomId: response && response.roomId !== undefined ? response.roomId : '',
+      playerId: response && response.playerId !== undefined ? response.playerId : 1,
+      gameState: response && response.gameState !== undefined ? response.gameState : testUtils.createMockGameState(),
+      error: response && response.error ? response.error : undefined,
+      ...response
+    };
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok,
-      json: jest.fn().mockResolvedValue(response),
-      text: jest.fn().mockResolvedValue(JSON.stringify(response))
-    })
+      json: () => Promise.resolve(safeResponse),
+      text: () => Promise.resolve(JSON.stringify(safeResponse))
+    });
   },
 
   mockFetchError: (error: string) => {
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error(error))
+    (globalThis.fetch as any).mockRejectedValueOnce(new Error(error));
   }
 }
 

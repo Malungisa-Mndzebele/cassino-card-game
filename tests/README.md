@@ -124,12 +124,6 @@ sensitive_patterns+=("new-sensitive-word")
 
 ## Mocking Guidelines
 
-### Supabase
-```typescript
-jest.mock('../utils/supabase/info', () => ({
-  projectId: 'test-project-id',
-  publicAnonKey: 'test-anon-key'
-}))
 ```
 
 ### Fetch API

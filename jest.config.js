@@ -2,7 +2,7 @@ export default {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@/components/(.*)$': '<rootDir>/components/$1',
     '^@/utils/(.*)$': '<rootDir>/utils/$1'
@@ -31,16 +31,14 @@ export default {
     }
   },
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      useESM: true
-    }]
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      {
+        useESM: true
+      }
+    ]
   },
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
-  },
   testTimeout: 10000,
   maxWorkers: 4,
   verbose: true,

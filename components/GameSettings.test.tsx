@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { GameSettings, useGamePreferences, useGameStatistics } from './GameSettings'
 
@@ -8,14 +9,14 @@ const mockLocalStorage = (() => {
   let store: Record<string, string> = {}
   
   return {
-    getItem: jest.fn((key: string) => store[key] || null),
-    setItem: jest.fn((key: string, value: string) => {
+    getItem: vi.fn((key: string) => store[key] || null),
+    setItem: vi.fn((key: string, value: string) => {
       store[key] = value
     }),
-    removeItem: jest.fn((key: string) => {
+    removeItem: vi.fn((key: string) => {
       delete store[key]
     }),
-    clear: jest.fn(() => {
+    clear: vi.fn(() => {
       store = {}
     })
   }
@@ -39,12 +40,12 @@ describe('GameSettings Component', () => {
 
   const defaultProps = {
     preferences: defaultPreferences,
-    onPreferencesChange: jest.fn(),
+    onPreferencesChange: vi.fn(),
     statistics: defaultStatistics
   }
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockLocalStorage.clear()
   })
 
@@ -416,7 +417,7 @@ describe('useGamePreferences Hook', () => {
       throw new Error('localStorage error')
     })
     
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     
     const TestComponent = () => {
       const [preferences] = useGamePreferences()

@@ -7,68 +7,132 @@ import { Badge } from './components/ui/badge'
 import { Button } from './components/ui/button'
 import { Card, CardContent } from './components/ui/card'
 import { Separator } from './components/ui/separator'
-import { projectId, publicAnonKey } from './utils/supabase/info'
+import { convex } from './convexClient'
+import { api } from './convex/_generated/api'
+import { useMutation } from 'convex/react'
 import { Trophy, Users, Clock, Heart, Diamond, Spade, Club, Crown, Star, Wifi, WifiOff } from 'lucide-react'
 
-interface GameCard {
-  id: string
-  suit: string
-  rank: string
+// Game-related interfaces
+interface Player {
+  id: number;
+  name: string;
 }
 
-interface Player {
-  id: number
-  name: string
+interface GameCard {
+  id: string;
+  suit: string;
+  rank: string;
 }
 
 interface Build {
-  id: string
-  cards: GameCard[]
-  value: number
-  owner: number
+  id: string;
+  owner: number;
+  cards: GameCard[];
+  value: number;
+}
+
+interface LastPlay {
+  cardId: string;
+  action: string;
+  targetCards?: string[];
+  buildValue?: number;
+}
+
+interface GamePreferences {
+  soundEnabled: boolean;
+  soundVolume: number;
+  hintsEnabled: boolean;
+  statisticsEnabled: boolean;
 }
 
 interface GameState {
-  roomId: string
-  players: Player[]
-  deck: GameCard[]
-  player1Hand: GameCard[]
-  player2Hand: GameCard[]
-  tableCards: GameCard[]
-  builds: Build[]
-  player1Captured: GameCard[]
-  player2Captured: GameCard[]
-  currentTurn: number
-  phase: string
-  round: number
-  countdownStartTime: string | null
-  countdownRemaining?: number
-  gameStarted: boolean
-  shuffleComplete: boolean
-  cardSelectionComplete: boolean
-  dealingComplete: boolean
-  player1Score: number
-  player2Score: number
-  winner: number | string | null
-  lastPlay: any
-  lastUpdate: string
+  roomId: string;
+  players: Player[];
+  phase: string;
+  round: number;
+  deck: GameCard[];
+  player1Hand: GameCard[];
+  player2Hand: GameCard[];
+  tableCards: GameCard[];
+  builds: Build[];
+  player1Captured: GameCard[];
+  player2Captured: GameCard[];
+  player1Score: number;
+  player2Score: number;
+  currentTurn: number;
+  cardSelectionComplete: boolean;
+  shuffleComplete: boolean;
+  countdownStartTime: string | null;
+  countdownRemaining?: number;
+  gameStarted: boolean;
+  lastPlay: LastPlay | null;
+  lastAction?: string;
+  lastUpdate: string;
+  gameCompleted: boolean;
+  winner: number | string | null;
+  dealingComplete: boolean;
+  player1Ready: boolean;
+  player2Ready: boolean;
 }
 
-export default function App() {
-  const [gameState, setGameState] = useState<GameState | null>(null)
-  const [playerId, setPlayerId] = useState<number | null>(null)
-  const [roomId, setRoomId] = useState<string>('')
-  const [playerName, setPlayerName] = useState<string>('')
-  const [isConnected, setIsConnected] = useState(false)
-  const [error, setError] = useState<string>('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [soundReady, setSoundReady] = useState(false)
-  const [previousGameState, setPreviousGameState] = useState<GameState | null>(null)
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected')
+const initialGameState: GameState = {
+  roomId: '',
+  players: [],
+  phase: 'waiting',
+  round: 0,
+  deck: [],
+  player1Hand: [],
+  player2Hand: [],
+  tableCards: [],
+  builds: [],
+  player1Captured: [],
+  player2Captured: [],
+  player1Score: 0,
+  player2Score: 0,
+  currentTurn: 0,
+  cardSelectionComplete: false,
+  shuffleComplete: false,
+  countdownStartTime: null,
+  gameStarted: false,
+  lastPlay: null,
+  lastAction: undefined,
+  lastUpdate: new Date().toISOString(),
+  gameCompleted: false,
+  winner: null,
+  dealingComplete: false,
+  player1Ready: false,
+  player2Ready: false,
+  countdownRemaining: undefined
+};
 
-  // Use custom hooks for preferences and statistics
-  const [preferences, setPreferences] = useGamePreferences()
-  const [statistics, updateStatistics] = useGameStatistics()
+export default function App() {
+  // Game state management
+  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [previousGameState, setPreviousGameState] = useState<GameState | null>(null);
+  const [playerId, setPlayerId] = useState<number | null>(null);
+  const [roomId, setRoomId] = useState<string>('');
+  const [playerName, setPlayerName] = useState<string>('');
+  
+  // UI state
+  const [error, setError] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [soundReady, setSoundReady] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected');
+
+  // Derive connection state from connection status
+  const isConnected = connectionStatus === 'connected';
+
+    // Game preferences and statistics
+  const defaultPreferences = {
+    soundEnabled: true,
+    soundVolume: 1,
+    hintsEnabled: true,
+    statisticsEnabled: true
+  };
+  
+  // Game preferences and statistics
+const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
+  const [statistics, updateStatistics] = useGameStatistics();
 
   // Update sound manager volume when preferences change
   useEffect(() => {
@@ -76,6 +140,73 @@ export default function App() {
       soundManager.setMasterVolume(preferences.soundEnabled ? preferences.soundVolume : 0)
     }
   }, [preferences.soundEnabled, preferences.soundVolume, soundReady])
+
+  // Room creation and joining
+  const createRoomMutation = useMutation(api.createRoom.createRoom);
+  const createRoom = async () => {
+    if (!playerName) {
+      setError("Please enter your name");
+      return;
+    }
+    
+    setIsLoading(true);
+    setError("");
+    try {
+      setConnectionStatus('connecting');
+      const response = await createRoomMutation({ playerName });
+      
+      if (!response) {
+        throw new Error("Failed to create room");
+      }
+      
+      setRoomId(response.roomId);
+      setPlayerId(1);
+      setGameState(response.gameState);
+      setConnectionStatus('connected');
+    } catch (error: any) {
+      console.error("Error creating room:", error);
+      const errorMsg = error?.message || String(error);
+      setError(`Network error`); // Using a generic error message for network issues
+      setConnectionStatus('disconnected');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const joinRoomMutation = useMutation(api.joinRoom.joinRoom);
+  const joinRoom = async (targetRoomId?: string, targetPlayerName?: string) => {
+    const roomToJoin = targetRoomId || roomId;
+    const nameToUse = targetPlayerName || playerName;
+    if (!roomToJoin || !nameToUse) {
+      setError('Please enter room ID and player name');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    try {
+      setConnectionStatus('connecting');
+      const data = await joinRoomMutation({ 
+        roomId: roomToJoin, 
+        playerName: nameToUse 
+      });
+      
+      if (!data.playerId || !data.gameState) {
+        throw new Error('Failed to join room');
+      }
+
+      setRoomId(roomToJoin);
+      setPlayerId(data.playerId);
+      setGameState(data.gameState);
+      setConnectionStatus('connected');
+    } catch (error: any) {
+      console.error('Error joining room:', error);
+      const errorMsg = error?.message || error;
+      setError(`Failed to join room - ${errorMsg}`);
+      setConnectionStatus('disconnected');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Track game state changes for statistics and sound effects
   useEffect(() => {
@@ -116,36 +247,24 @@ export default function App() {
     setPreviousGameState(gameState)
   }, [gameState, previousGameState, playerId, preferences.statisticsEnabled, preferences.soundEnabled, soundReady, statistics, updateStatistics])
 
-  // Poll for game state updates
+  // Poll for game state updates (Convex or local mock)
   const pollGameState = useCallback(async () => {
-    if (!roomId) return
-
-    try {
-      setConnectionStatus('connecting')
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/game/${roomId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      )
-
-      const data = await response.json()
-      if (data.success) {
-        setGameState(data.gameState)
-        setError('')
-        setConnectionStatus('connected')
-      } else {
-        console.error('Failed to get game state:', data.error)
-        setConnectionStatus('disconnected')
-      }
-    } catch (error) {
-      console.error('Error polling game state:', error)
-      setConnectionStatus('disconnected')
-    }
-  }, [roomId])
+    if (!roomId) return;
+    setConnectionStatus('connecting');
+    // TODO: Replace with Convex query or local mock
+    // Example: const data = await convex.query('getGameState', { roomId });
+    // For now, just simulate success
+    setTimeout(() => {
+      setGameState((prev) => prev || {
+        ...initialGameState,
+        roomId,
+        phase: 'waiting',
+        players: []
+      });
+      setError('');
+      setConnectionStatus('connected');
+    }, 200);
+  }, [roomId]);
 
   // Set up polling when connected
   useEffect(() => {
@@ -156,289 +275,76 @@ export default function App() {
     return () => clearInterval(interval)
   }, [isConnected, roomId, pollGameState])
 
-  const createRoom = async () => {
-    setIsLoading(true)
-    setError('')
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/create-room`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      )
-
-      const data = await response.json()
-      if (data.success) {
-        setRoomId(data.roomId)
-        setGameState(data.gameState)
-        
-        // Auto-join as player 1
-        await joinRoom(data.roomId, playerName || 'Player 1')
-      } else {
-        setError(data.error || 'Failed to create room')
-      }
-    } catch (error) {
-      console.error('Error creating room:', error)
-      setError('Failed to create room')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const joinRoom = async (targetRoomId?: string, targetPlayerName?: string) => {
-    const roomToJoin = targetRoomId || roomId
-    const nameToUse = targetPlayerName || playerName
-    
-    if (!roomToJoin || !nameToUse) {
-      setError('Please enter room ID and player name')
-      return
-    }
-
-    setIsLoading(true)
-    setError('')
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/join-room`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            roomId: roomToJoin,
-            playerName: nameToUse
-          })
-        }
-      )
-
-      const data = await response.json()
-      if (data.success) {
-        setRoomId(roomToJoin)
-        setPlayerId(data.playerId)
-        setGameState(data.gameState)
-        setIsConnected(true)
-        setError('')
-        setConnectionStatus('connected')
-      } else {
-        setError(data.error || 'Failed to join room')
-      }
-    } catch (error) {
-      console.error('Error joining room:', error)
-      setError('Failed to join room')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const startShuffle = async () => {
-    if (!roomId || !playerId) return
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/start-shuffle`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            roomId,
-            playerId
-          })
-        }
-      )
-
-      const data = await response.json()
-      if (data.success) {
-        setGameState(data.gameState)
-        setError('')
-      } else {
-        setError(data.error || 'Failed to start shuffle')
-        if (preferences.soundEnabled && soundReady) {
-          soundManager.playSound('error')
-        }
-      }
-    } catch (error) {
-      console.error('Error starting shuffle:', error)
-      setError('Failed to start shuffle')
-      if (preferences.soundEnabled && soundReady) {
-        soundManager.playSound('error')
-      }
-    }
-  }
+    if (!roomId || !playerId) return;
+    // TODO: Replace with Convex mutation
+    setGameState((prev) => prev ? {
+      ...prev,
+      shuffleComplete: true
+    } : null);
+    setError('');
+  };
 
   const selectFaceUpCards = async (cardIds: string[]) => {
-    if (!roomId || !playerId) return
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/select-face-up-cards`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            roomId,
-            playerId,
-            cardIds
-          })
-        }
-      )
-
-      const data = await response.json()
-      if (data.success) {
-        setGameState(data.gameState)
-        setError('')
-      } else {
-        setError(data.error || 'Failed to select face-up cards')
-        if (preferences.soundEnabled && soundReady) {
-          soundManager.playSound('error')
-        }
-      }
-    } catch (error) {
-      console.error('Error selecting face-up cards:', error)
-      setError('Failed to select face-up cards')
-      if (preferences.soundEnabled && soundReady) {
-        soundManager.playSound('error')
-      }
-    }
-  }
+    if (!roomId || !playerId) return;
+    // TODO: Replace with Convex mutation
+    setGameState((prev) => prev ? {
+      ...prev,
+      cardSelectionComplete: true
+    } : null);
+    setError('');
+  };
 
   const playCard = async (cardId: string, action: string, targetCards?: string[], buildValue?: number) => {
-    if (!roomId || !playerId) return
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/play-card`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            roomId,
-            playerId,
-            cardId,
-            action,
-            targetCards,
-            buildValue
-          })
-        }
-      )
-
-      const data = await response.json()
-      if (data.success) {
-        setGameState(data.gameState)
-        setError('')
-      } else {
-        setError(data.error || 'Failed to play card')
-        if (preferences.soundEnabled && soundReady) {
-          soundManager.playSound('error')
-        }
-      }
-    } catch (error) {
-      console.error('Error playing card:', error)
-      setError('Failed to play card')
-      if (preferences.soundEnabled && soundReady) {
-        soundManager.playSound('error')
-      }
-    }
-  }
+    if (!roomId || !playerId) return;
+    // TODO: Replace with Convex mutation
+    setGameState((prev) => prev ? {
+      ...prev,
+      lastPlay: { cardId, action, targetCards, buildValue }
+    } : null);
+    setError('');
+  };
 
   const resetGame = async () => {
-    if (!roomId) return
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-48645a41/reset-game`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            roomId
-          })
-        }
-      )
-
-      const data = await response.json()
-      if (data.success) {
-        setGameState(data.gameState)
-        setError('')
-        setPreviousGameState(null) // Reset previous state
-      } else {
-        setError(data.error || 'Failed to reset game')
-      }
-    } catch (error) {
-      console.error('Error resetting game:', error)
-      setError('Failed to reset game')
-    }
-  }
+    if (!roomId) return;
+    // TODO: Replace with Convex mutation
+    setGameState(null);
+    setPreviousGameState(null);
+    setError('');
+  };
 
   const disconnectGame = () => {
-    setIsConnected(false)
+    setConnectionStatus('disconnected')
     setGameState(null)
     setPlayerId(null)
     setRoomId('')
     setError('')
-    setConnectionStatus('disconnected')
-  }
-
-  if (!isConnected) {
-    return (
-      <>
-        <SoundSystem onSoundReady={() => setSoundReady(true)} />
-        <RoomManager
-          roomId={roomId}
-          setRoomId={setRoomId}
-          playerName={playerName}
-          setPlayerName={setPlayerName}
-          onCreateRoom={createRoom}
-          onJoinRoom={() => joinRoom()}
-          error={error}
-          isLoading={isLoading}
-        />
-      </>
-    )
-  }
-
-  if (!gameState) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-green-800 to-teal-900 flex items-center justify-center">
-        <Card className="backdrop-blur-sm bg-white/90 shadow-2xl border-0">
-          <CardContent className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-            <h3 className="text-xl font-medium text-gray-800 mb-2">Loading Game...</h3>
-            <p className="text-gray-600">Connecting to room {roomId}</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   // Get current scores for header display
-  const myScore = playerId === 1 ? gameState.player1Score : gameState.player2Score
-  const opponentScore = playerId === 1 ? gameState.player2Score : gameState.player1Score
-  const myName = gameState.players.find(p => p.id === playerId)?.name || 'You'
-  const opponentName = gameState.players.find(p => p.id !== playerId)?.name || 'Opponent'
+  const myScore = playerId === 1 ? gameState?.player1Score ?? 0 : gameState?.player2Score ?? 0;
+  const opponentScore = playerId === 1 ? gameState?.player2Score ?? 0 : gameState?.player1Score ?? 0;
+  const myName = gameState?.players?.find(p => p.id === playerId)?.name || 'You';
+  const opponentName = gameState?.players?.find(p => p.id !== playerId)?.name || 'Opponent';
 
   return (
     <>
       <SoundSystem onSoundReady={() => setSoundReady(true)} />
       <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-green-800 to-teal-900 relative">
+        {/* Show RoomManager if not connected */}
+        {!isConnected && (
+          <RoomManager
+            roomId={roomId}
+            setRoomId={setRoomId}
+            playerName={playerName}
+            setPlayerName={setPlayerName}
+            onCreateRoom={createRoom}
+            onJoinRoom={joinRoom}
+            error={error}
+            isLoading={isLoading}
+          />
+        )}
+
         {/* Decorative Background */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-20 left-10 transform rotate-12">
@@ -474,7 +380,7 @@ export default function App() {
                       <div className="flex items-center space-x-3 text-sm text-gray-600">
                         <span className="flex items-center">
                           <Users className="w-4 h-4 mr-1" />
-                          {gameState.roomId}
+                          {gameState?.roomId}
                         </span>
                         <Separator orientation="vertical" className="h-4" />
                         <span className="flex items-center">
@@ -528,12 +434,12 @@ export default function App() {
                       <div className="flex items-center space-x-2 mb-1">
                         <Star className="w-4 h-4 text-yellow-500" />
                         <span className="text-sm font-medium text-gray-800">
-                          {gameState.phase.charAt(0).toUpperCase() + gameState.phase.slice(1)}
+                          {gameState?.phase ? (gameState.phase.charAt(0).toUpperCase() + gameState.phase.slice(1)) : ''}
                         </span>
                       </div>
-                      {gameState.round > 0 && (
+                      {(gameState?.round || 0) > 0 && (
                         <div className="text-xs text-gray-600">
-                          Round {gameState.round}/2
+                          Round {gameState?.round || 0}/2
                         </div>
                       )}
                     </div>
@@ -566,7 +472,7 @@ export default function App() {
             </Card>
 
             {/* Waiting for Players */}
-            {gameState.phase === 'waiting' && (
+            {gameState?.phase === 'waiting' && gameState && (
               <Card className="backdrop-blur-sm bg-white/95 shadow-2xl border-0">
                 <CardContent className="p-8">
                   <div className="text-center">
@@ -579,15 +485,15 @@ export default function App() {
 
                     <div className="mb-6">
                       <p className="text-xl text-gray-700 mb-4">
-                        {gameState.players.length}/2 players joined
+                        {gameState?.players?.length || 0}/2 players joined
                       </p>
                       <div className="flex justify-center space-x-3">
-                        {gameState.players.map(player => (
+                        {gameState?.players?.map(player => (
                           <div key={player.id} className="bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full px-4 py-2 border border-emerald-200">
                             <span className="text-emerald-800 font-medium">{player.name}</span>
                           </div>
                         ))}
-                        {gameState.players.length < 2 && (
+                        {(gameState?.players?.length || 0) < 2 && (
                           <div className="bg-gray-100 rounded-full px-4 py-2 border-2 border-dashed border-gray-300">
                             <span className="text-gray-500">Waiting...</span>
                           </div>
@@ -601,7 +507,7 @@ export default function App() {
                       </p>
                       <div className="inline-flex items-center bg-white rounded-lg px-4 py-2 shadow-sm border">
                         <code className="text-2xl font-mono font-bold text-emerald-600 tracking-wider">
-                          {gameState.roomId}
+                          {gameState?.roomId}
                         </code>
                       </div>
                     </div>
@@ -690,7 +596,7 @@ export default function App() {
             )}
 
             {/* Game Phases */}
-            {gameState.phase !== 'waiting' && playerId && (
+            {gameState?.phase !== 'waiting' && playerId && (
               <GamePhases
                 gameState={gameState}
                 playerId={playerId}
@@ -705,5 +611,5 @@ export default function App() {
         </div>
       </div>
     </>
-  )
+  );
 }

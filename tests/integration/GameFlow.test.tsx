@@ -1,12 +1,17 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi, afterAll, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event'
 import App from '../../App'
 
-// Integration tests for complete game flows
+// Integ    it('should handle game reset', async () => {
+      const user = userEvent.setup()
+      render(<App />)
+      
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')n tests for complete game flows
 describe('Complete Game Flow Integration', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     
     // Mock successful API responses for different game phases
     global.testUtils.mockFetch({
@@ -25,7 +30,7 @@ describe('Complete Game Flow Integration', () => {
       expect(screen.getByTestId('room-manager')).toBeInTheDocument()
       
       // Enter player name
-      await user.type(screen.getByTestId('player-name-input'), 'Player 1')
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')
       
       // Mock room creation response
       global.testUtils.mockFetch({
@@ -60,9 +65,11 @@ describe('Complete Game Flow Integration', () => {
       const user = userEvent.setup()
       render(<App />)
       
+      // Show join room form
+      await user.click(screen.getByTestId('show-join-form'));
       // Setup for joining existing room
       await user.type(screen.getByTestId('room-id-input'), 'ROOM123')
-      await user.type(screen.getByTestId('player-name-input'), 'Player 2')
+      await user.type(screen.getByTestId('player-name-input-join'), 'Player 2')
       
       // Mock join response with both players
       global.testUtils.mockFetch({
@@ -78,7 +85,7 @@ describe('Complete Game Flow Integration', () => {
         })
       })
       
-      await user.click(screen.getByTestId('join-room'))
+      await user.click(screen.getByTestId('join-room-submit'))
       
       await waitFor(() => {
         expect(screen.getByText('Player 1 vs Player 2')).toBeInTheDocument()
@@ -92,7 +99,7 @@ describe('Complete Game Flow Integration', () => {
       const user = userEvent.setup()
       render(<App />)
       
-      await user.type(screen.getByTestId('player-name-input'), 'Player 1')
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')
       
       global.testUtils.mockFetch({
         success: true,
@@ -169,7 +176,7 @@ describe('Complete Game Flow Integration', () => {
       const user = userEvent.setup()
       render(<App />)
       
-      await user.type(screen.getByTestId('player-name-input'), 'Player 1')
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')
       
       global.testUtils.mockFetch({
         success: true,
@@ -188,7 +195,7 @@ describe('Complete Game Flow Integration', () => {
         })
       })
       
-      await user.click(screen.getByTestId('join-room'))
+      await user.click(screen.getByTestId('create-room'))
       
       await waitFor(() => {
         expect(screen.getByText('Game Phase: round1')).toBeInTheDocument()
@@ -250,7 +257,7 @@ describe('Complete Game Flow Integration', () => {
       const user = userEvent.setup()
       render(<App />)
       
-      await user.type(screen.getByTestId('player-name-input'), 'Player 1')
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')
       
       // Mock game finished state
       global.testUtils.mockFetch({
@@ -281,7 +288,7 @@ describe('Complete Game Flow Integration', () => {
       const user = userEvent.setup()
       render(<App />)
       
-      await user.type(screen.getByTestId('player-name-input'), 'Player 1')
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')
       
       // Setup finished game
       global.testUtils.mockFetch({
@@ -322,7 +329,7 @@ describe('Complete Game Flow Integration', () => {
       const user = userEvent.setup()
       render(<App />)
       
-      await user.type(screen.getByTestId('player-name-input'), 'Player 1')
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')
       
       // Mock API error
       global.testUtils.mockFetch({
@@ -341,7 +348,7 @@ describe('Complete Game Flow Integration', () => {
       const user = userEvent.setup()
       render(<App />)
       
-      await user.type(screen.getByTestId('player-name-input'), 'Player 1')
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')
       
       // Mock network error
       global.testUtils.mockFetchError('Network error')
@@ -349,19 +356,19 @@ describe('Complete Game Flow Integration', () => {
       await user.click(screen.getByTestId('create-room'))
       
       await waitFor(() => {
-        expect(screen.getByTestId('error-message')).toHaveTextContent('Failed to create room')
+        expect(screen.getByTestId('error-message')).toHaveTextContent('Failed to create room - invalid response')
       })
     })
   })
 
   describe('Real-time Updates', () => {
     it('should handle polling updates correctly', async () => {
-      jest.useFakeTimers()
+      vi.useFakeTimers()
       
       const user = userEvent.setup()
       render(<App />)
       
-      await user.type(screen.getByTestId('player-name-input'), 'Player 1')
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')
       
       // Mock initial connection
       global.testUtils.mockFetch({
@@ -376,7 +383,7 @@ describe('Complete Game Flow Integration', () => {
       await user.click(screen.getByTestId('join-room'))
       
       // Clear previous calls
-      jest.clearAllMocks()
+      vi.clearAllMocks()
       
       // Mock polling response with updated state
       global.testUtils.mockFetch({
@@ -392,7 +399,7 @@ describe('Complete Game Flow Integration', () => {
       
       // Advance timer to trigger polling
       act(() => {
-        jest.advanceTimersByTime(1000)
+        vi.advanceTimersByTime(1000)
       })
       
       await waitFor(() => {
@@ -406,16 +413,16 @@ describe('Complete Game Flow Integration', () => {
         )
       })
       
-      jest.useRealTimers()
+      vi.useRealTimers()
     })
 
     it('should update UI when game state changes via polling', async () => {
-      jest.useFakeTimers()
+      vi.useFakeTimers()
       
       const user = userEvent.setup()
       render(<App />)
       
-      await user.type(screen.getByTestId('player-name-input'), 'Player 1')
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')
       
       // Initial connection
       global.testUtils.mockFetch({
@@ -427,7 +434,7 @@ describe('Complete Game Flow Integration', () => {
         })
       })
       
-      await user.click(screen.getByTestId('join-room'))
+      await user.click(screen.getByTestId('create-room'))
       
       await waitFor(() => {
         expect(screen.getByText('1/2 players joined')).toBeInTheDocument()
@@ -447,14 +454,14 @@ describe('Complete Game Flow Integration', () => {
       
       // Trigger polling
       act(() => {
-        jest.advanceTimersByTime(1000)
+        vi.advanceTimersByTime(1000)
       })
       
       await waitFor(() => {
         expect(screen.getByText('Player 1 vs Player 2')).toBeInTheDocument()
       })
       
-      jest.useRealTimers()
+      vi.useRealTimers()
     })
   })
 
@@ -472,7 +479,7 @@ describe('Complete Game Flow Integration', () => {
       
       render(<App />)
       
-      await user.type(screen.getByTestId('player-name-input'), 'Player 1')
+      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1')
       
       // Mock joining and then game completion
       global.testUtils.mockFetch({
@@ -486,7 +493,7 @@ describe('Complete Game Flow Integration', () => {
         })
       })
       
-      await user.click(screen.getByTestId('join-room'))
+      await user.click(screen.getByTestId('join-room-submit'))
       
       // Statistics should be updated in localStorage
       await waitFor(() => {

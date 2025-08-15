@@ -1,10 +1,11 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { GameActions } from './GameActions'
 
 // Mock the dependencies
-jest.mock('./Card', () => ({
+vi.mock('./Card', () => ({
   Card: ({ card, onClick, selected, disabled }: any) => (
     <button
       data-testid={`card-${card.id}`}
@@ -17,7 +18,7 @@ jest.mock('./Card', () => ({
   )
 }))
 
-jest.mock('./GameHints', () => ({
+vi.mock('./GameHints', () => ({
   GameHints: ({ gameState, playerId, selectedCard, preferences }: any) => (
     <div data-testid="game-hints">
       {preferences.hintsEnabled && <span>Hints enabled</span>}
@@ -45,11 +46,15 @@ describe('GameActions Component', () => {
   }
 
   const defaultProps = {
-    gameState: mockGameState,
-    playerId: 1,
-    onPlayCard: jest.fn(),
-    preferences: global.testUtils.createMockPreferences()
-  }
+    playerHand: [global.testUtils.createMockCard()],
+    tableCards: [global.testUtils.createMockCard()],
+    builds: [],
+    onPlayCard: vi.fn(),
+    isMyTurn: true,
+    hintsEnabled: false,
+    soundEnabled: true,
+    playerId: 1
+  };
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -79,12 +84,7 @@ describe('GameActions Component', () => {
     })
 
     it('should show waiting message when it is not player turn', () => {
-      const gameStateNotMyTurn = {
-        ...mockGameState,
-        currentTurn: 2
-      }
-      
-      render(<GameActions {...defaultProps} gameState={gameStateNotMyTurn} />)
+      render(<GameActions {...defaultProps} isMyTurn={false} />)
       
       expect(screen.getByText(/opponent's turn/i)).toBeInTheDocument()
     })
@@ -171,15 +171,16 @@ describe('GameActions Component', () => {
 
     it('should show build action when valid build is possible', async () => {
       const user = userEvent.setup()
-      const gameStateWithBuildableCards = {
-        ...mockGameState,
+      const buildableProps = {
+        ...defaultProps,
+        playerHand: [global.testUtils.createMockCard('spades', '5')],
         tableCards: [
           global.testUtils.createMockCard('clubs', '3'),
           global.testUtils.createMockCard('hearts', '2') // 3 + 2 = 5, can build for 5 in hand
         ]
       }
       
-      render(<GameActions {...defaultProps} gameState={gameStateWithBuildableCards} />)
+      render(<GameActions {...buildableProps} />)
       
       await user.click(screen.getByTestId('card-spades-5')) // Have 5 in hand
       await user.click(screen.getByTestId('card-clubs-3'))
@@ -190,9 +191,13 @@ describe('GameActions Component', () => {
 
     it('should execute capture action correctly', async () => {
       const user = userEvent.setup()
-      const onPlayCard = jest.fn()
+      const onPlayCard = vi.fn()
       
-      render(<GameActions {...defaultProps} onPlayCard={onPlayCard} />)
+      const captureProps = {
+        ...defaultProps,
+        onPlayCard
+      }
+      render(<GameActions {...captureProps} />)
       
       await user.click(screen.getByTestId('card-hearts-A'))
       await user.click(screen.getByRole('button', { name: /capture/i }))
@@ -395,7 +400,16 @@ describe('GameActions Component', () => {
         ]
       }
       
-      render(<GameActions {...defaultProps} gameState={gameStateWithOpponentBuild} />)
+      const opponentBuildProps = {
+        ...defaultProps,
+        builds: [{
+          id: 'build-1',
+          cards: [global.testUtils.createMockCard()],
+          value: 5,
+          owner: 2
+        }]
+      }
+      render(<GameActions {...opponentBuildProps} />)
       
       // Try to select opponent's build
       await user.click(screen.getByTestId('card-hearts-A')) // Ace (value 1)
@@ -412,7 +426,11 @@ describe('GameActions Component', () => {
         player1Hand: []
       }
       
-      render(<GameActions {...defaultProps} gameState={gameStateEmptyHand} />)
+      const emptyHandProps = {
+        ...defaultProps,
+        playerHand: []
+      }
+      render(<GameActions {...emptyHandProps} />)
       
       expect(screen.getByText(/no cards in hand/i)).toBeInTheDocument()
     })
@@ -423,7 +441,11 @@ describe('GameActions Component', () => {
         tableCards: []
       }
       
-      render(<GameActions {...defaultProps} gameState={gameStateEmptyTable} />)
+      const emptyTableProps = {
+        ...defaultProps,
+        tableCards: []
+      }
+      render(<GameActions {...emptyTableProps} />)
       
       expect(screen.getByText(/no cards on table/i)).toBeInTheDocument()
     })
@@ -441,7 +463,11 @@ describe('GameActions Component', () => {
         phase: 'round2'
       }
       
-      rerender(<GameActions {...defaultProps} gameState={newGameState} />)
+      const newProps = {
+        ...defaultProps,
+        playerHand: [global.testUtils.createMockCard('hearts', 'K')]
+      }
+      rerender(<GameActions {...newProps} />)
       
       // Selection should be cleared
       expect(screen.getByTestId('card-hearts-A')).not.toHaveClass('selected')
@@ -468,7 +494,11 @@ describe('GameActions Component', () => {
         currentTurn: 2
       }
       
-      rerender(<GameActions {...defaultProps} gameState={gameStateNotMyTurn} />)
+      const notMyTurnProps = {
+        ...defaultProps,
+        isMyTurn: false
+      }
+      rerender(<GameActions {...notMyTurnProps} />)
       
       expect(screen.getByRole('status')).toHaveTextContent(/opponent's turn/i)
     })

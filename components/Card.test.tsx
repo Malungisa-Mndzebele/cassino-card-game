@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { Card } from './Card'
 
@@ -8,7 +9,7 @@ describe('Card Component', () => {
   
   const defaultProps = {
     card: mockCard,
-    onClick: jest.fn(),
+    onClick: vi.fn(),
     disabled: false,
     selected: false,
     highlighted: false,
@@ -16,7 +17,7 @@ describe('Card Component', () => {
   }
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('Rendering', () => {
@@ -108,7 +109,7 @@ describe('Card Component', () => {
   describe('Interactions', () => {
     it('should call onClick when clicked', async () => {
       const user = userEvent.setup()
-      const onClick = jest.fn()
+      const onClick = vi.fn()
       
       render(<Card {...defaultProps} onClick={onClick} />)
       

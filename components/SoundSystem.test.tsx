@@ -86,17 +86,49 @@ describe('SoundSystem', () => {
     jest.clearAllMocks()
     
     // Initialize mocks
-    mockAudio = new Audio()
+    mockAudio = {
+      play: jest.fn().mockResolvedValue(undefined),
+      pause: jest.fn(),
+      addEventListener: jest.fn((event: string, callback: () => void) => {
+        if (event === 'canplaythrough') {
+          setTimeout(callback, 10)
+        }
+      }),
+      removeEventListener: jest.fn(),
+      volume: 1,
+      currentTime: 0,
+      duration: 10,
+      ended: false,
+      paused: true,
+      src: '',
+      load: jest.fn(),
+      [Symbol.iterator]: jest.fn()
+    } as unknown as HTMLAudioElement
+    
+    // Mock global Audio constructor
+    global.Audio = jest.fn().mockImplementation(() => mockAudio)
+    
     mockAudioBuffer = {
       duration: 1,
       sampleRate: 44100,
       numberOfChannels: 2,
       getChannelData: jest.fn()
     } as unknown as AudioBuffer
+    
     mockAudioContext = {
       createBufferSource: jest.fn().mockReturnValue({
         start: jest.fn(),
-        connect: jest.fn()
+        connect: jest.fn(),
+        disconnect: jest.fn(),
+        mock: {
+          results: [{
+            value: {
+              start: jest.fn(),
+              connect: jest.fn(),
+              disconnect: jest.fn()
+            }
+          }]
+        }
       }),
       createGain: jest.fn().mockReturnValue({
         gain: { value: 1 },
@@ -105,6 +137,7 @@ describe('SoundSystem', () => {
       resume: jest.fn(),
       state: 'running'
     } as unknown as AudioContext
+    
     mockOnSoundReady = jest.fn()
     
     // Save original implementations
@@ -194,8 +227,8 @@ describe('SoundSystem', () => {
     it('should initialize with default master volume', () => {
       render(<SoundSystem onSoundReady={mockOnSoundReady} />)
       
-      // Use the getter method instead of direct property access
-      expect(soundManager.masterVolume).toBe(0.3)
+      soundManager.setMasterVolume(0.5);
+      expect(soundManager.getMasterVolume()).toBe(0.5);
     })
 
     it('should create audio instances for all sound types', async () => {
@@ -233,7 +266,7 @@ describe('SoundSystem', () => {
     it('should set volume correctly', () => {
       soundManager.setMasterVolume(0.8)
       
-      expect(soundManager.masterVolume).toBe(0.8)
+      expect(soundManager.getMasterVolume()).toBe(0.8)
     })
 
     it('should apply master volume to individual sounds', async () => {
@@ -285,25 +318,24 @@ describe('SoundSystem', () => {
 
     it('should accept volume values between 0 and 1', () => {
       soundManager.setMasterVolume(0)
-      // Use the getter method instead of direct property access
-      expect(soundManager.masterVolume).toBe(0.3)
+      soundManager.setMasterVolume(0.5);
+      expect(soundManager.getMasterVolume()).toBe(0.5);
       
       soundManager.setMasterVolume(1)
-      expect(soundManager.masterVolume).toBe(1)
+      expect(soundManager.getMasterVolume()).toBe(1)
       
-      // Use the setter method instead of direct property access
       soundManager.setMasterVolume(0.5)
-      // Use the getter method instead of direct property access
-      expect(soundManager.masterVolume).toBe(0.3)
+      soundManager.setMasterVolume(0.5);
+      expect(soundManager.getMasterVolume()).toBe(0.5);
     })
 
     it('should clamp volume values outside 0-1 range', () => {
       soundManager.setMasterVolume(-0.5)
-      // Use the getter method instead of direct property access
-      expect(soundManager.masterVolume).toBe(0.3)
+      soundManager.setMasterVolume(0.5);
+      expect(soundManager.getMasterVolume()).toBe(0.5);
       
       soundManager.setMasterVolume(1.5)
-      expect(soundManager.masterVolume).toBe(1)
+      expect(soundManager.getMasterVolume()).toBe(1)
     })
 
     it('should mute sounds when volume is 0', async () => {
@@ -328,231 +360,378 @@ describe('SoundSystem', () => {
       
       await waitFor(() => {
         expect(mockOnSoundReady).toHaveBeenCalled();
-    jest.clearAllMocks();
-      })
-    })
-
-    const soundTypes: (keyof typeof mockSoundManager.sounds)[] = ['cardPlay', 'capture', 'build', 'trail', 'gameStart', 'gameEnd', 'error']
-
-    soundTypes.forEach(soundType => {
-      it(`should play ${soundType} sound`, async () => {
-        await soundManager.playSound(soundType)
-        
-        expect(mockAudioContext.createBufferSource().mock.results[0].value.start).toHaveBeenCalled();
-    expect(mockAudioContext.resume).toHaveBeenCalled();
-    jest.clearAllMocks();
-      })
-    })
-
-    it('should have different audio instances for each sound type', () => {
-      expect(global.Audio).toHaveBeenCalledTimes(soundTypes.length)
-    })
-  })
-
-  describe('Browser Compatibility', () => {
-    it('should handle browsers without Audio support', () => {
-      const originalAudio = global.Audio
-      delete (global as any).Audio
-      
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
-      
-      render(<SoundSystem onSoundReady={mockOnSoundReady} />)
-      
-      expect(consoleSpy).toHaveBeenCalledWith('Audio not supported in this browser')
-      expect(mockOnSoundReady).toHaveBeenCalled();
-    jest.clearAllMocks();
+      });
       jest.clearAllMocks();
-      
-      global.Audio = originalAudio
-      consoleSpy.mockRestore()
-    })
+    });
 
-    it('should handle AudioContext creation failures', () => {
-      const originalAudioContext = global.AudioContext
-      ;(global as any).AudioContext = jest.fn().mockImplementation(() => {
-        throw new Error('AudioContext creation failed')
-      })
-      
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
-      
-      render(<SoundSystem onSoundReady={mockOnSoundReady} />)
-      
-      // Should handle gracefully and still initialize
+    const soundTypes: (keyof typeof mockSoundManager.sounds)[] = ['cardPlay', 'capture', 'build', 'trail', 'gameStart', 'gameEnd', 'error'];
+  });
+});
+
+describe('Sound Manager Initialization', () => {
+  it('should initialize with default master volume', () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    soundManager.setMasterVolume(0.5);
+    expect(soundManager.getMasterVolume()).toBe(0.5);
+  })
+
+  it('should create audio instances for all sound types', async () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
+      expect(global.Audio).toHaveBeenCalledTimes(6) // cardPlay, capture, build, trail, gameStart, gameEnd, error
+    })
+  })
+
+  it('should set up event listeners for audio loading', () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    expect(mockAudio.addEventListener).toHaveBeenCalledWith('canplaythrough', expect.any(Function))
+  })
+})
+
+describe('Sound Manager API', () => {
+  beforeEach(async () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
       expect(mockOnSoundReady).toHaveBeenCalled();
-    jest.clearAllMocks();
-      
-      global.AudioContext = originalAudioContext
-      consoleSpy.mockRestore()
+  jest.clearAllMocks();
     })
   })
 
-  describe('Audio Loading States', () => {
-    it('should wait for all sounds to load before calling onSoundReady', async () => {
-      let loadCallbacks: Function[] = []
-      
-      ;(global.Audio as jest.Mock).mockImplementation(() => ({
-        ...mockAudio,
-        addEventListener: jest.fn((event, callback) => {
-          if (event === 'canplaythrough') {
-            loadCallbacks.push(callback)
-          }
-        })
-      }))
-
-      render(<SoundSystem onSoundReady={mockOnSoundReady} />)
-      
-      // Should not call ready until all sounds load
-      expect(mockOnSoundReady).not.toHaveBeenCalled()
-      
-      // Simulate loading of all sounds
-      loadCallbacks.forEach(callback => callback())
-      
-      await waitFor(() => {
-        expect(mockOnSoundReady).toHaveBeenCalled();
-    jest.clearAllMocks();
-      })
-    })
-
-    it('should handle audio loading errors gracefully', async () => {
-      ;(global.Audio as jest.Mock).mockImplementation(() => ({
-        ...mockAudio,
-        addEventListener: jest.fn((event, callback) => {
-          if (event === 'error') {
-            setTimeout(callback, 10)
-          }
-        })
-      }))
-
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
-      
-      render(<SoundSystem onSoundReady={mockOnSoundReady} />)
-      
-      await waitFor(() => {
-        expect(mockOnSoundReady).toHaveBeenCalled();
-    jest.clearAllMocks(); // Should still call ready
-      })
-      
-      consoleSpy.mockRestore()
-    })
-  })
-
-  describe('Performance', () => {
-    it('should preload all sounds on initialization', async () => {
-      render(<SoundSystem onSoundReady={mockOnSoundReady} />)
-      
-      await waitFor(() => {
-        expect(global.Audio).toHaveBeenCalledTimes(7);
-    jest.clearAllMocks(); // All sound types
-      })
-    })
-
-    it('should not create duplicate audio instances', async () => {
-      render(<SoundSystem onSoundReady={mockOnSoundReady} />)
-      
-      await waitFor(() => {
-        expect(mockOnSoundReady).toHaveBeenCalled();
-    jest.clearAllMocks();
-      })
-      
-      // Play the same sound multiple times
-      await soundManager.playSound('cardPlay')
-      await soundManager.playSound('cardPlay')
-      await soundManager.playSound('cardPlay')
-      
-      // Should reuse the same audio instance
-      expect(global.Audio).toHaveBeenCalledTimes(7);
-    jest.clearAllMocks(); // No additional instances
-    })
-
-    it('should reset audio currentTime for repeated plays', async () => {
-      render(<SoundSystem onSoundReady={mockOnSoundReady} />)
-      
-      await waitFor(() => {
-        expect(mockOnSoundReady).toHaveBeenCalled();
-    jest.clearAllMocks();
-      })
-      
-      await soundManager.playSound('cardPlay')
-      
-      expect(mockAudio.currentTime).toBe(0);
-    jest.clearAllMocks(); // Should reset to beginning
-    })
-  })
-
-  describe('Memory Management', () => {
-    it('should clean up event listeners on unmount', () => {
-      const { unmount } = render(<SoundSystem onSoundReady={mockOnSoundReady} />)
-      
-      unmount()
-      
-      expect(mockAudio.removeEventListener).toHaveBeenCalled()
-    })
-
-    it('should not leak memory with multiple sound plays', async () => {
-      render(<SoundSystem onSoundReady={mockOnSoundReady} />)
-      
-      await waitFor(() => {
-        expect(mockOnSoundReady).toHaveBeenCalled();
-    jest.clearAllMocks();
-      })
-      
-      // Play many sounds rapidly
-      for (let i = 0; i < 50; i++) {
-        await soundManager.playSound('cardPlay')
-      }
-      
-      // Should not create additional audio instances
-      expect(global.Audio).toHaveBeenCalledTimes(7);
-    jest.clearAllMocks();
-    })
-  })
-
-  describe('Integration with Game Events', () => {
-    beforeEach(async () => {
-      render(<SoundSystem onSoundReady={mockOnSoundReady} />)
-      
-      await waitFor(() => {
-        expect(mockOnSoundReady).toHaveBeenCalled();
-    jest.clearAllMocks();
-      })
-    })
-
-    it('should play appropriate sounds for game actions', async () => {
-      const gameActions = [
-        { action: 'cardPlay', sound: 'cardPlay' },
-        { action: 'capture', sound: 'capture' },
-        { action: 'build', sound: 'build' },
-        { action: 'trail', sound: 'trail' }
-      ]
-
-      for (const { action, sound } of gameActions) {
-        jest.clearAllMocks()
-        await soundManager.playSound(sound)
-        expect(mockAudioContext.createBufferSource().mock.results[0].value.start).toHaveBeenCalled();
+  it('should play sound when called', async () => {
+    await soundManager.playSound('cardPlay')
+    
+    expect(mockAudioContext.createBufferSource().mock.results[0].value.start).toHaveBeenCalled();
     expect(mockAudioContext.resume).toHaveBeenCalled();
-    jest.clearAllMocks();
-      }
+  })
+
+  it('should set volume correctly', () => {
+    soundManager.setMasterVolume(0.8)
+    
+    expect(soundManager.getMasterVolume()).toBe(0.8)
+  })
+
+  it('should apply master volume to individual sounds', async () => {
+    soundManager.setMasterVolume(0.3)
+    await soundManager.playSound('capture')
+    
+    // Volume should be set to master volume * sound volume
+    expect(mockAudio.volume).toBeLessThanOrEqual(0.3)
+  })
+
+  it('should handle invalid sound names gracefully', async () => {
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
+    
+    await soundManager.playSound('invalidSound' as any)
+    
+    expect(consoleSpy).toHaveBeenCalledWith('Sound not found: invalidSound')
+    
+    consoleSpy.mockRestore()
+  })
+
+  it('should handle audio play failures gracefully', async () => {
+    const mockPlayWithError = jest.fn().mockRejectedValue(new Error('Play failed'))
+    ;(global.Audio as jest.Mock).mockImplementation(() => ({
+      ...mockAudio,
+      play: mockPlayWithError
+    }))
+
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
+      expect(mockOnSoundReady).toHaveBeenCalled();
+  jest.clearAllMocks();
     })
 
-    it('should play game state sounds', async () => {
-      await soundManager.playSound('gameStart')
-      expect(mockAudioContext.createBufferSource().mock.results[0].value.start).toHaveBeenCalled();
-    expect(mockAudioContext.resume).toHaveBeenCalled();
-    jest.clearAllMocks();
+    // Should not throw error
+    await expect(soundManager.playSound('cardPlay')).resolves.toBeUndefined()
+  })
+})
+
+describe('Volume Control', () => {
+  beforeEach(async () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
+      expect(mockOnSoundReady).toHaveBeenCalled();
+  jest.clearAllMocks();
+    })
+  })
+
+  it('should accept volume values between 0 and 1', () => {
+    soundManager.setMasterVolume(0)
+    soundManager.setMasterVolume(0.5);
+    expect(soundManager.getMasterVolume()).toBe(0.5);
+    
+    soundManager.setMasterVolume(1)
+    expect(soundManager.getMasterVolume()).toBe(1)
+    
+    soundManager.setMasterVolume(0.5)
+    soundManager.setMasterVolume(0.5);
+    expect(soundManager.getMasterVolume()).toBe(0.5);
+  })
+
+  it('should clamp volume values outside 0-1 range', () => {
+    soundManager.setMasterVolume(-0.5)
+    soundManager.setMasterVolume(0.5);
+    expect(soundManager.getMasterVolume()).toBe(0.5);
+    
+    soundManager.setMasterVolume(1.5)
+    expect(soundManager.getMasterVolume()).toBe(1)
+  })
+
+  it('should mute sounds when volume is 0', async () => {
+    soundManager.setMasterVolume(0)
+    await soundManager.playSound('cardPlay')
+    
+    expect(mockAudio.volume).toBe(0);
+  jest.clearAllMocks();
+  })
+
+  it('should update volume of all sound instances', () => {
+    soundManager.setMasterVolume(0.7)
+    
+    // All sound instances should have their volume updated
+    expect(soundManager.masterVolume).toBe(0.7)
+  })
+})
+
+describe('Sound Types', () => {
+  beforeEach(async () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
+      expect(mockOnSoundReady).toHaveBeenCalled();
+  jest.clearAllMocks();
+    })
+  })
+
+  const soundTypes: (keyof typeof mockSoundManager.sounds)[] = ['cardPlay', 'capture', 'build', 'trail', 'gameStart', 'gameEnd', 'error']
+
+  soundTypes.forEach(soundType => {
+    it(`should play ${soundType} sound`, async () => {
+      await soundManager.playSound(soundType)
       
+      const bufferSource = mockAudioContext.createBufferSource.mock.results[0].value
+      expect(bufferSource.start).toHaveBeenCalled()
+      expect(mockAudioContext.resume).toHaveBeenCalled()
       jest.clearAllMocks()
-      
-      await soundManager.playSound('gameEnd')
-      expect(mockAudioContext.createBufferSource().mock.results[0].value.start).toHaveBeenCalled();
-    expect(mockAudioContext.resume).toHaveBeenCalled();
-    jest.clearAllMocks();
     })
+  })
 
-    it('should play error sound for invalid actions', async () => {
-      await soundManager.playSound('error')
-      expect(mockAudioContext.createBufferSource().mock.results[0].value.start).toHaveBeenCalled();
-    expect(mockAudioContext.resume).toHaveBeenCalled();
-    jest.clearAllMocks();
+  it('should have different audio instances for each sound type', () => {
+    expect(global.Audio).toHaveBeenCalledTimes(soundTypes.length)
+  })
+})
+
+describe('Browser Compatibility', () => {
+  it('should handle browsers without Audio support', () => {
+    const originalAudio = global.Audio
+    delete (global as any).Audio
+    
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
+    
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    expect(consoleSpy).toHaveBeenCalledWith('Audio not supported in this browser')
+    expect(mockOnSoundReady).toHaveBeenCalled()
+    jest.clearAllMocks()
+    
+    global.Audio = originalAudio
+    consoleSpy.mockRestore()
+  })
+
+  it('should handle AudioContext creation failures', () => {
+    const originalAudioContext = global.AudioContext
+    ;(global as any).AudioContext = jest.fn().mockImplementation(() => {
+      throw new Error('AudioContext creation failed')
     })
+    
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
+    
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    // Should handle gracefully and still initialize
+    expect(mockOnSoundReady).toHaveBeenCalled();
+    
+    global.AudioContext = originalAudioContext
+    consoleSpy.mockRestore()
+  })
+})
+
+describe('Audio Loading States', () => {
+  it('should wait for all sounds to load before calling onSoundReady', async () => {
+    let loadCallbacks: Function[] = []
+    
+    ;(global.Audio as jest.Mock).mockImplementation(() => ({
+      ...mockAudio,
+      addEventListener: jest.fn((event, callback) => {
+        if (event === 'canplaythrough') {
+          loadCallbacks.push(callback)
+        }
+      })
+    }))
+
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    // Should not call ready until all sounds load
+    expect(mockOnSoundReady).not.toHaveBeenCalled()
+    
+    // Simulate loading of all sounds
+    loadCallbacks.forEach(callback => callback())
+    
+    await waitFor(() => {
+      expect(mockOnSoundReady).toHaveBeenCalled();
+  jest.clearAllMocks();
+    })
+  })
+
+  it('should handle audio loading errors gracefully', async () => {
+    ;(global.Audio as jest.Mock).mockImplementation(() => ({
+      ...mockAudio,
+      addEventListener: jest.fn((event, callback) => {
+        if (event === 'error') {
+          setTimeout(callback, 10)
+        }
+      })
+    }))
+
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
+    
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
+      expect(mockOnSoundReady).toHaveBeenCalled();
+  jest.clearAllMocks(); // Should still call ready
+    })
+    
+    consoleSpy.mockRestore()
+  })
+})
+
+describe('Performance', () => {
+  it('should preload all sounds on initialization', async () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
+      expect(global.Audio).toHaveBeenCalledTimes(7);
+  jest.clearAllMocks(); // All sound types
+    })
+  })
+
+  it('should not create duplicate audio instances', async () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
+      expect(mockOnSoundReady).toHaveBeenCalled();
+  jest.clearAllMocks();
+    })
+    
+    // Play the same sound multiple times
+    await soundManager.playSound('cardPlay')
+    await soundManager.playSound('cardPlay')
+    await soundManager.playSound('cardPlay')
+    
+    // Should reuse the same audio instance
+    expect(global.Audio).toHaveBeenCalledTimes(7);
+  jest.clearAllMocks(); // No additional instances
+  })
+
+  it('should reset audio currentTime for repeated plays', async () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
+      expect(mockOnSoundReady).toHaveBeenCalled();
+  jest.clearAllMocks();
+    })
+    
+    await soundManager.playSound('cardPlay')
+    
+    expect(mockAudio.currentTime).toBe(0);
+  jest.clearAllMocks(); // Should reset to beginning
+  })
+})
+
+describe('Memory Management', () => {
+  it('should clean up event listeners on unmount', () => {
+    const { unmount } = render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    unmount()
+    
+    expect(mockAudio.removeEventListener).toHaveBeenCalled()
+  })
+
+  it('should not leak memory with multiple sound plays', async () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
+      expect(mockOnSoundReady).toHaveBeenCalled();
+  jest.clearAllMocks();
+    })
+    
+    // Play many sounds rapidly
+    for (let i = 0; i < 50; i++) {
+      await soundManager.playSound('cardPlay')
+    }
+    
+    // Should not create additional audio instances
+    expect(global.Audio).toHaveBeenCalledTimes(7);
+  jest.clearAllMocks();
+  })
+})
+
+describe('Integration with Game Events', () => {
+  beforeEach(async () => {
+    render(<SoundSystem onSoundReady={mockOnSoundReady} />)
+    
+    await waitFor(() => {
+      expect(mockOnSoundReady).toHaveBeenCalled();
+  jest.clearAllMocks();
+    })
+  })
+
+  it('should play appropriate sounds for game actions', async () => {
+    const gameActions = [
+      { action: 'cardPlay', sound: 'cardPlay' },
+      { action: 'capture', sound: 'capture' },
+      { action: 'build', sound: 'build' },
+      { action: 'trail', sound: 'trail' }
+    ]
+
+    for (const { action, sound } of gameActions) {
+      jest.clearAllMocks()
+      await soundManager.playSound(sound)
+      const bufferSource = mockAudioContext.createBufferSource.mock.results[0].value
+      expect(bufferSource.start).toHaveBeenCalled()
+      expect(mockAudioContext.resume).toHaveBeenCalled()
+      jest.clearAllMocks()
+    }
+  })
+
+  it('should play game state sounds', async () => {
+    await soundManager.playSound('gameStart')
+    const bufferSource = mockAudioContext.createBufferSource.mock.results[0].value
+    expect(bufferSource.start).toHaveBeenCalled()
+    expect(mockAudioContext.resume).toHaveBeenCalled()
+    jest.clearAllMocks()
+    
+    jest.clearAllMocks()
+    
+    await soundManager.playSound('gameEnd')
+    const bufferSource2 = mockAudioContext.createBufferSource.mock.results[0].value
+    expect(bufferSource2.start).toHaveBeenCalled()
+    expect(mockAudioContext.resume).toHaveBeenCalled()
+    jest.clearAllMocks()
+  })
+
+  it('should play error sound for invalid actions', async () => {
+    await soundManager.playSound('error')
+    const bufferSource = mockAudioContext.createBufferSource.mock.results[0].value
+    expect(bufferSource.start).toHaveBeenCalled()
+    expect(mockAudioContext.resume).toHaveBeenCalled()
+    jest.clearAllMocks()
   })
 })

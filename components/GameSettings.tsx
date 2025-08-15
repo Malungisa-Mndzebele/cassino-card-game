@@ -13,6 +13,13 @@ export interface GamePreferences {
   soundVolume: number
 }
 
+const DEFAULT_PREFERENCES: GamePreferences = {
+  hintsEnabled: true,
+  statisticsEnabled: true,
+  soundEnabled: true,
+  soundVolume: 0.5
+}
+
 interface GameSettingsProps {
   preferences: GamePreferences
   onPreferencesChange: (preferences: GamePreferences) => void
@@ -28,27 +35,31 @@ export interface GameStatistics {
   averageScore: number
   longestWinStreak: number
   currentWinStreak: number
-  captureRate: number // percentage of successful captures
-  buildRate: number // percentage of successful builds
+  captureRate: number
+  buildRate: number
 }
 
 export function GameSettings({ preferences, onPreferencesChange, statistics }: GameSettingsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [showStats, setShowStats] = useState(false)
 
+  const currentPreferences = {
+    ...DEFAULT_PREFERENCES,
+    ...preferences
+  }
+
   const updatePreference = <K extends keyof GamePreferences>(
     key: K,
     value: GamePreferences[K]
   ) => {
     onPreferencesChange({
-      ...preferences,
+      ...currentPreferences,
       [key]: value
     })
   }
 
   const resetStatistics = () => {
     if (confirm('Are you sure you want to reset all statistics? This cannot be undone.')) {
-      // This would be handled by the parent component
       const event = new CustomEvent('resetStatistics')
       window.dispatchEvent(event)
     }
@@ -59,7 +70,7 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" aria-label="Open settings">
           <Settings className="h-4 w-4 mr-1" />
           Settings
         </Button>
@@ -67,6 +78,17 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Game Settings</DialogTitle>
+          <Button 
+            variant="ghost"
+            size="sm"
+            className="absolute right-4 top-4"
+            onClick={() => setIsOpen(false)}
+            data-testid="dialog-close-x"
+            aria-label="Close settings dialog"
+          >
+            <span className="sr-only">Close</span>
+            ×
+          </Button>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -80,6 +102,8 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
               </div>
               <Switch
                 id="sound-enabled"
+                role="switch"
+                aria-label="Enable sound effects"
                 checked={preferences.soundEnabled}
                 onCheckedChange={(checked) => updatePreference('soundEnabled', checked)}
               />
@@ -96,6 +120,7 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
                   value={preferences.soundVolume}
                   onChange={(e) => updatePreference('soundVolume', parseFloat(e.target.value))}
                   className="w-full mt-1"
+                  aria-label="Sound volume"
                 />
               </div>
             )}
@@ -111,13 +136,12 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
               </div>
               <Switch
                 id="hints-enabled"
+                role="switch"
+                aria-label="Enable gameplay hints"
                 checked={preferences.hintsEnabled}
                 onCheckedChange={(checked) => updatePreference('hintsEnabled', checked)}
               />
             </div>
-            <p className="text-xs text-muted-foreground pl-6">
-              Highlights possible captures and builds
-            </p>
           </div>
 
           {/* Statistics */}
@@ -130,6 +154,8 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
               </div>
               <Switch
                 id="stats-enabled"
+                role="switch"
+                aria-label="Enable statistics tracking"
                 checked={preferences.statisticsEnabled}
                 onCheckedChange={(checked) => updatePreference('statisticsEnabled', checked)}
               />
@@ -178,7 +204,6 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
                       variant="destructive"
                       size="sm"
                       onClick={resetStatistics}
-                      className="w-full mt-2"
                     >
                       Reset Statistics
                     </Button>
@@ -187,12 +212,15 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
               </div>
             )}
           </div>
+        </div>
 
-          <div className="pt-4 border-t">
-            <Button onClick={() => setIsOpen(false)} className="w-full">
-              Close
-            </Button>
-          </div>
+        <div className="mt-6 flex justify-end">
+          <Button
+            onClick={() => setIsOpen(false)}
+            data-testid="dialog-close"
+          >
+            Close
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -200,8 +228,8 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
 }
 
 // Hook for managing preferences
-export function useGamePreferences(): [GamePreferences, (prefs: GamePreferences) => void] {
-  const [preferences, setPreferences] = useState<GamePreferences>({
+export function useGamePreferences(defaultPreferences?: GamePreferences): [GamePreferences, (prefs: GamePreferences) => void] {
+  const [preferences, setPreferences] = useState<GamePreferences>(defaultPreferences || {
     hintsEnabled: false,
     statisticsEnabled: false,
     soundEnabled: true,
@@ -209,8 +237,12 @@ export function useGamePreferences(): [GamePreferences, (prefs: GamePreferences)
   })
 
   useEffect(() => {
-    // Load preferences from localStorage
-    const saved = localStorage.getItem('cassino-preferences')
+    let saved: string | null = null
+    try {
+      saved = localStorage.getItem('cassino-preferences')
+    } catch (e) {
+      console.error('Failed to access localStorage for preferences:', e)
+    }
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
@@ -223,7 +255,11 @@ export function useGamePreferences(): [GamePreferences, (prefs: GamePreferences)
 
   const updatePreferences = (newPreferences: GamePreferences) => {
     setPreferences(newPreferences)
-    localStorage.setItem('cassino-preferences', JSON.stringify(newPreferences))
+    try {
+      localStorage.setItem('cassino-preferences', JSON.stringify(newPreferences))
+    } catch (e) {
+      console.error('Failed to save preferences to localStorage:', e)
+    }
   }
 
   return [preferences, updatePreferences]
@@ -245,8 +281,12 @@ export function useGameStatistics(): [GameStatistics, (update: Partial<GameStati
   })
 
   useEffect(() => {
-    // Load statistics from localStorage
-    const saved = localStorage.getItem('cassino-statistics')
+    let saved: string | null = null
+    try {
+      saved = localStorage.getItem('cassino-statistics')
+    } catch (e) {
+      console.error('Failed to access localStorage for statistics:', e)
+    }
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
@@ -256,7 +296,6 @@ export function useGameStatistics(): [GameStatistics, (update: Partial<GameStati
       }
     }
 
-    // Listen for reset event
     const handleReset = () => {
       const defaultStats: GameStatistics = {
         gamesPlayed: 0,
@@ -281,13 +320,16 @@ export function useGameStatistics(): [GameStatistics, (update: Partial<GameStati
   const updateStatistics = (update: Partial<GameStatistics>) => {
     const newStats = { ...statistics, ...update }
     
-    // Recalculate derived values
     if (newStats.gamesPlayed > 0) {
       newStats.averageScore = newStats.totalScore / newStats.gamesPlayed
     }
     
     setStatistics(newStats)
-    localStorage.setItem('cassino-statistics', JSON.stringify(newStats))
+    try {
+      localStorage.setItem('cassino-statistics', JSON.stringify(newStats))
+    } catch (e) {
+      console.error('Failed to save statistics to localStorage:', e)
+    }
   }
 
   const reset = () => {
@@ -304,7 +346,11 @@ export function useGameStatistics(): [GameStatistics, (update: Partial<GameStati
       buildRate: 0
     }
     setStatistics(defaultStats)
-    localStorage.setItem('cassino-statistics', JSON.stringify(defaultStats))
+    try {
+      localStorage.setItem('cassino-statistics', JSON.stringify(defaultStats))
+    } catch (e) {
+      console.error('Failed to reset statistics in localStorage:', e)
+    }
   }
 
   return [statistics, updateStatistics, reset]
