@@ -8,7 +8,8 @@ vi.mock('convex/react', async () => {
     ...actual,
     ConvexProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     useMutation: (fn: any) => {
-      if (fn.name === 'createRoom') {
+      // Mock createRoom mutation
+      if (fn && fn.toString().includes('createRoom')) {
         return async ({ playerName }: { playerName: string }) => {
           const gameState = testUtils.createMockGameState({ roomId: 'new-room', players: [{ id: 1, name: playerName }] });
           return {
@@ -18,7 +19,8 @@ vi.mock('convex/react', async () => {
           };
         };
       }
-      if (fn.name === 'joinRoom') {
+      // Mock joinRoom mutation
+      if (fn && fn.toString().includes('joinRoom')) {
         return async ({ roomId, playerName }: { roomId: string, playerName: string }) => {
           const gameState = testUtils.createMockGameState({ roomId, players: [{ id: 1, name: playerName }] });
           return {
