@@ -6,7 +6,7 @@ vi.mock('convex/react', async () => {
   const actual = await vi.importActual<any>('convex/react');
   return {
     ...actual,
-    ConvexProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    ConvexProvider: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
     useMutation: (fn: any) => {
       // Mock createRoom mutation
       if (fn && fn.toString().includes('createRoom')) {

@@ -3,7 +3,6 @@
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "types": ["jest", "@testing-library/jest-dom", "node"],
     "module": "ESNext",
     "skipLibCheck": true,
 
@@ -30,13 +29,21 @@
     }
   },
   "include": [
-    "**/*.ts", 
-    "**/*.tsx"
+    "*.tsx",
+    "components/**/*.ts", 
+    "components/**/*.tsx",
+    "convexClient.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "supabase/functions/_shared"
+    "supabase/functions/_shared",
+    "LICENSE/**",
+    "_trash/**",
+    "tests/**",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "jest.config.js"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

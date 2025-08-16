@@ -1,9 +1,27 @@
-import { ConvexProvider, ConvexReactClient, useMutation, useQuery } from "convex/react";
+import React from 'react';
 
-// TODO: Replace this with your actual Convex deployment URL
-// TODO: Replace with your actual Convex deployment URL (e.g. https://neat-mouse-123.convex.cloud)
-const convexUrl = "http://localhost:8000";
+// Mock Convex client for static deployment
+// This allows the game to run without a backend temporarily
 
-export const convex = new ConvexReactClient(convexUrl);
+// Create mock implementations
+const mockConvex = {
+  // Mock for mutation calls
+  mutation: () => () => Promise.resolve({}),
+  // Mock for query calls  
+  query: () => () => null,
+};
 
-export { ConvexProvider, useMutation, useQuery };
+export const convex = mockConvex;
+
+// Mock implementations for React hooks
+export function ConvexProvider({ children }: { children: React.ReactNode }) {
+  return React.createElement(React.Fragment, null, children);
+}
+
+export function useMutation() {
+  return () => Promise.resolve({});
+}
+
+export function useQuery() {
+  return null;
+}
