@@ -11,7 +11,7 @@ The most common reason for CI failure is missing FTP credentials. Here's how to 
 3. **Find FTP credentials** (usually in cPanel or hosting settings)
 4. **Note down:**
    - FTP Host (e.g., `khasinogaming.com` - without ftp. prefix)
-   - FTP Username (e.g., `githubactions@khasinogaming.com`)
+   - FTP Username (e.g., `cassino@khasinogaming.com`)
    - FTP Password
 
 ### 🔐 **Step 2: Add GitHub Secrets**
@@ -25,7 +25,7 @@ The most common reason for CI failure is missing FTP credentials. Here's how to 
 | Secret Name | Value |
 |-------------|-------|
 | `FTP_HOST` | Your FTP host (e.g., `khasinogaming.com`) |
-| `FTP_USERNAME` | Your FTP username (e.g., `githubactions@khasinogaming.com`) |
+| `FTP_USERNAME` | Your FTP username (e.g., `cassino@khasinogaming.com`) |
 | `FTP_PASSWORD` | Your FTP password |
 
 ### ✅ **Step 3: Test the CI/CD**
@@ -68,7 +68,7 @@ The most common reason for CI failure is missing FTP credentials. Here's how to 
 ### **Issue: "Permission denied"**
 **Solution:** 
 - Check file permissions on your hosting
-- Ensure the FTP user has write access to `/home/mawdqtvped/khasinogaming.com/githubactions/`
+- Ensure the FTP user has write access to `/home/mawdqtvped/khasinogaming.com/cassino/`
 
 ---
 
@@ -78,7 +78,7 @@ If you're still having issues:
 
 1. **Check the Actions tab** in your GitHub repository for detailed error logs
 2. **Contact Spaceship support** for FTP credential help
-3. **Verify your hosting path** is correct: `/home/mawdqtvped/khasinogaming.com/githubactions/`
+3. **Verify your hosting path** is correct: `/home/mawdqtvped/khasinogaming.com/cassino/`
 
 ---
 
@@ -86,7 +86,7 @@ If you're still having issues:
 
 Once configured correctly, every time you push to the `master` branch:
 - ✅ Code builds automatically
-- ✅ Game deploys to https://khasinogaming.com/githubactions/
+- ✅ Game deploys to https://khasinogaming.com/cassino/
 - ✅ No manual upload needed
 - ✅ Flickering issues are fixed
 
