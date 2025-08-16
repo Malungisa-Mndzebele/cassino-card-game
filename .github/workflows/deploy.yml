@@ -76,6 +76,10 @@ jobs:
           exit 0
         else
           echo "✅ FTP credentials configured, proceeding with deployment..."
+          echo "🔍 Debug info (hostname only):"
+          echo "   FTP_HOST length: ${#FTP_HOST}"
+          echo "   FTP_HOST first char: ${FTP_HOST:0:1}"
+          echo "   FTP_HOST last char: ${FTP_HOST: -1}"
         fi
         
     - name: Create deployment package
@@ -161,6 +165,21 @@ jobs:
         
         echo "Deployment package created successfully"
         ls -la deployment/
+        
+    - name: Test FTP connection
+      run: |
+        echo "🔍 Testing FTP connection..."
+        echo "Host: ${{ secrets.FTP_HOST }}"
+        echo "Username: ${{ secrets.FTP_USERNAME }}"
+        echo "Password: [HIDDEN]"
+        
+        # Test DNS resolution
+        if nslookup ${{ secrets.FTP_HOST }} 2>/dev/null; then
+          echo "✅ DNS resolution successful"
+        else
+          echo "❌ DNS resolution failed for ${{ secrets.FTP_HOST }}"
+          echo "💡 Try using: khasinogaming.com"
+        fi
         
     - name: Deploy to Spaceship hosting via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
