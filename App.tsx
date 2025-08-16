@@ -11,6 +11,7 @@ import { convex } from './convexClient'
 import { api } from './convex/_generated/api'
 import { useMutation } from 'convex/react'
 import { Trophy, Users, Clock, Heart, Diamond, Spade, Club, Crown, Star, Wifi, WifiOff } from 'lucide-react'
+import type { GameState } from './convex/types'
 
 // Game-related interfaces
 interface Player {
@@ -45,35 +46,7 @@ interface GamePreferences {
   statisticsEnabled: boolean;
 }
 
-interface GameState {
-  roomId: string;
-  players: Player[];
-  phase: string;
-  round: number;
-  deck: GameCard[];
-  player1Hand: GameCard[];
-  player2Hand: GameCard[];
-  tableCards: GameCard[];
-  builds: Build[];
-  player1Captured: GameCard[];
-  player2Captured: GameCard[];
-  player1Score: number;
-  player2Score: number;
-  currentTurn: number;
-  cardSelectionComplete: boolean;
-  shuffleComplete: boolean;
-  countdownStartTime: string | null;
-  countdownRemaining?: number;
-  gameStarted: boolean;
-  lastPlay: LastPlay | null;
-  lastAction?: string;
-  lastUpdate: string;
-  gameCompleted: boolean;
-  winner: number | string | null;
-  dealingComplete: boolean;
-  player1Ready: boolean;
-  player2Ready: boolean;
-}
+
 
 const initialGameState: GameState = {
   roomId: '',
@@ -162,7 +135,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
       }
       
       setRoomId(response.roomId);
-      setPlayerId(response.playerId || 1);
+      setPlayerId(1); // Player 1 is the room creator
       setGameState(response.gameState);
       setConnectionStatus('connected');
     } catch (error: any) {
@@ -188,53 +161,24 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     try {
       setConnectionStatus('connecting');
       
-      // For now, always use mock implementation since Convex is not set up
-      console.log("Using mock implementation for room joining");
-      const data = {
-        playerId: 2,
-        gameState: {
-          roomId: roomToJoin,
-          players: [{ id: 1, name: 'Host' }, { id: 2, name: nameToUse }],
-          phase: 'waiting',
-          round: 0,
-          deck: [],
-          player1Hand: [],
-          player2Hand: [],
-          tableCards: [],
-          builds: [],
-          player1Captured: [],
-          player2Captured: [],
-          player1Score: 0,
-          player2Score: 0,
-          currentTurn: 0,
-          cardSelectionComplete: false,
-          shuffleComplete: false,
-          countdownStartTime: null,
-          countdownRemaining: undefined,
-          gameStarted: false,
-          lastPlay: null,
-          lastAction: undefined,
-          lastUpdate: new Date().toISOString(),
-          gameCompleted: false,
-          winner: null,
-          dealingComplete: false,
-          player1Ready: false,
-          player2Ready: false,
-        }
-      };
+      // Use the actual Convex mutation
+      const response = await joinRoomMutation({ 
+        roomId: roomToJoin, 
+        playerName: nameToUse 
+      });
       
-      if (!data.playerId || !data.gameState) {
-        throw new Error('Failed to join room');
+      if (!response) {
+        throw new Error("Failed to join room");
       }
-
+      
       setRoomId(roomToJoin);
-      setPlayerId(data.playerId);
-      setGameState(data.gameState);
+      setPlayerId(response.playerId);
+      setGameState(response.gameState);
       setConnectionStatus('connected');
     } catch (error: any) {
-      console.error('Error joining room:', error);
-      const errorMsg = error?.message || error;
-      setError(`Failed to join room - ${errorMsg}`);
+      console.error("Error joining room:", error);
+      const errorMsg = error?.message || String(error);
+      setError(errorMsg);
       setConnectionStatus('disconnected');
     } finally {
       setIsLoading(false);
