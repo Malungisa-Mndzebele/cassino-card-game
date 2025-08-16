@@ -1,0 +1,96 @@
+KhasinoGaming.com Upload Instructions - UPDATED VERSION
+=========================================================
+
+🎮 CASSINO CARD GAME DEPLOYMENT GUIDE (Updated with Latest Code)
+
+WHAT'S NEW IN THIS VERSION:
+✅ Updated mock backend for better game simulation
+✅ Improved TypeScript compilation
+✅ Enhanced error handling
+✅ Better mobile responsiveness
+✅ Optimized build size (~342KB total)
+
+1. ACCESS YOUR SPACESHIP HOSTING CONTROL PANEL
+   - Log into your Spaceship hosting account
+   - Navigate to File Manager or use your FTP client
+
+2. CHOOSE DEPLOYMENT LOCATION
+   
+   Option A: Subdirectory (Recommended)
+   - Go to public_html directory
+   - Create a folder called 'cassino'
+   - Upload ALL files from this folder to public_html/cassino/
+   - Your game will be available at: https://khasinogaming.com/cassino/
+
+   Option B: Root Domain
+   - Upload ALL files to public_html/
+   - Your game will be available at: https://khasinogaming.com/
+
+3. UPLOAD ALL FILES
+   Make sure to upload these files:
+   - index.html (main game file - 5.5KB)
+   - assets/ folder (contains optimized CSS and JavaScript bundles)
+     * index-BJtnrDan.css (79KB - game styles)
+     * index-CO-uc6Zl.js (115KB - main game logic)
+     * ui-3O5c68Rl.js (8KB - UI components)
+     * vendor-gILhtmMa.js (140KB - React & dependencies)
+   - manifest.json (PWA features for offline play)
+   - favicon-guide.md (favicon setup instructions)
+   - .htaccess (performance optimization with enhanced caching)
+   - Documentation files (README, guides)
+
+4. VERIFY HTTPS IS ENABLED
+   - Ensure your domain uses HTTPS (required for modern web features)
+   - Test at: https://khasinogaming.com/cassino/ (or root if uploaded there)
+
+5. TESTING CHECKLIST
+   ✓ Game loads without errors
+   ✓ Can create a new room
+   ✓ Room codes are generated properly
+   ✓ Interface is responsive on mobile devices
+   ✓ No JavaScript errors in browser console
+   ✓ Game works in offline mode after first load
+
+6. PERFORMANCE OPTIMIZATIONS INCLUDED
+   - Gzip compression enabled for all text files
+   - Browser caching configured for 1 year on assets
+   - Security headers for better protection
+   - PWA manifest for app-like experience
+   - Optimized bundle splitting for faster loading
+
+7. GAME FEATURES (THIS VERSION)
+   ✅ Modern, casino-themed responsive design
+   ✅ Touch-friendly mobile interface
+   ✅ Offline play capability (PWA)
+   ✅ Local game state management
+   ✅ Mock multiplayer simulation
+   ✅ Sound system support
+   ✅ Game statistics tracking
+   ✅ Settings management
+   ✅ Fast loading (~342KB total size)
+
+TECHNICAL IMPROVEMENTS IN THIS VERSION:
+- Enhanced Convex mock for better API simulation
+- Fixed TypeScript compilation issues
+- Improved error handling and fallbacks
+- Better mobile touch interactions
+- Optimized CSS and JavaScript bundles
+- Enhanced security headers
+
+IMPORTANT NOTES:
+- This is a static version with simulated multiplayer
+- Real-time multiplayer features are mocked for demonstration
+- Game state is stored locally in the browser
+- Perfect for showcasing the game interface and mechanics
+- No backend infrastructure required
+
+TROUBLESHOOTING:
+- If the game doesn't load, check browser console for errors
+- Ensure all files are uploaded including the assets/ folder
+- Verify HTTPS is working on your domain
+- Clear browser cache if updating from previous version
+
+For technical support with your Spaceship hosting,
+contact their support team.
+
+🎊 Your updated Cassino card game is ready for KhasinoGaming.com!

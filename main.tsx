@@ -4,7 +4,7 @@ import App from './App.tsx'
 import './styles/globals.css'
 
 // Production error handling
-if (process.env.NODE_ENV === 'production') {
+if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
   // Disable console.log in production
   console.log = () => {}
   
@@ -18,13 +18,21 @@ if (process.env.NODE_ENV === 'production') {
   })
 }
 
+<<<<<<< Current (Your changes)
+<<<<<<< Current (Your changes)
 import { ConvexProvider, ConvexReactClient } from 'convex/react';
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+=======
+import { ConvexProvider } from './convexClient';
+>>>>>>> Incoming (Background Agent changes)
+=======
+import { ConvexProvider } from './convexClient';
+>>>>>>> Incoming (Background Agent changes)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ConvexProvider client={convex}>
+    <ConvexProvider>
       <App />
     </ConvexProvider>
   </React.StrictMode>,

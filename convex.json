@@ -1,4 +1,13 @@
 {
+<<<<<<< Current (Your changes)
+=======
+  "project": {
+    "name": "cassino-card-game"
+  },
+<<<<<<< Current (Your changes)
+>>>>>>> Incoming (Background Agent changes)
+=======
+>>>>>>> Incoming (Background Agent changes)
   "functions": "convex",
   "schema": {
     "path": "convex/schema.ts"
