@@ -5,6 +5,7 @@ import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Progress } from './ui/progress'
 import { GamePreferences } from './GameSettings'
+import { Dealer } from './Dealer'
 
 interface GameCard {
   id: string
@@ -19,6 +20,8 @@ interface GamePhasesProps {
   onSelectFaceUpCards: (cardIds: string[]) => void
   onPlayCard: (cardId: string, action: string, targetCards?: string[], buildValue?: number) => void
   onResetGame: () => void
+  onPlayerReady: () => void
+  onPlayerNotReady: () => void
   preferences: GamePreferences
 }
 
@@ -29,6 +32,8 @@ export function GamePhases({
   onSelectFaceUpCards, 
   onPlayCard,
   onResetGame,
+  onPlayerReady,
+  onPlayerNotReady,
   preferences
 }: GamePhasesProps) {
   const [countdownTime, setCountdownTime] = useState(30)
@@ -38,21 +43,42 @@ export function GamePhases({
   // Add test-specific elements
   if (!gameState) return null;
 
-  return (
-    <div data-testid="game-phases">
-      <div>Current Phase: {gameState.phase}</div>
-      <div>Room ID: {gameState.roomId}</div>
-      {gameState.players.map((player: any) => (
-        <div key={player.id}>Player Name: {player.name}</div>
-      ))}
-    </div>
-  )
-
   useEffect(() => {
     if (gameState.phase === 'countdown' && gameState.countdownRemaining !== undefined) {
       setCountdownTime(Math.ceil(gameState.countdownRemaining))
     }
   }, [gameState.countdownRemaining])
+
+  // Auto-transition from dealer to countdown when both players are ready
+  useEffect(() => {
+    if (gameState.phase === 'dealer' && gameState.player1Ready && gameState.player2Ready) {
+      // The transition will be handled by the setPlayerReady mutation
+      // This effect just ensures the UI updates properly
+    }
+  }, [gameState.phase, gameState.player1Ready, gameState.player2Ready])
+
+  // Countdown timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (gameState.phase === 'countdown' && gameState.countdownStartTime) {
+      interval = setInterval(() => {
+        const elapsed = (Date.now() - gameState.countdownStartTime) / 1000;
+        const remaining = Math.max(0, 30 - elapsed);
+        setCountdownTime(Math.ceil(remaining));
+        
+        if (remaining <= 0) {
+          clearInterval(interval);
+        }
+      }, 1000);
+    }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [gameState.phase, gameState.countdownStartTime]);
 
   useEffect(() => {
     if (gameState.phase === 'shuffling') {
@@ -91,6 +117,17 @@ export function GamePhases({
     breakdown.tenOfDiamonds = capturedCards.some(card => card.rank === '10' && card.suit === 'diamonds') ? 2 : 0
     
     return breakdown
+  }
+
+  if (gameState.phase === 'dealer') {
+    return (
+      <Dealer
+        gameState={gameState}
+        playerId={playerId}
+        onPlayerReady={onPlayerReady}
+        onPlayerNotReady={onPlayerNotReady}
+      />
+    )
   }
 
   if (gameState.phase === 'countdown') {

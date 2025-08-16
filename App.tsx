@@ -9,7 +9,7 @@ import { Card, CardContent } from './components/ui/card'
 import { Separator } from './components/ui/separator'
 
 import { api } from './convex/_generated/api'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { Trophy, Users, Clock, Heart, Diamond, Spade, Club, Crown, Star, Wifi, WifiOff } from 'lucide-react'
 import type { GameState } from './convex/types'
 
@@ -92,8 +92,8 @@ export default function App() {
   const [soundReady, setSoundReady] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected');
 
-  // Derive connection state from connection status
-  const isConnected = connectionStatus === 'connected';
+  // Derive connection state from connection status and game state
+  const isConnected = connectionStatus === 'connected' && gameState !== null && roomId !== '';
 
     // Game preferences and statistics
   const defaultPreferences = {
@@ -149,13 +149,14 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
   };
 
   const joinRoomMutation = useMutation(api.joinRoom.joinRoom);
+  const setPlayerReadyMutation = useMutation(api.setPlayerReady.setPlayerReady);
+  
   const joinRoom = async (targetRoomId?: string, targetPlayerName?: string) => {
-    console.log('joinRoom called with:', { targetRoomId, targetPlayerName, roomId, playerName });
-    
+    console.log('🎯 joinRoom function called!');
     const roomToJoin = targetRoomId || roomId;
     const nameToUse = targetPlayerName || playerName;
     
-    console.log('Using values:', { roomToJoin, nameToUse });
+    console.log('🚀 Joining room:', { roomToJoin, nameToUse });
     
     if (!roomToJoin || !nameToUse) {
       setError('Please enter room ID and player name');
@@ -167,14 +168,12 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
       setConnectionStatus('connecting');
       
       // Use the actual Convex mutation
-      const mutationArgs = { 
+      const response = await joinRoomMutation({ 
         roomId: roomToJoin, 
         playerName: nameToUse 
-      };
+      });
       
-      console.log('Calling joinRoomMutation with:', mutationArgs);
-      
-      const response = await joinRoomMutation(mutationArgs);
+      console.log('✅ Join room response:', response);
       
       if (!response) {
         throw new Error("Failed to join room");
@@ -184,8 +183,20 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
       setPlayerId(response.playerId);
       setGameState(response.gameState);
       setConnectionStatus('connected');
+      
+      console.log('🎯 Updated game state:', {
+        phase: response.gameState.phase,
+        players: response.gameState.players?.length || 0,
+        shouldShowDealer: response.gameState.phase === 'dealer'
+      });
     } catch (error: any) {
-      console.error("Error joining room:", error);
+      console.error("❌ Error joining room:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        roomId: roomToJoin,
+        playerName: nameToUse
+      });
       const errorMsg = error?.message || String(error);
       setError(errorMsg);
       setConnectionStatus('disconnected');
@@ -233,33 +244,38 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     setPreviousGameState(gameState)
   }, [gameState, previousGameState, playerId, preferences.statisticsEnabled, preferences.soundEnabled, soundReady, statistics, updateStatistics])
 
-  // Poll for game state updates (Convex or local mock)
-  const pollGameState = useCallback(async () => {
-    if (!roomId) return;
-    setConnectionStatus('connecting');
-    // TODO: Replace with Convex query or local mock
-    // Example: const data = await convex.query('getGameState', { roomId });
-    // For now, just simulate success
-    setTimeout(() => {
-      setGameState((prev) => prev || {
-        ...initialGameState,
-        roomId,
-        phase: 'waiting',
-        players: []
-      });
-      setError('');
-      setConnectionStatus('connected');
-    }, 200);
-  }, [roomId]);
+  // No polling needed - using real-time Convex subscription instead
 
-  // Set up polling when connected
+  // Real-time game state subscription - only when we have a valid roomId AND we're actually in the game
+  const gameStateData = useQuery(
+    api.getGameState.getGameState, 
+    roomId && roomId.trim() && roomId.length > 0 && roomId !== '' && playerId ? { roomId } : "skip"
+  );
+  
+  // Update local game state when Convex data changes
   useEffect(() => {
-    if (!isConnected || !roomId) return
+    if (gameStateData && gameStateData.gameState && roomId) {
+      console.log('🔄 Game state updated from Convex:', {
+        phase: gameStateData.gameState.phase,
+        players: gameStateData.gameState.players?.length || 0,
+        roomId: gameStateData.gameState.roomId
+      });
+      setGameState(gameStateData.gameState);
+      setConnectionStatus('connected');
+    }
+  }, [gameStateData, roomId]);
 
-    // Poll more frequently during active phases
-    const interval = setInterval(pollGameState, 1000)
-    return () => clearInterval(interval)
-  }, [isConnected, roomId, pollGameState])
+  // Force refresh game state every 2 seconds to catch real-time updates
+  useEffect(() => {
+    if (roomId && playerId && connectionStatus === 'connected') {
+      const interval = setInterval(() => {
+        console.log('🔄 Periodic game state refresh for room:', roomId);
+        // The useQuery will automatically refetch
+      }, 2000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [roomId, playerId, connectionStatus]);
 
   const startShuffle = async () => {
     if (!roomId || !playerId) return;
@@ -478,6 +494,14 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
 
             {/* Enhanced Waiting for Players */}
             {gameState?.phase === 'waiting' && gameState && (
+              <>
+                {/* Debug info */}
+                <div className="fixed top-4 left-4 bg-black/80 text-white p-2 rounded text-xs z-50">
+                  Debug: Phase={gameState.phase}, Players={gameState.players?.length || 0}
+                </div>
+              </>
+            )}
+            {gameState?.phase === 'waiting' && gameState && (
               <Card className="backdrop-casino border-0 shadow-casino-lg overflow-hidden">
                 <CardContent className="p-10">
                   <div className="text-center">
@@ -602,7 +626,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
             )}
 
             {/* Game Phases */}
-            {gameState?.phase !== 'waiting' && playerId && (
+            {gameState?.phase && gameState.phase !== 'waiting' && playerId && (
               <GamePhases
                 gameState={gameState}
                 playerId={playerId}
@@ -610,6 +634,38 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                 onSelectFaceUpCards={selectFaceUpCards}
                 onPlayCard={playCard}
                 onResetGame={resetGame}
+                onPlayerReady={async () => {
+                  if (!roomId || !playerId) return;
+                  try {
+                    const response = await setPlayerReadyMutation({ 
+                      roomId, 
+                      playerId, 
+                      isReady: true 
+                    });
+                    if (response) {
+                      setGameState(response.gameState);
+                    }
+                  } catch (error: any) {
+                    console.error('Error setting player ready:', error);
+                    setError(error?.message || 'Failed to set player ready status');
+                  }
+                }}
+                onPlayerNotReady={async () => {
+                  if (!roomId || !playerId) return;
+                  try {
+                    const response = await setPlayerReadyMutation({ 
+                      roomId, 
+                      playerId, 
+                      isReady: false 
+                    });
+                    if (response) {
+                      setGameState(response.gameState);
+                    }
+                  } catch (error: any) {
+                    console.error('Error setting player not ready:', error);
+                    setError(error?.message || 'Failed to set player ready status');
+                  }
+                }}
                 preferences={preferences}
               />
             )}

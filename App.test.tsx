@@ -66,13 +66,37 @@ vi.mock('convex/react', async () => {
             playerId: 2,
             gameState: require('./tests/test-utils').createMockGameState({ 
               roomId, 
-              phase: 'waiting',
+              phase: 'dealer',
               players: [{ id: 1, name: 'Host' }, { id: 2, name: playerName }]
             })
           };
         });
       }
+      if (fn.name === 'setPlayerReady') {
+        return createMockMutation(async ({ roomId, playerId, isReady }: { roomId: string, playerId: number, isReady: boolean }) => {
+          return {
+            gameState: require('./tests/test-utils').createMockGameState({ 
+              roomId,
+              phase: isReady ? 'countdown' : 'dealer',
+              player1Ready: playerId === 1 ? isReady : false,
+              player2Ready: playerId === 2 ? isReady : false
+            })
+          };
+        });
+      }
       return createMockMutation(vi.fn());
+    },
+    useQuery: (fn: any, args: any) => {
+      if (fn.name === 'getGameState' && args && args !== 'skip') {
+        return {
+          gameState: require('./tests/test-utils').createMockGameState({ 
+            roomId: args.roomId,
+            phase: 'waiting',
+            players: []
+          })
+        };
+      }
+      return null;
     },
     ConvexProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   };

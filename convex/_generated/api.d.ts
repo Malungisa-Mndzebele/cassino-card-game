@@ -19,8 +19,10 @@ import type * as joinRoom from "../joinRoom.js";
 import type * as playCard from "../playCard.js";
 import type * as resetGame from "../resetGame.js";
 import type * as selectFaceUpCards from "../selectFaceUpCards.js";
+import type * as setPlayerReady from "../setPlayerReady.js";
 import type * as startShuffle from "../startShuffle.js";
 import type * as types from "../types.js";
+import type * as updateCountdown from "../updateCountdown.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -37,8 +39,10 @@ declare const fullApi: ApiFromModules<{
   playCard: typeof playCard;
   resetGame: typeof resetGame;
   selectFaceUpCards: typeof selectFaceUpCards;
+  setPlayerReady: typeof setPlayerReady;
   startShuffle: typeof startShuffle;
   types: typeof types;
+  updateCountdown: typeof updateCountdown;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

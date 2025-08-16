@@ -29,6 +29,15 @@ export function RoomManager({
   isLoading
 }: RoomManagerProps) {
   const [showJoinForm, setShowJoinForm] = useState(false)
+  
+  // Debug logging
+  console.log('🏠 RoomManager render:', { 
+    showJoinForm, 
+    playerName, 
+    roomId, 
+    hasPlayerName: !!playerName.trim(),
+    hasRoomId: !!roomId.trim()
+  });
 
   const generateRoomId = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -167,6 +176,10 @@ export function RoomManager({
 
                   {!showJoinForm ? (
                     <div className="space-y-6">
+                      {/* Debug indicator */}
+                      <div className="text-center text-xs text-casino-gold bg-black/20 p-2 rounded">
+                        🎯 CREATE FORM ACTIVE
+                      </div>
                       <Button
                         onClick={onCreateRoom}
                         disabled={!playerName.trim() || isLoading}
@@ -196,7 +209,10 @@ export function RoomManager({
                       </div>
 
                       <Button
-                        onClick={() => setShowJoinForm(true)}
+                        onClick={() => {
+                          console.log('🔘 Show Join Form button clicked!');
+                          setShowJoinForm(true);
+                        }}
                         variant="outline"
                         data-testid="show-join-form-test"
                         className="w-full h-14 text-lg font-bold border-casino-blue text-casino-blue hover:bg-casino-blue/10 hover:border-casino-blue-light backdrop-casino-dark rounded-xl transition-all duration-300"
@@ -209,6 +225,10 @@ export function RoomManager({
                     </div>
                   ) : (
                     <div className="space-y-6">
+                      {/* Debug indicator */}
+                      <div className="text-center text-xs text-casino-blue bg-black/20 p-2 rounded">
+                        🎯 JOIN FORM ACTIVE
+                      </div>
                       <div className="backdrop-casino-dark rounded-xl p-6 border border-casino-blue/30">
                         <Label htmlFor="roomId" className="text-casino-blue-light font-medium text-lg mb-3 block">
                           Room Code
@@ -234,7 +254,11 @@ export function RoomManager({
                       </div>
 
                       <Button
-                        onClick={() => onJoinRoom()}
+                        onClick={() => {
+                          console.log('🔘 Join Game button clicked!');
+                          console.log('📝 Current values:', { playerName, roomId, isLoading });
+                          onJoinRoom();
+                        }}
                         disabled={!playerName.trim() || !roomId.trim() || isLoading}
                         data-testid="join-room-submit-test"
                         className="w-full h-14 text-lg font-bold bg-gradient-to-r from-casino-blue to-casino-blue-light hover:from-casino-blue-light hover:to-casino-blue text-white shadow-casino border-0 rounded-xl transition-all duration-300 disabled:opacity-50"
