@@ -179,11 +179,13 @@
   /* Prevent flickering during initial load */
   #root {
     opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
   }
   
   #root.loaded {
     opacity: 1;
+    visibility: visible;
   }
   
   /* Prevent layout shift during loading */

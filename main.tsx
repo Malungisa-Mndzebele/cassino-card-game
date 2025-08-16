@@ -20,9 +20,35 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
 
 import { ConvexProvider } from './convexClient';
 
-// Add loaded class to prevent flickering
+// Wait for DOM and CSS to be ready before showing content
 const root = document.getElementById('root')!;
-root.classList.add('loaded');
+
+// Function to add loaded class when everything is ready
+function addLoadedClass() {
+  // Ensure we're in the next tick to avoid any remaining flicker
+  requestAnimationFrame(() => {
+    root.classList.add('loaded');
+  });
+}
+
+// Wait for all resources to be loaded
+function waitForLoad() {
+  if (document.readyState === 'complete') {
+    // All resources loaded, show content
+    addLoadedClass();
+  } else {
+    // Wait for load event
+    window.addEventListener('load', addLoadedClass);
+  }
+}
+
+// Start the loading process
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', waitForLoad);
+} else {
+  // DOM is already ready, wait for resources
+  waitForLoad();
+}
 
 ReactDOM.createRoot(root).render(
   <ConvexProvider>

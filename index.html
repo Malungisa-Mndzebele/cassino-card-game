@@ -40,6 +40,28 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="dns-prefetch" href="//supabase.co">
     
+    <!-- Critical CSS to prevent flickering -->
+    <style>
+      #root {
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+      }
+      #root.loaded {
+        opacity: 1;
+        visibility: visible;
+      }
+      html, body {
+        overflow-x: hidden;
+        scroll-behavior: smooth;
+      }
+      * {
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        transform: translateZ(0);
+      }
+    </style>
+    
     <!-- Performance and SEO -->
     <meta name="robots" content="index, follow" />
     <meta name="googlebot" content="index, follow" />
