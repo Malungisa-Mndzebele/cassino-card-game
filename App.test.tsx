@@ -34,7 +34,7 @@ vi.mock('convex/react', async () => {
     useMutation: (fn: any) => {
       if (fn.name === 'createRoom') {
         return createMockMutation(async ({ playerName }: { playerName: string }) => {
-          await new Promise(res => setTimeout(res, 500));
+          // Remove the artificial delay to reduce act() warnings
           if (globalThis.mockError) {
             const error = new Error(globalThis.mockError);
             error.name = 'ConvexError';
@@ -54,7 +54,7 @@ vi.mock('convex/react', async () => {
       }
       if (fn.name === 'joinRoom') {
         return createMockMutation(async ({ roomId, playerName }: { roomId: string, playerName: string }) => {
-          await new Promise(res => setTimeout(res, 500));
+          // Remove the artificial delay to reduce act() warnings
           if (!roomId || !playerName) {
             throw new Error('Please enter room ID and player name');
           }
@@ -163,6 +163,11 @@ vi.mock('./components/GamePhases', () => ({
 vi.mock('./components/RoomManager', () => ({
   RoomManager: ({ roomId = '', setRoomId = () => {}, playerName = '', setPlayerName = () => {}, onCreateRoom = () => {}, onJoinRoom = () => {}, error, isLoading }: any) => {
     const [showJoinForm, setShowJoinForm] = React.useState(false);
+    
+    const handleShowJoinForm = () => {
+      setShowJoinForm(true);
+    };
+    
     return (
       <div data-testid="room-manager-test">
         {showJoinForm ? (
@@ -171,17 +176,12 @@ vi.mock('./components/RoomManager', () => ({
               data-testid="room-id-input-test" 
               value={roomId} 
               onChange={(e) => setRoomId(e.target.value)} 
-              placeholder="Room ID"
-            />
-            <input 
-              data-testid="player-name-input-join-test" 
-              value={playerName} 
-              onChange={(e) => setPlayerName(e.target.value)} 
-              placeholder="Player Name"
+              placeholder="Room Code (e.g., ABC123)"
             />
             <button onClick={onJoinRoom} disabled={isLoading} data-testid="join-room-submit-test">
-              {isLoading ? 'Joining...' : 'Join Room'}
+              {isLoading ? 'Joining...' : 'Join Game'}
             </button>
+            <button onClick={() => setShowJoinForm(false)} data-testid="cancel-join-test">Cancel</button>
           </>
         ) : (
           <>
@@ -189,12 +189,12 @@ vi.mock('./components/RoomManager', () => ({
               data-testid="player-name-input-create-test" 
               value={playerName} 
               onChange={(e) => setPlayerName(e.target.value)} 
-              placeholder="Player Name"
+              placeholder="Enter your player name"
             />
             <button onClick={onCreateRoom} disabled={isLoading} data-testid="create-room-test">
-              {isLoading ? 'Creating...' : 'Create Room'}
+              {isLoading ? 'Creating Room...' : 'Create New Game'}
             </button>
-            <button onClick={() => setShowJoinForm(true)} data-testid="show-join-form-test">Join Room</button>
+            <button onClick={handleShowJoinForm} data-testid="show-join-form-test">Join Existing Game</button>
           </>
         )}
         {error && <div data-testid="error-message-test">{error}</div>}
@@ -235,23 +235,33 @@ describe('App Component', () => {
       
       let roomManager;
       try {
-        roomManager = await screen.findByTestId('room-manager-test', {}, { timeout: 2000 });
+        await act(async () => {
+          roomManager = await screen.findByTestId('room-manager-test', {}, { timeout: 2000 });
+        });
       } catch (e) {
         throw new Error('room-manager-test not found. DOM:\n' + document.body.innerHTML);
       }
       expect(roomManager).toBeInTheDocument();
-      expect(await screen.findByTestId('sound-system-test')).toBeInTheDocument();
+      await act(async () => {
+        expect(await screen.findByTestId('sound-system-test')).toBeInTheDocument();
+      });
     });
   });
 
   describe('Player Game Creation', () => {
     it('should allow a player to create a game', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      await act(async () => {
+        renderWithProviders(<App />);
+      });
       // Enter player name
-      await user.type(screen.getByTestId('player-name-input-create-test'), 'Test Player');
+      await act(async () => {
+        await user.type(screen.getByTestId('player-name-input-create-test'), 'Test Player');
+      });
       // Click create room
-      await user.click(screen.getByTestId('create-room-test'));
+      await act(async () => {
+        await user.click(screen.getByTestId('create-room-test'));
+      });
       // Should be able to click the button (basic functionality test)
       expect(screen.getByTestId('create-room-test')).toBeInTheDocument();
       expect(screen.getByTestId('player-name-input-create-test')).toHaveValue('Test Player');
@@ -261,36 +271,45 @@ describe('App Component', () => {
   describe('Second Player Joining', () => {
     it('should allow a second player to join an existing game', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      await act(async () => {
+        renderWithProviders(<App />);
+      });
       
       // Show join room form
-      await user.click(screen.getByTestId('show-join-form-test'));
+      await act(async () => {
+        await user.click(screen.getByTestId('show-join-form-test'));
+      });
       
       // Fill in room details for second player
-      await user.type(screen.getByTestId('player-name-input-join-test'), 'Second Player');
-      await user.type(screen.getByTestId('room-id-input-test'), 'TEST123');
+      await act(async () => {
+        await user.type(screen.getByTestId('room-id-input-test'), 'TEST123');
+      });
       
       // Click join room
-      await user.click(screen.getByTestId('join-room-submit-test'));
+      await act(async () => {
+        await user.click(screen.getByTestId('join-room-submit-test'));
+      });
       
       // Verify the form elements exist and can be interacted with
-      expect(screen.getByTestId('player-name-input-join-test')).toHaveValue('Second Player');
       expect(screen.getByTestId('room-id-input-test')).toHaveValue('TEST123');
       expect(screen.getByTestId('join-room-submit-test')).toBeInTheDocument();
     });
 
     it('should show join room form when join button is clicked', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      await act(async () => {
+        renderWithProviders(<App />);
+      });
       
       // Initially, join form should not be visible
-      expect(screen.queryByTestId('player-name-input-join-test')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('room-id-input-test')).not.toBeInTheDocument();
       
       // Click join room button to show form
-      await user.click(screen.getByTestId('show-join-form-test'));
+      await act(async () => {
+        await user.click(screen.getByTestId('show-join-form-test'));
+      });
       
       // Join form should now be visible
-      expect(screen.getByTestId('player-name-input-join-test')).toBeInTheDocument();
       expect(screen.getByTestId('room-id-input-test')).toBeInTheDocument();
       expect(screen.getByTestId('join-room-submit-test')).toBeInTheDocument();
     });
@@ -299,11 +318,15 @@ describe('App Component', () => {
   describe('Game Flow', () => {
     it('should start game when both players join and shuffle is clicked', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      await act(async () => {
+        renderWithProviders(<App />);
+      });
       
       // Create a room as first player
-      await user.type(screen.getByTestId('player-name-input-create-test'), 'Player 1');
-      await user.click(screen.getByTestId('create-room-test'));
+      await act(async () => {
+        await user.type(screen.getByTestId('player-name-input-create-test'), 'Player 1');
+        await user.click(screen.getByTestId('create-room-test'));
+      });
       
       // Since the mock is not working correctly, let's test what we can verify
       // The room manager should still be visible after clicking create
@@ -322,11 +345,15 @@ describe('App Component', () => {
 
     it('should allow players to play cards and capture/build', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      await act(async () => {
+        renderWithProviders(<App />);
+      });
       
       // Create a room as first player
-      await user.type(screen.getByTestId('player-name-input-create-test'), 'Player 1');
-      await user.click(screen.getByTestId('create-room-test'));
+      await act(async () => {
+        await user.type(screen.getByTestId('player-name-input-create-test'), 'Player 1');
+        await user.click(screen.getByTestId('create-room-test'));
+      });
       
       // Verify basic UI elements are present and functional
       expect(screen.getByTestId('room-manager-test')).toBeInTheDocument();
@@ -337,11 +364,17 @@ describe('App Component', () => {
       expect(screen.getByTestId('show-join-form-test')).toBeInTheDocument();
       
       // Test that we can switch to join form
-      await user.click(screen.getByTestId('show-join-form-test'));
+      await act(async () => {
+        await user.click(screen.getByTestId('show-join-form-test'));
+      });
+      
+      // Wait for the join form to appear
+      await waitFor(() => {
+        expect(screen.getByTestId('room-id-input-test')).toBeInTheDocument();
+      });
       
       // Verify join form elements are present
       expect(screen.getByTestId('room-id-input-test')).toBeInTheDocument();
-      expect(screen.getByTestId('player-name-input-join-test')).toBeInTheDocument();
       expect(screen.getByTestId('join-room-submit-test')).toBeInTheDocument();
       
       // This test verifies that the basic game flow UI elements are working
@@ -351,27 +384,36 @@ describe('App Component', () => {
 
     it('should handle win/loss conditions correctly', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      await act(async () => {
+        renderWithProviders(<App />);
+      });
       
       // Test basic room creation flow
-      await user.type(screen.getByTestId('player-name-input-create-test'), 'Winner');
-      await user.click(screen.getByTestId('create-room-test'));
+      await act(async () => {
+        await user.type(screen.getByTestId('player-name-input-create-test'), 'Winner');
+        await user.click(screen.getByTestId('create-room-test'));
+      });
       
       // Verify room manager is still functional
       expect(screen.getByTestId('room-manager-test')).toBeInTheDocument();
       expect(screen.getByTestId('player-name-input-create-test')).toHaveValue('Winner');
       
       // Test join room flow for second player
-      await user.click(screen.getByTestId('show-join-form-test'));
-      await user.type(screen.getByTestId('room-id-input-test'), 'GAME123');
+      await act(async () => {
+        await user.click(screen.getByTestId('show-join-form-test'));
+      });
       
-      // Clear the player name input before typing the second player name
-      await user.clear(screen.getByTestId('player-name-input-join-test'));
-      await user.type(screen.getByTestId('player-name-input-join-test'), 'Loser');
+      // Wait for the join form to appear
+      await waitFor(() => {
+        expect(screen.getByTestId('room-id-input-test')).toBeInTheDocument();
+      });
+      
+      await act(async () => {
+        await user.type(screen.getByTestId('room-id-input-test'), 'GAME123');
+      });
       
       // Verify join form data is captured correctly
       expect(screen.getByTestId('room-id-input-test')).toHaveValue('GAME123');
-      expect(screen.getByTestId('player-name-input-join-test')).toHaveValue('Loser');
       
       // This test verifies that the game can handle multiple players
       // and that the UI properly manages player interactions
@@ -380,25 +422,34 @@ describe('App Component', () => {
 
     it('should handle error scenarios gracefully', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      await act(async () => {
+        renderWithProviders(<App />);
+      });
       
       // Test error handling for empty player name
-      await user.click(screen.getByTestId('create-room-test'));
+      await act(async () => {
+        await user.click(screen.getByTestId('create-room-test'));
+      });
       
       // Should show error message for empty player name
       expect(screen.getByTestId('error-message-test')).toBeInTheDocument();
       expect(screen.getByTestId('error-message-test')).toHaveTextContent('Please enter your name');
       
       // Test that we can still interact with the form after error
-      await user.type(screen.getByTestId('player-name-input-create-test'), 'Test Player');
+      await act(async () => {
+        await user.type(screen.getByTestId('player-name-input-create-test'), 'Test Player');
+      });
       expect(screen.getByTestId('player-name-input-create-test')).toHaveValue('Test Player');
       
       // Test join room error handling
-      await user.click(screen.getByTestId('show-join-form-test'));
+      await act(async () => {
+        await user.click(screen.getByTestId('show-join-form-test'));
+      });
       
       // Try to join without room ID
-      await user.type(screen.getByTestId('player-name-input-join-test'), 'Player 2');
-      await user.click(screen.getByTestId('join-room-submit-test'));
+      await act(async () => {
+        await user.click(screen.getByTestId('join-room-submit-test'));
+      });
       
       // Should handle the error gracefully (the mock will show an error)
       expect(screen.getByTestId('join-room-submit-test')).toBeInTheDocument();
@@ -410,25 +461,36 @@ describe('App Component', () => {
 
     it('should manage player turns correctly', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      await act(async () => {
+        renderWithProviders(<App />);
+      });
       
       // Test complete game setup flow
-      await user.type(screen.getByTestId('player-name-input-create-test'), 'Player 1');
-      await user.click(screen.getByTestId('create-room-test'));
+      await act(async () => {
+        await user.type(screen.getByTestId('player-name-input-create-test'), 'Player 1');
+        await user.click(screen.getByTestId('create-room-test'));
+      });
       
       // Verify room creation flow
       expect(screen.getByTestId('room-manager-test')).toBeInTheDocument();
       expect(screen.getByTestId('player-name-input-create-test')).toHaveValue('Player 1');
       
       // Test second player joining
-      await user.click(screen.getByTestId('show-join-form-test'));
-      await user.type(screen.getByTestId('room-id-input-test'), 'ROOM456');
-      await user.clear(screen.getByTestId('player-name-input-join-test'));
-      await user.type(screen.getByTestId('player-name-input-join-test'), 'Player 2');
+      await act(async () => {
+        await user.click(screen.getByTestId('show-join-form-test'));
+      });
+      
+      // Wait for the join form to appear
+      await waitFor(() => {
+        expect(screen.getByTestId('room-id-input-test')).toBeInTheDocument();
+      });
+      
+      await act(async () => {
+        await user.type(screen.getByTestId('room-id-input-test'), 'ROOM456');
+      });
       
       // Verify both players can be set up
       expect(screen.getByTestId('room-id-input-test')).toHaveValue('ROOM456');
-      expect(screen.getByTestId('player-name-input-join-test')).toHaveValue('Player 2');
       
       // Test that the join form UI remains functional
       expect(screen.getByTestId('join-room-submit-test')).toBeInTheDocument();
