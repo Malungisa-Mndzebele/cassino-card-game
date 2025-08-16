@@ -3,7 +3,7 @@
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "types": ["jest", "@testing-library/jest-dom", "node"],
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "module": "ESNext",
     "skipLibCheck": true,
 
@@ -12,7 +12,9 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
+    "noEmit": false,
+    "emitDeclarationOnly": false,
+    "declaration": false,
     "jsx": "react-jsx",
 
     /* Linting */
@@ -36,7 +38,11 @@
   "exclude": [
     "node_modules",
     "dist",
-    "supabase/functions/_shared"
+    "supabase/functions/_shared",
+    "_trash/**/*",
+    "LICENSE/**/*",
+    "vite.config.ts",
+    "vitest.config.ts"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

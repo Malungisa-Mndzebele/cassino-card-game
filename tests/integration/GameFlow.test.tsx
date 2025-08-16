@@ -84,7 +84,6 @@ vi.mock('../../components/RoomManager', () => ({
     
     return (
       <div data-testid="room-manager">
-        {error && <div data-testid="error-message">{error}</div>}
         
         {showJoinForm ? (
           <div data-testid="join-form">
@@ -136,14 +135,13 @@ vi.mock('../../components/GameSettings', () => ({
     };
     
     return (
-      <div data-testid="game-settings">
+      <div>
         <button 
           onClick={toggleSound}
           data-testid="toggle-sound-btn"
         >
           Sound: {soundEnabled ? 'On' : 'Off'}
         </button>
-        {statistics && <div data-testid="statistics">Games: {statistics.gamesPlayed}</div>}
       </div>
     );
   },

@@ -104,6 +104,7 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
                 id="sound-enabled"
                 role="switch"
                 aria-label="Enable sound effects"
+                data-testid="toggle-sound-btn"
                 checked={preferences.soundEnabled}
                 onCheckedChange={(checked) => updatePreference('soundEnabled', checked)}
               />
