@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { Crown, Star } from 'lucide-react'
+import { Crown, Star, Sparkles } from 'lucide-react'
 
 interface CardProps {
   card: {
@@ -30,9 +30,13 @@ export function Card({
     return (
       <div className={`
         ${size === 'small' ? 'w-12 h-16' : size === 'large' ? 'w-20 h-28' : 'w-16 h-24'}
-        bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center
+        bg-gradient-to-br from-gray-50 to-gray-100 
+        border-2 border-dashed border-gray-300 
+        rounded-xl flex items-center justify-center
+        transition-all duration-300 hover:border-gray-400
+        shadow-inner
       `}>
-        <div className="text-gray-400 text-xs">Empty</div>
+        <div className="text-gray-400 text-xs font-medium">Empty</div>
       </div>
     )
   }
@@ -48,7 +52,24 @@ export function Card({
   }
 
   const getSuitColor = (suit: string) => {
-    return suit === 'hearts' || suit === 'diamonds' ? 'text-red-500' : 'text-gray-800'
+    return suit === 'hearts' || suit === 'diamonds' 
+      ? 'text-casino-red' 
+      : 'text-gray-800'
+  }
+
+  const getSuitGradient = (suit: string) => {
+    switch (suit) {
+      case 'hearts': 
+        return 'from-casino-red-light to-casino-red-dark'
+      case 'diamonds': 
+        return 'from-casino-blue-light to-casino-blue-dark'
+      case 'clubs': 
+        return 'from-gray-700 to-gray-900'
+      case 'spades': 
+        return 'from-gray-800 to-black'
+      default: 
+        return 'from-gray-600 to-gray-800'
+    }
   }
 
   const getCardValue = (rank: string) => {
@@ -79,6 +100,7 @@ export function Card({
   const { suit, rank } = card
   const suitSymbol = getSuitSymbol(suit)
   const suitColor = getSuitColor(suit)
+  const suitGradient = getSuitGradient(suit)
   const points = getCardPoints()
   const special = isSpecialCard()
 
@@ -91,82 +113,102 @@ export function Card({
   const cardContent = (
     <div className={`
       ${sizeClasses[size]}
-      relative bg-white rounded-lg shadow-lg border-2 transition-all duration-200
+      relative bg-gradient-to-br from-white via-gray-50 to-white
+      rounded-xl shadow-lg border-2 
+      transition-all duration-300 ease-out
+      card-hover
       ${selected 
-        ? 'border-emerald-500 ring-4 ring-emerald-200 shadow-emerald-200/50 transform -translate-y-2 shadow-2xl' 
+        ? 'border-casino-gold ring-4 ring-casino-gold/30 shadow-glow-gold transform -translate-y-2 shadow-2xl' 
         : highlighted 
-        ? 'border-yellow-400 ring-2 ring-yellow-200 shadow-yellow-200/50' 
-        : 'border-gray-200 hover:border-gray-300'
+        ? 'border-casino-blue ring-3 ring-casino-blue/30 shadow-casino' 
+        : special
+        ? 'border-casino-purple/40 shadow-casino hover:border-casino-purple'
+        : 'border-gray-200 hover:border-gray-300 hover:shadow-casino'
       }
-      ${disabled 
-        ? 'opacity-50 cursor-not-allowed' 
-        : 'hover:shadow-xl hover:-translate-y-1 cursor-pointer'
-      }
-      ${special ? 'bg-gradient-to-br from-yellow-50 to-orange-50' : 'bg-white'}
+      ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+      ${onClick ? 'hover:scale-105 active:scale-95' : ''}
+      overflow-hidden
     `}>
-      {/* Special card indicator */}
-      {special && showPoints && (
-        <div className="absolute -top-1 -right-1 z-10">
-          <Badge 
-            variant="secondary" 
-            className="h-5 px-1.5 text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 shadow-lg"
-          >
-            {points === 2 ? (
-              <Crown className="w-3 h-3" />
-            ) : (
-              <Star className="w-3 h-3" />
-            )}
-          </Badge>
+      {/* Background pattern for special cards */}
+      {special && (
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-1 right-1">
+            <Sparkles className="w-3 h-3" />
+          </div>
+          <div className="absolute bottom-1 left-1">
+            <Sparkles className="w-3 h-3" />
+          </div>
         </div>
       )}
 
-      {/* Card content */}
-      <div className="flex flex-col justify-between h-full p-1.5">
-        {/* Top rank and suit */}
-        <div className="flex flex-col items-start">
-          <div className={`font-bold ${suitColor} leading-none`}>
+      {/* Shimmer effect on hover */}
+      <div className="absolute inset-0 shimmer opacity-0 hover:opacity-100 transition-opacity duration-300" />
+      
+      {/* Main card content */}
+      <div className="relative h-full flex flex-col justify-between p-2">
+        {/* Top corner - rank and suit */}
+        <div className={`flex flex-col items-center ${suitColor} font-bold leading-none`}>
+          <div className={`${size === 'small' ? 'text-xs' : 'text-sm'} font-black`}>
             {rank}
           </div>
-          <div className={`${suitColor} leading-none ${size === 'small' ? 'text-xs' : 'text-sm'}`}>
+          <div className={`${size === 'small' ? 'text-xs' : 'text-base'} leading-none mt-0.5 
+            bg-gradient-to-br ${suitGradient} bg-clip-text text-transparent font-black`}>
             {suitSymbol}
           </div>
         </div>
 
-        {/* Center suit symbol (for larger cards) */}
-        {size !== 'small' && (
-          <div className={`text-center ${suitColor} ${size === 'large' ? 'text-2xl' : 'text-lg'} opacity-20`}>
-            {suitSymbol}
+        {/* Center suit symbol (for face cards and aces) */}
+        {(rank === 'A' || rank === 'K' || rank === 'Q' || rank === 'J') && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className={`
+              ${size === 'small' ? 'text-xl' : size === 'large' ? 'text-4xl' : 'text-2xl'} 
+              font-black opacity-20
+              bg-gradient-to-br ${suitGradient} bg-clip-text text-transparent
+            `}>
+              {rank === 'A' ? suitSymbol : rank}
+            </div>
           </div>
         )}
 
-        {/* Bottom rank and suit (rotated) */}
-        <div className="flex flex-col items-end transform rotate-180">
-          <div className={`font-bold ${suitColor} leading-none`}>
+        {/* Bottom corner - rank and suit (rotated) */}
+        <div className={`flex flex-col items-center ${suitColor} font-bold leading-none self-end transform rotate-180`}>
+          <div className={`${size === 'small' ? 'text-xs' : 'text-sm'} font-black`}>
             {rank}
           </div>
-          <div className={`${suitColor} leading-none ${size === 'small' ? 'text-xs' : 'text-sm'}`}>
+          <div className={`${size === 'small' ? 'text-xs' : 'text-base'} leading-none mt-0.5 
+            bg-gradient-to-br ${suitGradient} bg-clip-text text-transparent font-black`}>
             {suitSymbol}
           </div>
         </div>
       </div>
 
-      {/* Points indicator for special cards */}
-      {special && showPoints && points > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/10 to-transparent rounded-b-lg">
-          <div className="text-center text-xs font-bold text-gray-600 py-0.5">
-            {points}pt{points > 1 ? 's' : ''}
-          </div>
+      {/* Points badge for special cards */}
+      {showPoints && points > 0 && (
+        <div className="absolute -top-2 -right-2">
+          <Badge className={`
+            ${size === 'small' ? 'text-xs px-1.5 py-0.5' : 'text-xs px-2 py-1'}
+            bg-gradient-to-r from-casino-gold to-casino-gold-dark 
+            text-white font-bold shadow-gold border-0
+            animate-pulse-slow
+          `}>
+            {points === 2 ? (
+              <div className="flex items-center space-x-0.5">
+                <Crown className="w-2.5 h-2.5" />
+                <span>{points}</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-0.5">
+                <Star className="w-2.5 h-2.5" />
+                <span>{points}</span>
+              </div>
+            )}
+          </Badge>
         </div>
       )}
 
-      {/* Selection overlay */}
-      {selected && (
-        <div className="absolute inset-0 bg-emerald-500/10 rounded-lg pointer-events-none"></div>
-      )}
-
-      {/* Highlight overlay */}
-      {highlighted && !selected && (
-        <div className="absolute inset-0 bg-yellow-400/10 rounded-lg pointer-events-none"></div>
+      {/* Special card glow effect */}
+      {special && selected && (
+        <div className="absolute inset-0 bg-gradient-to-br from-casino-gold/20 via-transparent to-casino-purple/20 rounded-xl pointer-events-none" />
       )}
     </div>
   )
@@ -175,12 +217,8 @@ export function Card({
     return (
       <Button
         variant="ghost"
-        className="p-0 h-auto border-0 bg-transparent hover:bg-transparent"
+        className="p-0 h-auto w-auto bg-transparent hover:bg-transparent border-0 shadow-none"
         onClick={() => onClick(card)}
-        aria-label={`${rank} of ${suit}${special ? ` (${points} point${points > 1 ? 's' : ''})` : ''}`}
-        aria-pressed={selected}
-        disabled={disabled}
-        tabIndex={disabled ? -1 : 0}
       >
         {cardContent}
       </Button>
