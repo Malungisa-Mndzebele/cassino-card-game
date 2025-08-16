@@ -1,7 +1,8 @@
 import { mutation } from './_generated/server';
 import { v } from 'convex/values';
+import type { GameState, Card } from './types';
 
-import type { GameState, Card, Db } from './types';
+
 
 function createDeck(): Card[] {
   const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
@@ -23,12 +24,12 @@ function createDeck(): Card[] {
 export const resetGame = mutation({
   args: { roomId: v.string() },
   handler: async (
-    ctx: Db,
+    ctx,
     args: { roomId: string }
   ): Promise<{ gameState: GameState }> => {
-    const room = await ctx.db.query('rooms').filter(q => q.eq(q.field('roomId'), args.roomId)).first();
+    const room = await ctx.db.query('rooms').filter((q: any) => q.eq(q.field('roomId'), args.roomId)).first();
     if (!room) throw new Error('Room not found');
-    let gameState: GameState = { ...room.gameState };
+    let gameState: GameState = { ...room.gameState as GameState };
     const deck: Card[] = createDeck();
     gameState.deck = deck;
     gameState.player1Hand = [];

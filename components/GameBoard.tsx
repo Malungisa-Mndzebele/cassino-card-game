@@ -54,9 +54,7 @@ export function GameBoard({ playedCards, deckCount, onDrawCard, canDraw }: GameB
             {lastPlayedCard ? (
               <div className="text-center">
                 <Card
-                  suit={lastPlayedCard.suit}
-                  rank={lastPlayedCard.rank}
-                  id={lastPlayedCard.id}
+                  card={lastPlayedCard}
                   size="large"
                 />
                 <p className="text-white text-sm mt-2">

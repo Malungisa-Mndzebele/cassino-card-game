@@ -1,4 +1,0 @@
-(moved from utils/supabase/info.tsx)
-
-export const projectId = "qkxoaevnwogdjjfieufp"
-export const publicAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFreG9hZXZud29nZGpqZmlldWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5ODk4OTMsImV4cCI6MjA2OTU2NTg5M30.rLwFTuEiLLiQXZvSLpl7-Wpbze_SuvISDFxNZa0Fznk"

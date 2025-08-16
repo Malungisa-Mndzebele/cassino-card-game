@@ -54,7 +54,7 @@ export function createMockGameState(overrides: Partial<any> = {}) {
 
 // Mock fetch response
 export function mockFetch(response: any) {
-  (global.fetch as any) = vi.fn().mockImplementationOnce(() =>
+  (globalThis.fetch as any) = vi.fn().mockImplementationOnce(() =>
     Promise.resolve({
       ok: response.success !== false,
       json: () => Promise.resolve({

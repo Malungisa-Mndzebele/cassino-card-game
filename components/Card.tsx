@@ -15,6 +15,8 @@ interface CardProps {
   highlighted?: boolean
   size?: 'small' | 'normal' | 'large'
   showPoints?: boolean
+  isPlayable?: boolean
+  isHidden?: boolean
 }
 
 export function Card({ 

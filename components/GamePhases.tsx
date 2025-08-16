@@ -180,9 +180,7 @@ export function GamePhases({
               {gameState.deck.slice(0, 20).map((card: GameCard) => (
                 <Card
                   key={card.id}
-                  suit={card.suit}
-                  rank={card.rank}
-                  id={card.id}
+                  card={card}
                   onClick={() => handleCardSelection(card.id)}
                   isPlayable={true}
                   size="small"
@@ -316,9 +314,7 @@ export function GamePhases({
                   {myCaptures.slice(-10).map((card: GameCard, index: number) => (
                     <Card
                       key={`${card.id}-${index}`}
-                      suit={card.suit}
-                      rank={card.rank}
-                      id={card.id}
+                      card={card}
                       size="small"
                     />
                   ))}

@@ -130,7 +130,7 @@ export default function App() {
             onSelectFaceUpCards={() => {}}
             onPlayCard={() => {}}
             onResetGame={() => {}}
-            preferences={{ soundEnabled: true, soundVolume: 1 }}
+            preferences={{ soundEnabled: true, soundVolume: 1, hintsEnabled: true, statisticsEnabled: true }}
           />
           <SoundSystem />
         </div>
