@@ -7,7 +7,7 @@ import { Badge } from './components/ui/badge'
 import { Button } from './components/ui/button'
 import { Card, CardContent } from './components/ui/card'
 import { Separator } from './components/ui/separator'
-import { convex } from './convexClient'
+
 import { api } from './convex/_generated/api'
 import { useMutation } from 'convex/react'
 import { Trophy, Users, Clock, Heart, Diamond, Spade, Club, Crown, Star, Wifi, WifiOff } from 'lucide-react'
@@ -150,8 +150,13 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
 
   const joinRoomMutation = useMutation(api.joinRoom.joinRoom);
   const joinRoom = async (targetRoomId?: string, targetPlayerName?: string) => {
+    console.log('joinRoom called with:', { targetRoomId, targetPlayerName, roomId, playerName });
+    
     const roomToJoin = targetRoomId || roomId;
     const nameToUse = targetPlayerName || playerName;
+    
+    console.log('Using values:', { roomToJoin, nameToUse });
+    
     if (!roomToJoin || !nameToUse) {
       setError('Please enter room ID and player name');
       return;
@@ -162,10 +167,14 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
       setConnectionStatus('connecting');
       
       // Use the actual Convex mutation
-      const response = await joinRoomMutation({ 
+      const mutationArgs = { 
         roomId: roomToJoin, 
         playerName: nameToUse 
-      });
+      };
+      
+      console.log('Calling joinRoomMutation with:', mutationArgs);
+      
+      const response = await joinRoomMutation(mutationArgs);
       
       if (!response) {
         throw new Error("Failed to join room");

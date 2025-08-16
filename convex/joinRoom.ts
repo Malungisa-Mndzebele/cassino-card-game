@@ -25,7 +25,7 @@ export const joinRoom = mutation({
       ...room.gameState,
       players: updatedPlayers,
       phase: updatedPlayers.length === 2 ? 'countdown' : room.gameState.phase,
-      countdownStartTime: updatedPlayers.length === 2 ? new Date().toISOString() : room.gameState.countdownStartTime,
+      countdownStartTime: updatedPlayers.length === 2 ? Date.now() : room.gameState.countdownStartTime,
       lastUpdate: new Date().toISOString(),
     };
     await ctx.db.patch(room._id, { players: updatedPlayers, gameState: updatedGameState });

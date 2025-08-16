@@ -234,7 +234,7 @@ export function RoomManager({
                       </div>
 
                       <Button
-                        onClick={onJoinRoom}
+                        onClick={() => onJoinRoom()}
                         disabled={!playerName.trim() || !roomId.trim() || isLoading}
                         data-testid="join-room-submit-test"
                         className="w-full h-14 text-lg font-bold bg-gradient-to-r from-casino-blue to-casino-blue-light hover:from-casino-blue-light hover:to-casino-blue text-white shadow-casino border-0 rounded-xl transition-all duration-300 disabled:opacity-50"
