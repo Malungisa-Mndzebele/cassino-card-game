@@ -5,7 +5,7 @@ import { Label } from './ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
 import { Separator } from './ui/separator'
-import { Dice6, Users, Trophy, Heart, Diamond, Spade, Club, Shuffle, Crown, Star } from 'lucide-react'
+import { Dice6, Users, Trophy, Heart, Diamond, Spade, Club, Shuffle, Crown, Star, Sparkles, Zap } from 'lucide-react'
 
 interface RoomManagerProps {
   roomId: string
@@ -40,312 +40,252 @@ export function RoomManager({
   }
 
   const suitIcons = [
-    { icon: Heart, color: 'text-red-500' },
-    { icon: Diamond, color: 'text-red-500' },
-    { icon: Spade, color: 'text-gray-800' },
-    { icon: Club, color: 'text-gray-800' }
+    { icon: Heart, color: 'text-casino-red-light' },
+    { icon: Diamond, color: 'text-casino-blue-light' },
+    { icon: Spade, color: 'text-white' },
+    { icon: Club, color: 'text-white' }
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-green-800 to-teal-900 relative overflow-hidden">
-      {/* Decorative Background Elements */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-10 left-10 transform rotate-12">
-          <Heart className="w-20 h-20 text-red-300" />
+    <div className="min-h-screen gradient-casino-vibrant relative overflow-hidden">
+      {/* Enhanced Animated background particles */}
+      <div className="particles">
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div
+            key={i}
+            className="particle"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              width: `${Math.random() * 6 + 2}px`,
+              height: `${Math.random() * 6 + 2}px`,
+              animationDelay: `${Math.random() * 6}s`,
+              animationDuration: `${Math.random() * 4 + 3}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Enhanced Decorative Background Elements */}
+      <div className="absolute inset-0 opacity-15">
+        <div className="absolute top-10 left-10 transform rotate-12 floating">
+          <Heart className="w-24 h-24 text-casino-red-light glow-casino" />
         </div>
-        <div className="absolute top-32 right-16 transform -rotate-45">
-          <Spade className="w-16 h-16 text-gray-300" />
+        <div className="absolute top-32 right-16 transform -rotate-45 floating" style={{ animationDelay: '1s' }}>
+          <Spade className="w-20 h-20 text-white glow-casino" />
         </div>
-        <div className="absolute bottom-20 left-20 transform rotate-45">
-          <Diamond className="w-24 h-24 text-red-300" />
+        <div className="absolute bottom-20 left-20 transform rotate-45 floating" style={{ animationDelay: '2s' }}>
+          <Diamond className="w-28 h-28 text-casino-blue-light glow-casino" />
         </div>
-        <div className="absolute bottom-32 right-12 transform -rotate-12">
-          <Club className="w-18 h-18 text-gray-300" />
+        <div className="absolute bottom-32 right-12 transform -rotate-12 floating" style={{ animationDelay: '3s' }}>
+          <Club className="w-22 h-22 text-white glow-casino" />
         </div>
-        <div className="absolute top-1/2 left-1/4 transform rotate-90">
-          <Crown className="w-14 h-14 text-yellow-300" />
+        <div className="absolute top-1/2 left-1/4 transform rotate-90 floating" style={{ animationDelay: '0.5s' }}>
+          <Crown className="w-18 h-18 text-casino-gold glow-gold" />
         </div>
-        <div className="absolute top-1/3 right-1/3 transform -rotate-30">
-          <Star className="w-12 h-12 text-yellow-300" />
+        <div className="absolute top-1/3 right-1/3 transform -rotate-30 floating" style={{ animationDelay: '1.5s' }}>
+          <Star className="w-16 h-16 text-casino-purple-light glow-casino" />
+        </div>
+        <div className="absolute top-2/3 left-3/4 transform rotate-180 floating" style={{ animationDelay: '2.5s' }}>
+          <Sparkles className="w-14 h-14 text-casino-gold glow-gold" />
+        </div>
+        <div className="absolute bottom-1/3 right-2/3 transform -rotate-60 floating" style={{ animationDelay: '4s' }}>
+          <Zap className="w-12 h-12 text-casino-purple glow-casino" />
         </div>
       </div>
 
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="w-full max-w-4xl mx-auto" role="main">
-          {/* Hero Section */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center items-center mb-6">
+      <div className="relative z-10 flex items-center justify-center min-h-screen p-4 lg:p-8">
+        <div className="w-full max-w-5xl mx-auto" role="main">
+          {/* Enhanced Hero Section */}
+          <div className="text-center mb-12">
+            <div className="flex justify-center items-center mb-8">
               <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full blur opacity-30"></div>
-                <div className="relative bg-white rounded-full p-4 shadow-2xl">
-                  <Shuffle className="w-12 h-12 text-emerald-600" />
+                <div className="absolute -inset-3 bg-gradient-to-r from-casino-gold via-casino-purple to-casino-blue rounded-full blur-lg opacity-60 animate-pulse-slow"></div>
+                <div className="relative backdrop-casino-dark rounded-full p-6 shadow-glow-gold border border-casino-gold/30">
+                  <Shuffle className="w-16 h-16 text-casino-gold glow-gold animate-pulse-slow" />
                 </div>
               </div>
             </div>
             
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
-              Cassino Card Game
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-gradient-casino mb-6 tracking-tight">
+              Cassino
             </h1>
             
-            <div className="text-red-500 mt-2">{error}</div>
+            <p className="text-xl md:text-2xl text-white/80 font-medium mb-8 max-w-2xl mx-auto">
+              The Classic Card Game • Real-time Multiplayer • Pure Strategy
+            </p>
             
-            <div className="flex justify-center items-center space-x-2 mb-6">
+            {error && (
+              <div className="backdrop-casino-dark border border-casino-red/50 rounded-xl p-4 mb-6 max-w-md mx-auto">
+                <div className="text-casino-red-light font-medium">{error}</div>
+              </div>
+            )}
+            
+            <div className="flex justify-center items-center space-x-3 mb-8">
               {suitIcons.map((suit, index) => (
-                <suit.icon key={index} className={`w-6 h-6 ${suit.color} opacity-80`} />
+                <div key={index} className="floating" style={{ animationDelay: `${index * 0.2}s` }}>
+                  <suit.icon className={`w-8 h-8 ${suit.color} glow-casino`} />
+                </div>
               ))}
             </div>
 
-            <div className="flex justify-center space-x-6 text-emerald-200 text-sm">
-              <div className="flex items-center space-x-1">
-                <Users className="w-4 h-4" />
+            <div className="flex justify-center space-x-8 text-white/70 text-sm font-medium">
+              <div className="flex items-center space-x-2 backdrop-casino-dark px-4 py-2 rounded-full">
+                <Users className="w-5 h-5 text-casino-blue" />
                 <span>2 Players</span>
               </div>
-              <div className="flex items-center space-x-1">
-                <Trophy className="w-4 h-4" />
-                <span>11 Points to Win</span>
+              <div className="flex items-center space-x-2 backdrop-casino-dark px-4 py-2 rounded-full">
+                <Trophy className="w-5 h-5 text-casino-gold" />
+                <span>Skill-Based</span>
               </div>
-              <div className="flex items-center space-x-1">
-                <Dice6 className="w-4 h-4" />
-                <span>Real-time Online</span>
+              <div className="flex items-center space-x-2 backdrop-casino-dark px-4 py-2 rounded-full">
+                <Dice6 className="w-5 h-5 text-casino-purple" />
+                <span>Classic Rules</span>
               </div>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="grid md:grid-cols-2 gap-8 mb-8" data-testid="room-manager">
-            {/* Game Actions */}
-            <Card className="backdrop-blur-sm bg-white/95 shadow-2xl border-0">
-              <CardHeader className="text-center pb-4">
-                <CardTitle className="text-2xl text-gray-800">Start Playing</CardTitle>
-                <CardDescription className="text-gray-600">
-                  Create a new room or join an existing game
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Player Name Input */}
-                <div className="space-y-2" role="form">
-                  <Label htmlFor="playerName" className="text-gray-700 font-medium">
-                    Your Name
-                  </Label>
-                  <Input
-                    id="playerName"
-                    data-testid="player-name-input-create-test"
-                    type="text"
-                    placeholder="Enter your player name"
-                    value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
-                    className="bg-white border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-                    maxLength={20}
-                    aria-label="Player Name"
-                  />
-                </div>
-
-                <Separator className="my-6" />
-
-                {/* Action Buttons */}
-                <div className="space-y-4">
-                                      <Button
-                      onClick={onCreateRoom}
-                      disabled={!playerName.trim() || isLoading}
-                      className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium py-3 text-lg shadow-lg transform hover:scale-[1.02] transition-all duration-200"
-                      size="lg"
-                      aria-label={isLoading ? "Creating" : "Create Room"}
-                      data-testid="create-room-test"
-                    >
-                    {isLoading ? (
-                      <>
-                        <Shuffle className="w-5 h-5 mr-2 animate-spin" />
-                        Creating Room...
-                      </>
-                    ) : (
-                      <>
-                        <Crown className="w-5 h-5 mr-2" />
-                        Create New Game
-                      </>
-                    )}
-                  </Button>
-
-                  <div className="text-center text-gray-500 text-sm">or</div>
+          {/* Enhanced Main Game Entry */}
+          <div className="grid md:grid-cols-1 gap-8 max-w-3xl mx-auto">
+            <Card className="backdrop-casino border-0 shadow-casino-lg overflow-hidden">
+              <CardContent className="p-8">
+                <div className="text-center mb-8">
+                  <div className="backdrop-casino-dark rounded-xl p-6 mb-6 border border-casino-green/30">
+                    <Label htmlFor="playerName" className="text-casino-green-light font-medium text-lg mb-3 block">
+                      Enter Your Name
+                    </Label>
+                    <Input
+                      id="playerName"
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
+                      placeholder="Your display name"
+                      className="text-center text-lg py-3 backdrop-casino border-casino-green/50 text-white placeholder:text-white/50 focus:border-casino-gold focus:ring-casino-gold/30"
+                      maxLength={20}
+                    />
+                  </div>
 
                   {!showJoinForm ? (
-                    <Button
-                      onClick={() => setShowJoinForm(true)}
-                      variant="outline"
-                      className="w-full border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium py-3 text-lg"
-                      size="lg"
-                      aria-label="Show Join Room Form"
-                      data-testid="show-join-form-test"
-                    >
-                      <Users className="w-5 h-5 mr-2" />
-                      Join Existing Game
-                    </Button>
+                    <div className="space-y-6">
+                      <Button
+                        onClick={onCreateRoom}
+                        disabled={!playerName.trim() || isLoading}
+                        className="w-full h-14 text-lg font-bold bg-gradient-to-r from-casino-green to-casino-green-light hover:from-casino-green-light hover:to-casino-green text-white shadow-casino border-0 rounded-xl transition-all duration-300 disabled:opacity-50"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="casino-spinner w-5 h-5"></div>
+                            <span>Creating Room...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center space-x-2">
+                            <Crown className="w-6 h-6" />
+                            <span>Create New Game</span>
+                          </div>
+                        )}
+                      </Button>
+
+                      <div className="relative">
+                        <Separator className="bg-casino-gold/30" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="backdrop-casino-dark px-4 py-1 text-casino-gold font-medium text-sm rounded-full border border-casino-gold/30">
+                            OR
+                          </span>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={() => setShowJoinForm(true)}
+                        variant="outline"
+                        className="w-full h-14 text-lg font-bold border-casino-blue text-casino-blue hover:bg-casino-blue/10 hover:border-casino-blue-light backdrop-casino-dark rounded-xl transition-all duration-300"
+                      >
+                        <div className="flex items-center justify-center space-x-2">
+                          <Users className="w-6 h-6" />
+                          <span>Join Existing Game</span>
+                        </div>
+                      </Button>
+                    </div>
                   ) : (
-                    <div className="space-y-3">
-                      <div className="flex space-x-2">
-                        <div className="flex-1">
+                    <div className="space-y-6">
+                      <div className="backdrop-casino-dark rounded-xl p-6 border border-casino-blue/30">
+                        <Label htmlFor="roomId" className="text-casino-blue-light font-medium text-lg mb-3 block">
+                          Room Code
+                        </Label>
+                        <div className="flex space-x-3">
                           <Input
-                            type="text"
-                            placeholder="Room Code (e.g., ABC123)"
+                            id="roomId"
                             value={roomId}
                             onChange={(e) => setRoomId(e.target.value.toUpperCase())}
-                            className="bg-white border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                            placeholder="Enter 6-character code"
+                            className="text-center text-lg py-3 backdrop-casino border-casino-blue/50 text-white placeholder:text-white/50 focus:border-casino-gold focus:ring-casino-gold/30 font-mono"
                             maxLength={6}
-                            aria-label="Room ID"
-                            data-testid="room-id-input-test"
                           />
+                          <Button
+                            onClick={generateRoomId}
+                            variant="outline"
+                            className="border-casino-purple text-casino-purple hover:bg-casino-purple/10 hover:border-casino-purple-light backdrop-casino-dark"
+                          >
+                            <Dice6 className="w-5 h-5" />
+                          </Button>
                         </div>
-                        <Button
-                          onClick={generateRoomId}
-                          variant="outline"
-                          size="sm"
-                          className="px-3 border-gray-300 text-gray-600 hover:bg-gray-50"
-                          aria-label="Generate"
-                        >
-                          <Dice6 className="w-4 h-4" />
-                        </Button>
                       </div>
-                      
-                      <div className="flex space-x-2">
-                        <Button
-                          onClick={onJoinRoom}
-                          disabled={!roomId.trim() || !playerName.trim() || isLoading}
-                          className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
-                          aria-label={isLoading ? "Joining" : "Join Room"}
-                          data-testid="join-room-submit-test"
-                        >
-                          {isLoading ? (
-                            <>
-                              <Shuffle className="w-4 h-4 mr-2 animate-spin" />
-                              Joining...
-                            </>
-                          ) : (
-                            <>
-                              <Users className="w-4 h-4 mr-2" />
-                              Join Game
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          onClick={() => setShowJoinForm(false)}
-                          variant="outline"
-                          className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                          aria-label="Cancel"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
+
+                      <Button
+                        onClick={onJoinRoom}
+                        disabled={!playerName.trim() || !roomId.trim() || isLoading}
+                        className="w-full h-14 text-lg font-bold bg-gradient-to-r from-casino-blue to-casino-blue-light hover:from-casino-blue-light hover:to-casino-blue text-white shadow-casino border-0 rounded-xl transition-all duration-300 disabled:opacity-50"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="casino-spinner w-5 h-5"></div>
+                            <span>Joining Game...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center space-x-2">
+                            <Zap className="w-6 h-6" />
+                            <span>Join Game</span>
+                          </div>
+                        )}
+                      </Button>
+
+                      <Button
+                        onClick={() => setShowJoinForm(false)}
+                        variant="ghost"
+                        className="w-full text-white/70 hover:text-white hover:bg-white/5"
+                      >
+                        Back to Create Game
+                      </Button>
                     </div>
                   )}
-                </div>
-
-                {/* Error Message */}
-                {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg" role="alert" aria-live="assertive">
-                    <p className="text-red-700 text-sm font-medium">{error}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Game Rules */}
-            <Card className="backdrop-blur-sm bg-white/95 shadow-2xl border-0">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-2xl text-gray-800 flex items-center">
-                  <Star className="w-6 h-6 mr-2 text-yellow-500" />
-                  How to Play
-                </CardTitle>
-                <CardDescription className="text-gray-600">
-                  Master the art of card capturing
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Scoring Rules */}
-                <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-4">
-                  <h4 className="font-bold text-gray-800 mb-3 flex items-center">
-                    <Trophy className="w-5 h-5 mr-2 text-yellow-600" />
-                    Scoring (11 Points Total)
-                  </h4>
-                  <div className="space-y-2 text-sm text-gray-700">
-                    <div className="flex justify-between items-center">
-                      <span className="flex items-center">
-                        <Badge variant="secondary" className="mr-2 bg-red-100 text-red-800">A</Badge>
-                        Each Ace
-                      </span>
-                      <Badge className="bg-yellow-500 text-white">1 pt</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="flex items-center">
-                        <Badge variant="secondary" className="mr-2 bg-gray-100 text-gray-800">2♠</Badge>
-                        Two of Spades
-                      </span>
-                      <Badge className="bg-yellow-500 text-white">1 pt</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="flex items-center">
-                        <Badge variant="secondary" className="mr-2 bg-red-100 text-red-800">10♦</Badge>
-                        Ten of Diamonds
-                      </span>
-                      <Badge className="bg-yellow-500 text-white">2 pts</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Most Cards Captured</span>
-                      <Badge className="bg-yellow-500 text-white">2 pts</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Most Spades Captured</span>
-                      <Badge className="bg-yellow-500 text-white">2 pts</Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Gameplay Rules */}
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-4">
-                  <h4 className="font-bold text-gray-800 mb-3 flex items-center">
-                    <Shuffle className="w-5 h-5 mr-2 text-emerald-600" />
-                    Gameplay
-                  </h4>
-                  <div className="space-y-2 text-sm text-gray-700">
-                    <p><strong>Capture:</strong> Match your card value with table cards</p>
-                    <p><strong>Build:</strong> Combine table cards to create a sum you can capture</p>
-                    <p><strong>Trail:</strong> Place a card on the table when you can't capture</p>
-                    <div className="mt-3 p-2 bg-orange-100 rounded-md border-l-4 border-orange-400">
-                      <p className="text-orange-800 font-medium">
-                        ⚠️ Important: You can only build values that you have cards in hand to capture!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Features */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-blue-50 rounded-lg p-2 text-center">
-                    <div className="text-blue-600 font-medium">Real-time</div>
-                    <div className="text-blue-500">Multiplayer</div>
-                  </div>
-                  <div className="bg-purple-50 rounded-lg p-2 text-center">
-                    <div className="text-purple-600 font-medium">Smart</div>
-                    <div className="text-purple-500">Hints System</div>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-2 text-center">
-                    <div className="text-green-600 font-medium">Sound</div>
-                    <div className="text-green-500">Effects</div>
-                  </div>
-                  <div className="bg-orange-50 rounded-lg p-2 text-center">
-                    <div className="text-orange-600 font-medium">Game</div>
-                    <div className="text-orange-500">Statistics</div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Footer */}
-          <div className="text-center text-emerald-200">
-            <p className="text-sm">
-              Powered by <span className="font-medium text-white">KhasinoGaming</span> • 
-              <span className="mx-2">♠️ ♥️ ♦️ ♣️</span> • 
-              Play responsibly
-            </p>
+          {/* Enhanced Game Features */}
+          <div className="mt-12 grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <div className="backdrop-casino-dark rounded-2xl p-6 border border-casino-green/30 text-center shadow-casino">
+              <div className="backdrop-casino rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 border border-casino-green/20">
+                <Trophy className="w-8 h-8 text-casino-gold glow-gold" />
+              </div>
+              <h3 className="font-bold text-casino-green-light mb-2 text-lg">Strategic Gameplay</h3>
+              <p className="text-white/70 text-sm">Master the art of capturing, building, and trailing in this classic card game.</p>
+            </div>
+
+            <div className="backdrop-casino-dark rounded-2xl p-6 border border-casino-blue/30 text-center shadow-casino">
+              <div className="backdrop-casino rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 border border-casino-blue/20">
+                <Zap className="w-8 h-8 text-casino-purple glow-casino" />
+              </div>
+              <h3 className="font-bold text-casino-blue-light mb-2 text-lg">Real-time Play</h3>
+              <p className="text-white/70 text-sm">Experience smooth, real-time multiplayer action with instant updates.</p>
+            </div>
+
+            <div className="backdrop-casino-dark rounded-2xl p-6 border border-casino-purple/30 text-center shadow-casino">
+              <div className="backdrop-casino rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 border border-casino-purple/20">
+                <Crown className="w-8 h-8 text-casino-gold glow-gold" />
+              </div>
+              <h3 className="font-bold text-casino-purple-light mb-2 text-lg">Premium Experience</h3>
+              <p className="text-white/70 text-sm">Beautiful animations, sound effects, and an immersive casino atmosphere.</p>
+            </div>
           </div>
         </div>
       </div>
