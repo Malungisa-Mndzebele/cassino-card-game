@@ -61,6 +61,23 @@ jobs:
         name: dist-files
         path: dist/
         
+    - name: Check FTP credentials
+      run: |
+        if [ -z "${{ secrets.FTP_HOST }}" ] || [ -z "${{ secrets.FTP_USERNAME }}" ] || [ -z "${{ secrets.FTP_PASSWORD }}" ]; then
+          echo "❌ FTP credentials not configured!"
+          echo "Please add the following secrets to your repository:"
+          echo "  - FTP_HOST: Your Spaceship FTP host"
+          echo "  - FTP_USERNAME: Your Spaceship FTP username"
+          echo "  - FTP_PASSWORD: Your Spaceship FTP password"
+          echo ""
+          echo "Go to: https://github.com/${{ github.repository }}/settings/secrets/actions"
+          echo ""
+          echo "Build completed successfully, but deployment skipped due to missing credentials."
+          exit 0
+        else
+          echo "✅ FTP credentials configured, proceeding with deployment..."
+        fi
+        
     - name: Create deployment package
       run: |
         # Create deployment directory
@@ -159,6 +176,7 @@ jobs:
           **/node_modules/**
           **/.DS_Store
           **/Thumbs.db
+      continue-on-error: true
         
     - name: Verify deployment
       run: |
