@@ -188,7 +188,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./deployment/
-        server-dir: /home/mawdqtvped/khasinogaming.com/cassino/
+        server-dir: /home/mawdqtvped/khasinogaming.com/githubactions/
         exclude: |
           **/.git*
           **/.git*/**
@@ -202,7 +202,7 @@ jobs:
       run: |
         echo "🎊 Deployment completed successfully!"
         echo "Your Cassino card game should now be live at:"
-        echo "🔗 https://khasinogaming.com/cassino/ (or http://khasinogaming.com/cassino/ if HTTPS not configured)"
+        echo "🔗 https://khasinogaming.com/githubactions/ (or http://khasinogaming.com/githubactions/ if HTTPS not configured)"
         echo ""
         echo "Deployment details:"
         echo "📦 Package size: $(du -sh deployment | cut -f1)"
@@ -219,7 +219,7 @@ jobs:
       run: |
         if [ "${{ needs.deploy.result }}" == "success" ]; then
           echo "✅ Deployment to khasinogaming.com completed successfully!"
-          echo "🎮 Game is live at: https://khasinogaming.com/cassino/"
+          echo "🎮 Game is live at: https://khasinogaming.com/githubactions/"
         else
           echo "❌ Deployment failed. Check the logs above for details."
           echo "🔧 Please review the workflow and try again."

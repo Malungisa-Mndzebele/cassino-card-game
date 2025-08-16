@@ -68,7 +68,7 @@ The most common reason for CI failure is missing FTP credentials. Here's how to 
 ### **Issue: "Permission denied"**
 **Solution:** 
 - Check file permissions on your hosting
-- Ensure the FTP user has write access to `/home/mawdqtvped/khasinogaming.com/cassino/`
+- Ensure the FTP user has write access to `/home/mawdqtvped/khasinogaming.com/githubactions/`
 
 ---
 
@@ -78,7 +78,7 @@ If you're still having issues:
 
 1. **Check the Actions tab** in your GitHub repository for detailed error logs
 2. **Contact Spaceship support** for FTP credential help
-3. **Verify your hosting path** is correct: `/home/mawdqtvped/khasinogaming.com/cassino/`
+3. **Verify your hosting path** is correct: `/home/mawdqtvped/khasinogaming.com/githubactions/`
 
 ---
 
@@ -86,7 +86,7 @@ If you're still having issues:
 
 Once configured correctly, every time you push to the `master` branch:
 - ✅ Code builds automatically
-- ✅ Game deploys to https://khasinogaming.com/cassino/
+- ✅ Game deploys to https://khasinogaming.com/githubactions/
 - ✅ No manual upload needed
 - ✅ Flickering issues are fixed
 
