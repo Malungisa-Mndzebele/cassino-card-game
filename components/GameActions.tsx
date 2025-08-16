@@ -233,11 +233,9 @@ export function GameActions({
                 onClick={() => setSelectedHandCard(card.id)}
               >
                 <Card
-                  suit={card.suit}
-                  rank={card.rank}
-                  id={card.id}
+                  card={card}
                   isPlayable={true}
-                  size="medium"
+                  size="normal"
                 />
                 {isCapturingCard && (
                   <p className="text-xs text-center mt-1 text-green-600 font-medium">
@@ -412,9 +410,7 @@ export function GameActions({
                 onClick={() => (action === 'capture' || action === 'build') && handleTableCardClick(card.id)}
               >
                 <Card
-                  suit={card.suit}
-                  rank={card.rank}
-                  id={card.id}
+                  card={card}
                   size="small"
                 />
                 <p className="text-xs text-center mt-1">Val: {getCardValue(card.rank)}</p>
@@ -449,12 +445,10 @@ export function GameActions({
                 </div>
                 <div className="flex gap-1">
                   {build.cards.map((card) => (
-                    <Card
-                      key={card.id}
-                      suit={card.suit}
-                      rank={card.rank}
-                      id={card.id}
-                      size="small"
+                                    <Card
+                  key={card.id}
+                  card={card}
+                  size="small"
                     />
                   ))}
                 </div>

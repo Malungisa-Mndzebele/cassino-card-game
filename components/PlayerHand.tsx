@@ -40,9 +40,7 @@ export function PlayerHand({
             style={{ zIndex: cards.length - index }}
           >
             <Card
-              suit={card.suit}
-              rank={card.rank}
-              id={card.id}
+              card={card}
               isHidden={isOpponent}
               onClick={
                 !isOpponent && onPlayCard && canPlay 
@@ -50,7 +48,7 @@ export function PlayerHand({
                   : undefined
               }
               isPlayable={!isOpponent && canPlay}
-              size={isOpponent ? 'small' : 'medium'}
+              size={isOpponent ? 'small' : 'normal'}
             />
           </div>
         ))}

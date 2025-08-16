@@ -1,17 +1,18 @@
 import { mutation } from './_generated/server';
 import { v } from 'convex/values';
+import type { GameState, Card } from './types';
 
-import type { GameState, Card, Db } from './types';
+
 
 export const selectFaceUpCards = mutation({
   args: { roomId: v.string(), playerId: v.number(), cardIds: v.array(v.string()) },
   handler: async (
-    ctx: Db,
+    ctx,
     args: { roomId: string; playerId: number; cardIds: string[] }
   ): Promise<{ gameState: GameState }> => {
-    const room = await ctx.db.query('rooms').filter(q => q.eq(q.field('roomId'), args.roomId)).first();
+    const room = await ctx.db.query('rooms').filter((q: any) => q.eq(q.field('roomId'), args.roomId)).first();
     if (!room) throw new Error('Room not found');
-    let gameState: GameState = { ...room.gameState };
+    let gameState: GameState = { ...room.gameState as GameState };
     if (args.playerId !== 1) throw new Error('Only Player 1 can select face-up cards');
     if (gameState.phase !== 'cardSelection') throw new Error('Cannot select cards at this time');
     if (!args.cardIds || args.cardIds.length !== 4) throw new Error('Must select exactly 4 cards');

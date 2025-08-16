@@ -28,7 +28,7 @@ describe('GamePhases Component', () => {
     onSelectFaceUpCards: mockOnSelectFaceUpCards,
     onPlayCard: mockOnPlayCard,
     onResetGame: mockOnResetGame,
-    preferences: { soundEnabled: true }
+    preferences: { soundEnabled: true, soundVolume: 0.5, hintsEnabled: true, statisticsEnabled: true }
   };
 
   describe('Component Rendering', () => {

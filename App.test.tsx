@@ -42,7 +42,7 @@ vi.mock('convex/react', async () => {
           }
           const response = {
             roomId: 'new-room',
-            gameState: require('./tests/test-utils').createMockGameState({ 
+            gameState: globalThis.testUtils.createMockGameState({ 
               roomId: 'new-room',
               phase: 'waiting',
               players: [{ id: 1, name: playerName }] 
@@ -64,7 +64,7 @@ vi.mock('convex/react', async () => {
           }
           return {
             playerId: 2,
-            gameState: require('./tests/test-utils').createMockGameState({ 
+            gameState: globalThis.testUtils.createMockGameState({ 
               roomId, 
               phase: 'waiting',
               players: [{ id: 1, name: 'Host' }, { id: 2, name: playerName }]

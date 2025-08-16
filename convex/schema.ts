@@ -1,10 +1,11 @@
-import { defineSchema, defineTable } from 'convex/schema';
+import { defineSchema, defineTable } from 'convex/server';
+import { v } from 'convex/values';
 
 export default defineSchema({
   rooms: defineTable({
-    roomId: 'string',
-    players: 'array', // Array of { id: number, name: string }
-    createdAt: 'number',
-    gameState: 'object', // Holds the full game state object
+    roomId: v.string(),
+    players: v.any(), // Array of { id: number, name: string }
+    createdAt: v.number(),
+    gameState: v.any(), // Holds the full game state object
   }),
 });

@@ -3,7 +3,7 @@
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "types": ["jest", "@testing-library/jest-dom", "node"],
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "module": "ESNext",
     "skipLibCheck": true,
 
@@ -30,13 +30,37 @@
     }
   },
   "include": [
-    "**/*.ts", 
-    "**/*.tsx"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "convex/**/*.ts",
+    "*.ts",
+    "*.tsx"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "supabase/functions/_shared"
+    "tests/**/*",
+    "_trash/**/*",
+    "supabase/functions/_shared",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "convex/playCard.test.ts",
+    "convex/createRoom.test.ts",
+    "components/ui/accordion.tsx",
+    "components/ui/calendar.tsx",
+    "components/ui/carousel.tsx",
+    "components/ui/chart.tsx",
+    "components/ui/command.tsx",
+    "components/ui/drawer.tsx",
+    "components/ui/input-otp.tsx",
+    "components/ui/radio-group.tsx",
+    "components/ui/resizable.tsx",
+    "components/ui/scroll-area.tsx",
+    "components/ui/sonner.tsx",
+    "components/Card.test.tsx",
+    "components/CardGame.tsx"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

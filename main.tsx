@@ -4,7 +4,7 @@ import App from './App.tsx'
 import './styles/globals.css'
 
 // Production error handling
-if (process.env.NODE_ENV === 'production') {
+if (typeof window !== 'undefined') {
   // Disable console.log in production
   console.log = () => {}
   

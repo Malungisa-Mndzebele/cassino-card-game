@@ -21,7 +21,7 @@ export const playCard = mutation({
     buildValue: v.optional(v.number()),
   },
   handler: async (
-    ctx: Db,
+    ctx,
     args: {
       roomId: string;
       playerId: number;
@@ -33,7 +33,7 @@ export const playCard = mutation({
   ): Promise<{ gameState: GameState }> => {
     const room = await ctx.db.query('rooms').filter((q) => q.eq(q.field('roomId'), args.roomId)).first();
     if (!room) throw new Error('Room not found');
-    let gameState: GameState = { ...room.gameState };
+    let gameState: GameState = { ...room.gameState as GameState };
     // Validate playing phase
     if (gameState.phase !== 'round1' && gameState.phase !== 'round2') {
       throw new Error('Not in playing phase');
@@ -148,10 +148,12 @@ export const playCard = mutation({
           // Deal 4 cards to each player for round 2
           for (let i = 0; i < 8 && gameState.deck.length > 0; i++) {
             const card = gameState.deck.pop();
-            if (i % 2 === 0) {
-              gameState.player1Hand.push(card);
-            } else {
-              gameState.player2Hand.push(card);
+            if (card) {
+              if (i % 2 === 0) {
+                gameState.player1Hand.push(card);
+              } else {
+                gameState.player2Hand.push(card);
+              }
             }
           }
           gameState.phase = 'round2';
@@ -160,10 +162,12 @@ export const playCard = mutation({
           // Continue round 2, deal more cards
           for (let i = 0; i < 8 && gameState.deck.length > 0; i++) {
             const card = gameState.deck.pop();
-            if (i % 2 === 0) {
-              gameState.player1Hand.push(card);
-            } else {
-              gameState.player2Hand.push(card);
+            if (card) {
+              if (i % 2 === 0) {
+                gameState.player1Hand.push(card);
+              } else {
+                gameState.player2Hand.push(card);
+              }
             }
           }
         }

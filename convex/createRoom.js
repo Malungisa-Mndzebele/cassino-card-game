@@ -1,0 +1,39 @@
+import { mutation } from './_generated/server';
+import { v } from 'convex/values';
+export const createRoom = mutation({
+    args: { playerName: v.string() },
+    handler: async (ctx, args) => {
+        const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const initialGameState = {
+            roomId,
+            players: [{ id: 1, name: args.playerName }],
+            deck: [],
+            player1Hand: [],
+            player2Hand: [],
+            tableCards: [],
+            builds: [],
+            player1Captured: [],
+            player2Captured: [],
+            currentTurn: 1,
+            phase: 'waiting',
+            round: 0,
+            countdownStartTime: null,
+            gameStarted: false,
+            shuffleComplete: false,
+            cardSelectionComplete: false,
+            dealingComplete: false,
+            player1Score: 0,
+            player2Score: 0,
+            winner: null,
+            lastPlay: null,
+            lastUpdate: new Date().toISOString(),
+        };
+        const room = await ctx.db.insert('rooms', {
+            roomId,
+            players: initialGameState.players,
+            createdAt: Date.now(),
+            gameState: initialGameState,
+        });
+        return { roomId, gameState: initialGameState };
+    },
+});

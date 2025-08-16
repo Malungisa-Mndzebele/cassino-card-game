@@ -41,5 +41,12 @@ export interface GameState {
   currentTurn: number;
   lastPlay?: any;
   lastUpdate?: string;
-  winner?: number | 'tie';
+  winner?: number | 'tie' | null;
+  shuffleComplete?: boolean;
+  cardSelectionComplete?: boolean;
+  dealingComplete?: boolean;
+  roomId?: string;
+  players?: Player[];
+  countdownStartTime?: any;
+  gameStarted?: boolean;
 }

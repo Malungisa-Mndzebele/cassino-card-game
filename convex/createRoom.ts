@@ -1,12 +1,12 @@
 import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 
-import type { GameState, Player, Db } from './types';
+import type { GameState, Player } from './types';
 
 export const createRoom = mutation({
   args: { playerName: v.string() },
   handler: async (
-    ctx: Db,
+    ctx,
     args: { playerName: string }
   ): Promise<{ roomId: string; gameState: GameState }> => {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -36,7 +36,7 @@ export const createRoom = mutation({
     };
     const room = await ctx.db.insert('rooms', {
       roomId,
-      players: initialGameState.players,
+      players: initialGameState.players || [],
       createdAt: Date.now(),
       gameState: initialGameState,
     });

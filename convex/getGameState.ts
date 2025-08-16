@@ -1,16 +1,16 @@
 import { query } from './_generated/server';
 import { v } from 'convex/values';
 
-import type { GameState, Db } from './types';
+import type { GameState } from './types';
 
 export const getGameState = query({
   args: { roomId: v.string() },
   handler: async (
-    ctx: Db,
+    ctx,
     args: { roomId: string }
   ): Promise<{ gameState: GameState }> => {
-    const room = await ctx.db.query('rooms').filter(q => q.eq(q.field('roomId'), args.roomId)).first();
+    const room = await ctx.db.query('rooms').filter((q: any) => q.eq(q.field('roomId'), args.roomId)).first();
     if (!room) throw new Error('Room not found');
-    return { gameState: room.gameState };
+    return { gameState: room.gameState as GameState };
   },
 });
