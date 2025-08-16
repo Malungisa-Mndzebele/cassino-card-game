@@ -18,15 +18,12 @@ export interface Player {
   name: string;
 }
 
-// Convex context type for backend mutations
-export type Db = {
-  db: {
-    query: (table: string) => any;
-    patch: (id: string, update: any) => Promise<void>;
-  };
-};
+// Import correct Convex types
+import { MutationCtx, QueryCtx } from './_generated/server';
 
 export interface GameState {
+  roomId: string;
+  players: Player[];
   phase: string;
   round: number;
   deck: Card[];
@@ -39,7 +36,17 @@ export interface GameState {
   player1Score: number;
   player2Score: number;
   currentTurn: number;
+  cardSelectionComplete: boolean;
+  shuffleComplete: boolean;
+  dealingComplete: boolean;
+  countdownStartTime: number | null;
+  countdownRemaining?: number;
+  gameStarted: boolean;
   lastPlay?: any;
-  lastUpdate?: string;
-  winner?: number | 'tie';
+  lastAction?: any;
+  lastUpdate: string;
+  gameCompleted: boolean;
+  winner: number | 'tie' | null;
+  player1Ready: boolean;
+  player2Ready: boolean;
 }

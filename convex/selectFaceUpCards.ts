@@ -1,15 +1,15 @@
 import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 
-import type { GameState, Card, Db } from './types';
+import type { GameState, Card, MutationCtx } from './types';
 
 export const selectFaceUpCards = mutation({
   args: { roomId: v.string(), playerId: v.number(), cardIds: v.array(v.string()) },
   handler: async (
-    ctx: Db,
+    ctx: MutationCtx,
     args: { roomId: string; playerId: number; cardIds: string[] }
   ): Promise<{ gameState: GameState }> => {
-    const room = await ctx.db.query('rooms').filter(q => q.eq(q.field('roomId'), args.roomId)).first();
+    const room = await ctx.db.query('rooms').withIndex('by_roomId', q => q.eq('roomId', args.roomId)).first();
     if (!room) throw new Error('Room not found');
     let gameState: GameState = { ...room.gameState };
     if (args.playerId !== 1) throw new Error('Only Player 1 can select face-up cards');

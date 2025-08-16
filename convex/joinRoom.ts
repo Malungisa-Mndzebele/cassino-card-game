@@ -1,16 +1,16 @@
 import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 
-import type { GameState, Player, Db } from './types';
+import type { GameState, Player, MutationCtx } from './types';
 
 export const joinRoom = mutation({
   args: { roomId: v.string(), playerName: v.string() },
   handler: async (
-    ctx: Db,
+    ctx: MutationCtx,
     args: { roomId: string; playerName: string }
   ): Promise<{ playerId: number; gameState: GameState }> => {
     // Find the room by roomId
-    const room = await ctx.db.query('rooms').filter(q => q.eq(q.field('roomId'), args.roomId)).first();
+    const room = await ctx.db.query('rooms').withIndex('by_roomId', q => q.eq('roomId', args.roomId)).first();
     if (!room) {
       throw new Error('Room not found');
     }

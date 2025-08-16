@@ -1,7 +1,7 @@
 import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 
-import type { Card, Build, GameState } from './types';
+import type { Card, Build, GameState, MutationCtx } from './types';
 
 function getCardValue(rank: string): number {
   if (rank === 'A') return 14;
@@ -21,7 +21,7 @@ export const playCard = mutation({
     buildValue: v.optional(v.number()),
   },
   handler: async (
-    ctx: Db,
+    ctx: MutationCtx,
     args: {
       roomId: string;
       playerId: number;
@@ -31,7 +31,7 @@ export const playCard = mutation({
       buildValue?: number;
     }
   ): Promise<{ gameState: GameState }> => {
-    const room = await ctx.db.query('rooms').filter((q) => q.eq(q.field('roomId'), args.roomId)).first();
+    const room = await ctx.db.query('rooms').withIndex('by_roomId', q => q.eq('roomId', args.roomId)).first();
     if (!room) throw new Error('Room not found');
     let gameState: GameState = { ...room.gameState };
     // Validate playing phase
