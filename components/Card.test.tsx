@@ -93,7 +93,7 @@ describe('Card Component', () => {
       render(<Card {...defaultProps} selected={true} />);
       
       const cardElement = screen.getByRole('button').querySelector('div');
-      expect(cardElement).toHaveClass('border-emerald-500');
+      expect(cardElement).toHaveClass('border-casino-gold');
     });
 
     it('should not apply selected styling when selected is false', () => {
@@ -107,7 +107,7 @@ describe('Card Component', () => {
       render(<Card {...defaultProps} highlighted={true} />);
       
       const cardElement = screen.getByRole('button').querySelector('div');
-      expect(cardElement).toHaveClass('border-yellow-400');
+      expect(cardElement).toHaveClass('border-casino-blue');
     });
 
     it('should not apply highlighted styling when highlighted is false', () => {
@@ -143,33 +143,40 @@ describe('Card Component', () => {
     it('should apply red color to hearts', () => {
       render(<Card {...defaultProps} />);
       
-      // Use getAllByText and check the first one (top rank)
-      const rankElements = screen.getAllByText('A');
-      expect(rankElements[0]).toHaveClass('text-red-500');
+      // Check the parent container that has the suit color class
+      const cardElement = screen.getByRole('button').querySelector('div');
+      const rankContainer = cardElement.querySelector('.text-casino-red');
+      expect(rankContainer).toBeInTheDocument();
     });
 
     it('should apply red color to diamonds', () => {
       const diamondCard = { ...defaultCard, suit: 'diamonds' };
       render(<Card {...defaultProps} card={diamondCard} />);
       
-      const rankElements = screen.getAllByText('A');
-      expect(rankElements[0]).toHaveClass('text-red-500');
+      // Check the parent container that has the suit color class
+      const cardElement = screen.getByRole('button').querySelector('div');
+      const rankContainer = cardElement.querySelector('.text-casino-red');
+      expect(rankContainer).toBeInTheDocument();
     });
 
     it('should apply black color to clubs', () => {
       const clubCard = { ...defaultCard, suit: 'clubs' };
       render(<Card {...defaultProps} card={clubCard} />);
       
-      const rankElements = screen.getAllByText('A');
-      expect(rankElements[0]).toHaveClass('text-gray-800');
+      // Check the parent container that has the suit color class
+      const cardElement = screen.getByRole('button').querySelector('div');
+      const rankContainer = cardElement.querySelector('.text-gray-800');
+      expect(rankContainer).toBeInTheDocument();
     });
 
     it('should apply black color to spades', () => {
       const spadeCard = { ...defaultCard, suit: 'spades' };
       render(<Card {...defaultProps} card={spadeCard} />);
       
-      const rankElements = screen.getAllByText('A');
-      expect(rankElements[0]).toHaveClass('text-gray-800');
+      // Check the parent container that has the suit color class
+      const cardElement = screen.getByRole('button').querySelector('div');
+      const rankContainer = cardElement.querySelector('.text-gray-800');
+      expect(rankContainer).toBeInTheDocument();
     });
   });
 

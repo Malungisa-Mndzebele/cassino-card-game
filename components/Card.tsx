@@ -26,7 +26,9 @@ export function Card({
   size = 'normal',
   showPoints = true
 }: CardProps) {
-  if (!card) {
+  // Handle missing or invalid card data - add more robust validation
+  if (!card || typeof card !== 'object' || !card.suit || !card.rank || 
+      typeof card.suit !== 'string' || typeof card.rank !== 'string') {
     return (
       <div className={`
         ${size === 'small' ? 'w-12 h-16' : size === 'large' ? 'w-20 h-28' : 'w-16 h-24'}
@@ -82,27 +84,30 @@ export function Card({
     }
   }
 
-  const isSpecialCard = () => {
+  const isSpecialCard = (cardSuit: string, cardRank: string) => {
     return (
-      rank === 'A' || // All Aces
-      (suit === 'spades' && rank === '2') || // 2 of Spades
-      (suit === 'diamonds' && rank === '10') // 10 of Diamonds
+      cardRank === 'A' || // All Aces
+      (cardSuit === 'spades' && cardRank === '2') || // 2 of Spades
+      (cardSuit === 'diamonds' && cardRank === '10') // 10 of Diamonds
     )
   }
 
-  const getCardPoints = () => {
-    if (rank === 'A') return 1
-    if (suit === 'spades' && rank === '2') return 1
-    if (suit === 'diamonds' && rank === '10') return 2
+  const getCardPoints = (cardSuit: string, cardRank: string) => {
+    if (cardRank === 'A') return 1
+    if (cardSuit === 'spades' && cardRank === '2') return 1
+    if (cardSuit === 'diamonds' && cardRank === '10') return 2
     return 0
   }
 
   const { suit, rank } = card
-  const suitSymbol = getSuitSymbol(suit)
-  const suitColor = getSuitColor(suit)
-  const suitGradient = getSuitGradient(suit)
-  const points = getCardPoints()
-  const special = isSpecialCard()
+  // Ensure suit and rank are strings
+  const safeSuit = String(suit || '')
+  const safeRank = String(rank || '')
+  const suitSymbol = getSuitSymbol(safeSuit)
+  const suitColor = getSuitColor(safeSuit)
+  const suitGradient = getSuitGradient(safeSuit)
+  const points = getCardPoints(safeSuit, safeRank)
+  const special = isSpecialCard(safeSuit, safeRank)
 
   const sizeClasses = {
     small: 'w-12 h-16 text-xs',
@@ -149,7 +154,7 @@ export function Card({
         {/* Top corner - rank and suit */}
         <div className={`flex flex-col items-center ${suitColor} font-bold leading-none`}>
           <div className={`${size === 'small' ? 'text-xs' : 'text-sm'} font-black`}>
-            {rank}
+            {safeRank}
           </div>
           <div className={`${size === 'small' ? 'text-xs' : 'text-base'} leading-none mt-0.5 
             bg-gradient-to-br ${suitGradient} bg-clip-text text-transparent font-black`}>
@@ -158,14 +163,14 @@ export function Card({
         </div>
 
         {/* Center suit symbol (for face cards and aces) */}
-        {(rank === 'A' || rank === 'K' || rank === 'Q' || rank === 'J') && (
+        {(safeRank === 'A' || safeRank === 'K' || safeRank === 'Q' || safeRank === 'J') && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className={`
               ${size === 'small' ? 'text-xl' : size === 'large' ? 'text-4xl' : 'text-2xl'} 
               font-black opacity-20
               bg-gradient-to-br ${suitGradient} bg-clip-text text-transparent
             `}>
-              {rank === 'A' ? suitSymbol : rank}
+              {safeRank === 'A' ? suitSymbol : safeRank}
             </div>
           </div>
         )}
@@ -173,7 +178,7 @@ export function Card({
         {/* Bottom corner - rank and suit (rotated) */}
         <div className={`flex flex-col items-center ${suitColor} font-bold leading-none self-end transform rotate-180`}>
           <div className={`${size === 'small' ? 'text-xs' : 'text-sm'} font-black`}>
-            {rank}
+            {safeRank}
           </div>
           <div className={`${size === 'small' ? 'text-xs' : 'text-base'} leading-none mt-0.5 
             bg-gradient-to-br ${suitGradient} bg-clip-text text-transparent font-black`}>
@@ -214,11 +219,15 @@ export function Card({
   )
 
   if (onClick && !disabled) {
+    const ariaLabel = `${safeRank} of ${safeSuit}${points > 0 ? ` (${points} point${points > 1 ? 's' : ''})` : ''}`;
     return (
       <Button
         variant="ghost"
         className="p-0 h-auto w-auto bg-transparent hover:bg-transparent border-0 shadow-none"
         onClick={() => onClick(card)}
+        aria-label={ariaLabel}
+        aria-pressed={selected}
+        tabIndex={0}
       >
         {cardContent}
       </Button>

@@ -30,8 +30,8 @@ describe('RoomManager Component', () => {
     it('should render the main title and game information', () => {
       render(<RoomManager {...defaultProps} />);
       
-      expect(screen.getByText('Cassino Card Game')).toBeInTheDocument();
-      expect(screen.getByText('Create a new room or join an existing game')).toBeInTheDocument();
+      expect(screen.getByText('Cassino')).toBeInTheDocument();
+      expect(screen.getByText('The Classic Card Game • Real-time Multiplayer • Pure Strategy')).toBeInTheDocument();
     });
 
     it('should render create room form by default', () => {
@@ -81,7 +81,7 @@ describe('RoomManager Component', () => {
     it('should show error message when provided', () => {
       render(<RoomManager {...defaultProps} error="Room creation failed" />);
       
-      expect(screen.getAllByText('Room creation failed')).toHaveLength(2);
+      expect(screen.getByText('Room creation failed')).toBeInTheDocument();
     });
   });
 
@@ -145,7 +145,7 @@ describe('RoomManager Component', () => {
       
       const joinButton = screen.getByTestId('join-room-submit-test');
       expect(joinButton).toBeDisabled();
-      expect(joinButton).toHaveTextContent('Joining...');
+      expect(joinButton).toHaveTextContent('Joining Game...');
     });
   });
 
@@ -228,14 +228,14 @@ describe('RoomManager Component', () => {
       const errorMessage = 'Network connection failed';
       render(<RoomManager {...defaultProps} error={errorMessage} />);
       
-      expect(screen.getAllByText(errorMessage)).toHaveLength(2); // Error appears in two places
+      expect(screen.getByText(errorMessage)).toBeInTheDocument(); // Error appears in one place
     });
 
     it('should handle multiple error messages', () => {
       const errorMessage = 'Multiple errors: Invalid room ID, Player name too short';
       render(<RoomManager {...defaultProps} error={errorMessage} />);
       
-      expect(screen.getAllByText(errorMessage)).toHaveLength(2); // Error appears in two places
+      expect(screen.getByText(errorMessage)).toBeInTheDocument(); // Error appears in one place
     });
 
     it('should not show error when error is empty', () => {
@@ -264,7 +264,7 @@ describe('RoomManager Component', () => {
       
       const joinButton = screen.getByTestId('join-room-submit-test');
       expect(joinButton).toBeDisabled();
-      expect(joinButton).toHaveTextContent('Joining...');
+      expect(joinButton).toHaveTextContent('Joining Game...');
     });
 
     it('should enable buttons when not loading', () => {
@@ -288,14 +288,14 @@ describe('RoomManager Component', () => {
       render(<RoomManager {...defaultProps} />);
       
       const createPlayerInput = screen.getByTestId('player-name-input-create-test');
-      expect(createPlayerInput).toHaveAttribute('placeholder', 'Enter your player name');
+      expect(createPlayerInput).toHaveAttribute('placeholder', 'Your display name');
       
       // Show join form
       fireEvent.click(screen.getByTestId('show-join-form-test'));
       
       const joinRoomInput = screen.getByTestId('room-id-input-test');
       
-      expect(joinRoomInput).toHaveAttribute('placeholder', 'Room Code (e.g., ABC123)');
+      expect(joinRoomInput).toHaveAttribute('placeholder', 'Enter 6-character code');
     });
 
     it('should have proper button text for screen readers', () => {

@@ -47,7 +47,7 @@ export function RoomManager({
   ]
 
   return (
-    <div className="min-h-screen gradient-casino-vibrant relative overflow-hidden">
+    <div className="min-h-screen gradient-casino-vibrant relative overflow-hidden" data-testid="room-manager">
       {/* Enhanced Animated background particles */}
       <div className="particles">
         {Array.from({ length: 30 }).map((_, i) => (
@@ -117,7 +117,7 @@ export function RoomManager({
             
             {error && (
               <div className="backdrop-casino-dark border border-casino-red/50 rounded-xl p-4 mb-6 max-w-md mx-auto">
-                <div className="text-casino-red-light font-medium">{error}</div>
+                <div className="text-casino-red-light font-medium" data-testid="error-message-test">{error}</div>
               </div>
             )}
             
@@ -156,6 +156,7 @@ export function RoomManager({
                     </Label>
                     <Input
                       id="playerName"
+                      data-testid="player-name-input-create-test"
                       value={playerName}
                       onChange={(e) => setPlayerName(e.target.value)}
                       placeholder="Your display name"
@@ -169,6 +170,7 @@ export function RoomManager({
                       <Button
                         onClick={onCreateRoom}
                         disabled={!playerName.trim() || isLoading}
+                        data-testid="create-room-test"
                         className="w-full h-14 text-lg font-bold bg-gradient-to-r from-casino-green to-casino-green-light hover:from-casino-green-light hover:to-casino-green text-white shadow-casino border-0 rounded-xl transition-all duration-300 disabled:opacity-50"
                       >
                         {isLoading ? (
@@ -196,6 +198,7 @@ export function RoomManager({
                       <Button
                         onClick={() => setShowJoinForm(true)}
                         variant="outline"
+                        data-testid="show-join-form-test"
                         className="w-full h-14 text-lg font-bold border-casino-blue text-casino-blue hover:bg-casino-blue/10 hover:border-casino-blue-light backdrop-casino-dark rounded-xl transition-all duration-300"
                       >
                         <div className="flex items-center justify-center space-x-2">
@@ -213,6 +216,7 @@ export function RoomManager({
                         <div className="flex space-x-3">
                           <Input
                             id="roomId"
+                            data-testid="room-id-input-test"
                             value={roomId}
                             onChange={(e) => setRoomId(e.target.value.toUpperCase())}
                             placeholder="Enter 6-character code"
@@ -232,6 +236,7 @@ export function RoomManager({
                       <Button
                         onClick={onJoinRoom}
                         disabled={!playerName.trim() || !roomId.trim() || isLoading}
+                        data-testid="join-room-submit-test"
                         className="w-full h-14 text-lg font-bold bg-gradient-to-r from-casino-blue to-casino-blue-light hover:from-casino-blue-light hover:to-casino-blue text-white shadow-casino border-0 rounded-xl transition-all duration-300 disabled:opacity-50"
                       >
                         {isLoading ? (
@@ -250,6 +255,7 @@ export function RoomManager({
                       <Button
                         onClick={() => setShowJoinForm(false)}
                         variant="ghost"
+                        data-testid="cancel-join-test"
                         className="w-full text-white/70 hover:text-white hover:bg-white/5"
                       >
                         Back to Create Game

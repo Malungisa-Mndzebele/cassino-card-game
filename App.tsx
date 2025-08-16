@@ -364,6 +364,31 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     <>
       <SoundSystem onSoundReady={() => setSoundReady(true)} />
       <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-green-800 to-teal-900 relative">
+        {/* Global Settings - Always Available */}
+        <div className="absolute top-4 right-4 z-50" data-testid="game-settings">
+          <GameSettings
+            preferences={preferences}
+            onPreferencesChange={setPreferences}
+            statistics={preferences.statisticsEnabled ? statistics : undefined}
+          />
+        </div>
+
+        {/* Global Statistics Display */}
+        {preferences.statisticsEnabled && (
+          <div data-testid="statistics" className="absolute top-4 left-4 z-50 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+            <div className="text-sm font-medium text-gray-800">Games: {statistics.gamesPlayed}</div>
+          </div>
+        )}
+
+        {/* Global Error Display */}
+        {error && (
+          <div data-testid="error-message" className="absolute top-16 left-1/2 transform -translate-x-1/2 z-40 max-w-md w-full mx-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 shadow-lg">
+              <p className="text-red-700 font-medium text-center">{error}</p>
+            </div>
+          </div>
+        )}
+
         {/* Show RoomManager if not connected */}
         {!isConnected && (
           <RoomManager
@@ -482,11 +507,6 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                     </div>
                     <Separator orientation="vertical" className="h-8" />
                     <div className="flex items-center space-x-2">
-                      <GameSettings
-                        preferences={preferences}
-                        onPreferencesChange={setPreferences}
-                        statistics={preferences.statisticsEnabled ? statistics : undefined}
-                      />
                       <Button
                         onClick={disconnectGame}
                         variant="outline"
@@ -642,7 +662,6 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
             )}
           </div>
         </div>
-        )}
       </div>
     </>
   );
