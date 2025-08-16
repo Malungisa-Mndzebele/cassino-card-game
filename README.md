@@ -1,8 +1,8 @@
-# 🎮 Cassino Card Game
+# 🎮 Multiplayer Card Game
 
-A real-time multiplayer implementation of the classic Cassino card game built with React, TypeScript, and Supabase.
+A real-time multiplayer implementation of the classic Cassino card game built with React, TypeScript, and Convex.
 
-![Cassino Card Game](https://via.placeholder.com/800x400/065f46/ffffff?text=Cassino+Card+Game)
+![Multiplayer Card Game](https://via.placeholder.com/800x400/065f46/ffffff?text=Multiplayer+Card+Game)
 
 ## 🎯 About
 
@@ -17,7 +17,7 @@ This is a faithful digital recreation of the traditional Cassino card game featu
 
 ## 🚀 Live Demo
 
-Play the game at: **[https://khasinogaming.com/cassino](https://khasinogaming.com/cassino)**
+Play the game at: **[https://your-deployment-url.com](https://your-deployment-url.com)**
 
 ## 🎲 How to Play
 
@@ -46,11 +46,10 @@ Play the game at: **[https://khasinogaming.com/cassino](https://khasinogaming.co
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 18, TypeScript, Tailwind CSS v4
-- **Backend**: Supabase Edge Functions (Hono.js)
-- **Database**: Supabase PostgreSQL with KV store
-- **Real-time**: Supabase real-time subscriptions
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Backend**: Convex (real-time database and functions)
 - **Build Tool**: Vite
+- **Testing**: Vitest, React Testing Library
 - **UI Components**: shadcn/ui
 - **Icons**: Lucide React
 - **Sound**: Web Audio API
@@ -58,20 +57,24 @@ Play the game at: **[https://khasinogaming.com/cassino](https://khasinogaming.co
 ## 📁 Project Structure
 
 ```
-cassino-card-game/
+Multiplayer Card Game/
 ├── components/          # React components
 │   ├── ui/             # shadcn/ui components
 │   ├── Card.tsx        # Card display component
 │   ├── GamePhases.tsx  # Game phase management
 │   ├── GameActions.tsx # Player action handling
+│   ├── RoomManager.tsx # Room creation and joining
 │   └── ...
-├── supabase/
-│   └── functions/
-│       └── server/     # Edge function backend
-├── utils/
-│   └── supabase/       # Supabase configuration
+├── convex/             # Convex backend functions
+│   ├── createRoom.ts   # Room creation logic
+│   ├── joinRoom.ts     # Room joining logic
+│   ├── playCard.ts     # Game action logic
+│   ├── schema.ts       # Database schema
+│   └── ...
+├── tests/              # Test files and utilities
 ├── styles/             # Global CSS and Tailwind config
-└── public/             # Static assets
+├── public/             # Static assets
+└── ...
 ```
 
 ## 🔧 Development Setup
@@ -79,14 +82,14 @@ cassino-card-game/
 ### Prerequisites
 - Node.js 18+ 
 - npm or yarn
-- Supabase account
+- Convex account
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Malungisa-Mndzebele/cassino-card-game.git
-   cd cassino-card-game
+   git clone https://github.com/your-username/multiplayer-card-game.git
+   cd multiplayer-card-game
    ```
 
 2. **Install dependencies**
@@ -94,30 +97,20 @@ cassino-card-game/
    npm install
    ```
 
-3. **Configure Supabase**
-   - Create a new Supabase project
-   - Update `/utils/supabase/info.tsx` with your project details:
-   ```typescript
-   export const projectId = 'your-project-id'
-   export const publicAnonKey = 'your-anon-key'
-   ```
+3. **Set up Convex**
+   - Create a new Convex project at [convex.dev](https://convex.dev)
+   - Install Convex CLI: `npm install -g convex`
+   - Link your project: `npx convex dev --configure`
+   - This will create a `convex/` directory and configure your project
 
-4. **Deploy the Edge Function**
-   ```bash
-   # Install Supabase CLI
-   npm install -g supabase
-   
-   # Login and link project
-   supabase login
-   supabase link --project-ref your-project-id
-   
-   # Deploy the server function
-   supabase functions deploy server
-   ```
-
-5. **Start development server**
+4. **Start development server**
    ```bash
    npm run dev
+   ```
+
+5. **Run tests**
+   ```bash
+   npm test
    ```
 
 ## 📦 Deployment
@@ -133,7 +126,7 @@ This creates a `dist/` folder with production-ready files.
 ### Deploy to Web Hosting
 
 1. Upload the contents of `dist/` to your web server
-2. Ensure HTTPS is enabled (required for Supabase)
+2. Ensure HTTPS is enabled (required for Convex)
 3. Configure proper MIME types for `.js` and `.css` files
 
 For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
@@ -156,11 +149,37 @@ For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUI
 - ✅ Settings panel with preferences
 
 ### Technical Features
-- ✅ Real-time state synchronization
+- ✅ Real-time state synchronization with Convex
 - ✅ Error handling and recovery
 - ✅ Performance optimizations
 - ✅ SEO optimization
 - ✅ PWA capabilities
+- ✅ Comprehensive test coverage
+
+## 🧪 Testing
+
+The project includes comprehensive test coverage:
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run specific test file
+npm test -- --run App.test.tsx
+```
+
+### Test Coverage
+- ✅ Component unit tests
+- ✅ Integration tests
+- ✅ Game logic tests
+- ✅ Error handling tests
+- ✅ User interaction tests
 
 ## 🐛 Known Issues
 
@@ -174,6 +193,12 @@ For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUI
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+### Development Guidelines
+- Write tests for new features
+- Follow the existing code style
+- Update documentation as needed
+- Ensure all tests pass before submitting PR
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -182,7 +207,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Traditional Cassino card game rules
 - [shadcn/ui](https://ui.shadcn.com/) for beautiful UI components
-- [Supabase](https://supabase.com/) for backend infrastructure
+- [Convex](https://convex.dev/) for real-time backend infrastructure
 - [Lucide](https://lucide.dev/) for icons
 
 ## 📞 Support
