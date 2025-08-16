@@ -7,9 +7,7 @@ import { Badge } from './components/ui/badge'
 import { Button } from './components/ui/button'
 import { Card, CardContent } from './components/ui/card'
 import { Separator } from './components/ui/separator'
-import { convex } from './convexClient'
-import { api } from './convex/_generated/api'
-import { useMutation } from 'convex/react'
+import { convex, api, useMutation } from './convexClient'
 import { Trophy, Users, Clock, Heart, Diamond, Spade, Club, Crown, Star, Wifi, WifiOff } from 'lucide-react'
 
 // Game-related interfaces

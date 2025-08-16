@@ -4,7 +4,7 @@ import App from './App.tsx'
 import './styles/globals.css'
 
 // Production error handling
-if (process.env.NODE_ENV === 'production') {
+if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
   // Disable console.log in production
   console.log = () => {}
   
@@ -18,11 +18,11 @@ if (process.env.NODE_ENV === 'production') {
   })
 }
 
-import { ConvexProvider, convex } from './convexClient';
+import { ConvexProvider } from './convexClient';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ConvexProvider client={convex}>
+    <ConvexProvider>
       <App />
     </ConvexProvider>
   </React.StrictMode>,

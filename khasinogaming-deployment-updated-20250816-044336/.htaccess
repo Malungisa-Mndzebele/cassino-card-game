@@ -1,5 +1,5 @@
 # KhasinoGaming.com - Cassino Card Game Configuration
-# Performance optimization for Spaceship hosting
+# Performance optimization for Spaceship hosting - Updated Version
 
 # Enable CORS if needed
 Header set Access-Control-Allow-Origin "*"
@@ -52,4 +52,11 @@ Header set Access-Control-Allow-Headers "Authorization, Content-Type"
     AddType application/manifest+json .webmanifest
     AddType application/javascript .js
     AddType text/css .css
+</IfModule>
+
+# Enable browser caching for assets
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg)$">
+        Header set Cache-Control "public, max-age=31536000"
+    </FilesMatch>
 </IfModule>
