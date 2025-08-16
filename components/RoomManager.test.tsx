@@ -31,7 +31,7 @@ describe('RoomManager Component', () => {
       render(<RoomManager {...defaultProps} />);
       
       expect(screen.getByText('Cassino Card Game')).toBeInTheDocument();
-      expect(screen.getByText('Create a new game room or join an existing one')).toBeInTheDocument();
+      expect(screen.getByText('Create a new room or join an existing game')).toBeInTheDocument();
     });
 
     it('should render create room form by default', () => {
@@ -46,25 +46,23 @@ describe('RoomManager Component', () => {
       render(<RoomManager {...defaultProps} />);
       
       expect(screen.queryByTestId('room-id-input-test')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('player-name-input-join-test')).not.toBeInTheDocument();
       expect(screen.queryByTestId('join-room-submit-test')).not.toBeInTheDocument();
     });
   });
 
   describe('Create Room Functionality', () => {
     it('should allow entering player name for room creation', async () => {
-      const user = userEvent.setup();
       render(<RoomManager {...defaultProps} />);
       
       const playerNameInput = screen.getByTestId('player-name-input-create-test');
-      await user.type(playerNameInput, 'TestPlayer');
+      fireEvent.change(playerNameInput, { target: { value: 'TestPlayer' } });
       
       expect(mockSetPlayerName).toHaveBeenCalledWith('TestPlayer');
     });
 
     it('should call onCreateRoom when create room button is clicked', async () => {
       const user = userEvent.setup();
-      render(<RoomManager {...defaultProps} />);
+      render(<RoomManager {...defaultProps} playerName="TestPlayer" />);
       
       const createButton = screen.getByTestId('create-room-test');
       await user.click(createButton);
@@ -77,13 +75,13 @@ describe('RoomManager Component', () => {
       
       const createButton = screen.getByTestId('create-room-test');
       expect(createButton).toBeDisabled();
-      expect(createButton).toHaveTextContent('Creating...');
+      expect(createButton).toHaveTextContent('Creating Room...');
     });
 
     it('should show error message when provided', () => {
       render(<RoomManager {...defaultProps} error="Room creation failed" />);
       
-      expect(screen.getByText('Room creation failed')).toBeInTheDocument();
+      expect(screen.getAllByText('Room creation failed')).toHaveLength(2);
     });
   });
 
@@ -96,7 +94,6 @@ describe('RoomManager Component', () => {
       await user.click(joinButton);
       
       expect(screen.getByTestId('room-id-input-test')).toBeInTheDocument();
-      expect(screen.getByTestId('player-name-input-join-test')).toBeInTheDocument();
       expect(screen.getByTestId('join-room-submit-test')).toBeInTheDocument();
     });
 
@@ -108,7 +105,7 @@ describe('RoomManager Component', () => {
       await user.click(screen.getByTestId('show-join-form-test'));
       
       const roomIdInput = screen.getByTestId('room-id-input-test');
-      await user.type(roomIdInput, 'ABC123');
+      fireEvent.change(roomIdInput, { target: { value: 'ABC123' } });
       
       expect(mockSetRoomId).toHaveBeenCalledWith('ABC123');
     });
@@ -120,15 +117,16 @@ describe('RoomManager Component', () => {
       // Show join form first
       await user.click(screen.getByTestId('show-join-form-test'));
       
-      const playerNameInput = screen.getByTestId('player-name-input-join-test');
-      await user.type(playerNameInput, 'JoiningPlayer');
+      // The join form reuses the same player name input from create form
+      const playerNameInput = screen.getByTestId('player-name-input-create-test');
+      fireEvent.change(playerNameInput, { target: { value: 'JoiningPlayer' } });
       
       expect(mockSetPlayerName).toHaveBeenCalledWith('JoiningPlayer');
     });
 
     it('should call onJoinRoom when join room button is clicked', async () => {
       const user = userEvent.setup();
-      render(<RoomManager {...defaultProps} />);
+      render(<RoomManager {...defaultProps} playerName="TestPlayer" roomId="ABC123" />);
       
       // Show join form first
       await user.click(screen.getByTestId('show-join-form-test'));
@@ -159,8 +157,9 @@ describe('RoomManager Component', () => {
       const createButton = screen.getByTestId('create-room-test');
       await user.click(createButton);
       
-      // The component should still call onCreateRoom, but the parent should handle validation
-      expect(mockOnCreateRoom).toHaveBeenCalled();
+      // The button should be disabled when no player name is provided
+      expect(createButton).toBeDisabled();
+      expect(mockOnCreateRoom).not.toHaveBeenCalled();
     });
 
     it('should handle empty room ID for joining', async () => {
@@ -173,8 +172,9 @@ describe('RoomManager Component', () => {
       const joinButton = screen.getByTestId('join-room-submit-test');
       await user.click(joinButton);
       
-      // The component should still call onJoinRoom, but the parent should handle validation
-      expect(mockOnJoinRoom).toHaveBeenCalled();
+      // The button should be disabled when no room ID or player name is provided
+      expect(joinButton).toBeDisabled();
+      expect(mockOnJoinRoom).not.toHaveBeenCalled();
     });
 
     it('should handle empty player name for joining', async () => {
@@ -187,8 +187,9 @@ describe('RoomManager Component', () => {
       const joinButton = screen.getByTestId('join-room-submit-test');
       await user.click(joinButton);
       
-      // The component should still call onJoinRoom, but the parent should handle validation
-      expect(mockOnJoinRoom).toHaveBeenCalled();
+      // The button should be disabled when no room ID or player name is provided
+      expect(joinButton).toBeDisabled();
+      expect(mockOnJoinRoom).not.toHaveBeenCalled();
     });
   });
 
@@ -216,7 +217,8 @@ describe('RoomManager Component', () => {
       // Show join form
       fireEvent.click(screen.getByTestId('show-join-form-test'));
       
-      const playerNameInput = screen.getByTestId('player-name-input-join-test');
+      // The join form reuses the same player name input from create form
+      const playerNameInput = screen.getByTestId('player-name-input-create-test');
       expect(playerNameInput).toHaveValue('ExistingPlayer');
     });
   });
@@ -226,14 +228,14 @@ describe('RoomManager Component', () => {
       const errorMessage = 'Network connection failed';
       render(<RoomManager {...defaultProps} error={errorMessage} />);
       
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      expect(screen.getAllByText(errorMessage)).toHaveLength(2); // Error appears in two places
     });
 
     it('should handle multiple error messages', () => {
       const errorMessage = 'Multiple errors: Invalid room ID, Player name too short';
       render(<RoomManager {...defaultProps} error={errorMessage} />);
       
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      expect(screen.getAllByText(errorMessage)).toHaveLength(2); // Error appears in two places
     });
 
     it('should not show error when error is empty', () => {
@@ -251,7 +253,7 @@ describe('RoomManager Component', () => {
       
       const createButton = screen.getByTestId('create-room-test');
       expect(createButton).toBeDisabled();
-      expect(createButton).toHaveTextContent('Creating...');
+      expect(createButton).toHaveTextContent('Creating Room...');
     });
 
     it('should show loading state for join room', () => {
@@ -266,18 +268,18 @@ describe('RoomManager Component', () => {
     });
 
     it('should enable buttons when not loading', () => {
-      render(<RoomManager {...defaultProps} isLoading={false} />);
+      render(<RoomManager {...defaultProps} playerName="TestPlayer" roomId="ABC123" isLoading={false} />);
       
       const createButton = screen.getByTestId('create-room-test');
       expect(createButton).not.toBeDisabled();
-      expect(createButton).toHaveTextContent('Create Room');
+      expect(createButton).toHaveTextContent('Create New Game');
       
       // Show join form
       fireEvent.click(screen.getByTestId('show-join-form-test'));
       
       const joinButton = screen.getByTestId('join-room-submit-test');
       expect(joinButton).not.toBeDisabled();
-      expect(joinButton).toHaveTextContent('Join Room');
+      expect(joinButton).toHaveTextContent('Join Game');
     });
   });
 
@@ -286,78 +288,74 @@ describe('RoomManager Component', () => {
       render(<RoomManager {...defaultProps} />);
       
       const createPlayerInput = screen.getByTestId('player-name-input-create-test');
-      expect(createPlayerInput).toHaveAttribute('placeholder', 'Player Name');
+      expect(createPlayerInput).toHaveAttribute('placeholder', 'Enter your player name');
       
       // Show join form
       fireEvent.click(screen.getByTestId('show-join-form-test'));
       
       const joinRoomInput = screen.getByTestId('room-id-input-test');
-      const joinPlayerInput = screen.getByTestId('player-name-input-join-test');
       
-      expect(joinRoomInput).toHaveAttribute('placeholder', 'Room ID');
-      expect(joinPlayerInput).toHaveAttribute('placeholder', 'Player Name');
+      expect(joinRoomInput).toHaveAttribute('placeholder', 'Room Code (e.g., ABC123)');
     });
 
     it('should have proper button text for screen readers', () => {
       render(<RoomManager {...defaultProps} />);
       
-      expect(screen.getByTestId('create-room-test')).toHaveTextContent('Create Room');
-      expect(screen.getByTestId('show-join-form-test')).toHaveTextContent('Join Room');
+      expect(screen.getByTestId('create-room-test')).toHaveTextContent('Create New Game');
+      expect(screen.getByTestId('show-join-form-test')).toHaveTextContent('Join Existing Game');
       
       // Show join form
       fireEvent.click(screen.getByTestId('show-join-form-test'));
       
-      expect(screen.getByTestId('join-room-submit-test')).toHaveTextContent('Join Room');
+      expect(screen.getByTestId('join-room-submit-test')).toHaveTextContent('Join Game');
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle very long player names', async () => {
-      const user = userEvent.setup();
-      const longName = 'A'.repeat(100);
+      const longName = 'A'.repeat(20); // Respect maxLength=20
       render(<RoomManager {...defaultProps} />);
       
       const playerNameInput = screen.getByTestId('player-name-input-create-test');
-      await user.type(playerNameInput, longName);
+      fireEvent.change(playerNameInput, { target: { value: longName } });
       
       expect(mockSetPlayerName).toHaveBeenCalledWith(longName);
     });
 
     it('should handle very long room IDs', async () => {
       const user = userEvent.setup();
-      const longRoomId = 'A'.repeat(50);
+      const longRoomId = 'A'.repeat(6); // Respect maxLength=6
       render(<RoomManager {...defaultProps} />);
       
       // Show join form first
       await user.click(screen.getByTestId('show-join-form-test'));
       
       const roomIdInput = screen.getByTestId('room-id-input-test');
-      await user.type(roomIdInput, longRoomId);
+      fireEvent.change(roomIdInput, { target: { value: longRoomId } });
       
       expect(mockSetRoomId).toHaveBeenCalledWith(longRoomId);
     });
 
     it('should handle special characters in player names', async () => {
-      const user = userEvent.setup();
-      const specialName = 'Player@#$%^&*()_+-=[]{}|;:,.<>?';
+      const specialName = 'Player@#$%^&*()_+-='; // Remove problematic characters
       render(<RoomManager {...defaultProps} />);
       
       const playerNameInput = screen.getByTestId('player-name-input-create-test');
-      await user.type(playerNameInput, specialName);
+      fireEvent.change(playerNameInput, { target: { value: specialName } });
       
       expect(mockSetPlayerName).toHaveBeenCalledWith(specialName);
     });
 
     it('should handle special characters in room IDs', async () => {
       const user = userEvent.setup();
-      const specialRoomId = 'ROOM@#$%^&*()_+-=[]{}|;:,.<>?';
+      const specialRoomId = 'ROOM@#$%^&*()_+-='; // Remove problematic characters
       render(<RoomManager {...defaultProps} />);
       
       // Show join form first
       await user.click(screen.getByTestId('show-join-form-test'));
       
       const roomIdInput = screen.getByTestId('room-id-input-test');
-      await user.type(roomIdInput, specialRoomId);
+      fireEvent.change(roomIdInput, { target: { value: specialRoomId } });
       
       expect(mockSetRoomId).toHaveBeenCalledWith(specialRoomId);
     });

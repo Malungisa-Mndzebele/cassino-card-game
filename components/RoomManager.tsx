@@ -129,7 +129,7 @@ export function RoomManager({
                   </Label>
                   <Input
                     id="playerName"
-                    data-testid="player-name-input"
+                    data-testid="player-name-input-create-test"
                     type="text"
                     placeholder="Enter your player name"
                     value={playerName}
@@ -144,13 +144,14 @@ export function RoomManager({
 
                 {/* Action Buttons */}
                 <div className="space-y-4">
-                  <Button
-                    onClick={onCreateRoom}
-                    disabled={!playerName.trim() || isLoading}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium py-3 text-lg shadow-lg transform hover:scale-[1.02] transition-all duration-200"
-                    size="lg"
-                    aria-label={isLoading ? "Creating" : "Create Room"}
-                  >
+                                      <Button
+                      onClick={onCreateRoom}
+                      disabled={!playerName.trim() || isLoading}
+                      className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium py-3 text-lg shadow-lg transform hover:scale-[1.02] transition-all duration-200"
+                      size="lg"
+                      aria-label={isLoading ? "Creating" : "Create Room"}
+                      data-testid="create-room-test"
+                    >
                     {isLoading ? (
                       <>
                         <Shuffle className="w-5 h-5 mr-2 animate-spin" />
@@ -173,7 +174,7 @@ export function RoomManager({
                       className="w-full border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium py-3 text-lg"
                       size="lg"
                       aria-label="Show Join Room Form"
-                      data-testid="show-join-form"
+                      data-testid="show-join-form-test"
                     >
                       <Users className="w-5 h-5 mr-2" />
                       Join Existing Game
@@ -190,6 +191,7 @@ export function RoomManager({
                             className="bg-white border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                             maxLength={6}
                             aria-label="Room ID"
+                            data-testid="room-id-input-test"
                           />
                         </div>
                         <Button
@@ -207,9 +209,9 @@ export function RoomManager({
                         <Button
                           onClick={onJoinRoom}
                           disabled={!roomId.trim() || !playerName.trim() || isLoading}
-                          className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
+                          className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
                           aria-label={isLoading ? "Joining" : "Join Room"}
-                          data-testid="join-room-submit"
+                          data-testid="join-room-submit-test"
                         >
                           {isLoading ? (
                             <>

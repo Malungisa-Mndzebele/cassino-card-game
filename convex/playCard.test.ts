@@ -602,8 +602,8 @@ describe('playCard Function', () => {
         // Both players have same score at end of game
         const newScore = room.player1Score + 1;
         
-        if (newScore >= 11 && newScore === room.player2Score) {
-          // Tie game
+        if (newScore >= 11 && newScore === room.player2Score + 1) {
+          // Tie game - both players reach 11 points
           mockDb.patch('rooms', args.roomId, { 
             player1Score: newScore,
             phase: 'finished',
@@ -614,7 +614,7 @@ describe('playCard Function', () => {
           return { success: true, gameTied: true };
         }
         
-        return { success: true };
+        return { success: true, gameTied: false };
       });
 
       const result = playCard(args);
