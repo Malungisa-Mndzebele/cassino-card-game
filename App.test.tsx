@@ -42,7 +42,6 @@ vi.mock('convex/react', async () => {
           }
           const response = {
             roomId: 'new-room',
-            playerId: 1,
             gameState: require('./tests/test-utils').createMockGameState({ 
               roomId: 'new-room',
               phase: 'waiting',

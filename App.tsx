@@ -153,7 +153,42 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     setError("");
     try {
       setConnectionStatus('connecting');
-      const response = await createRoomMutation({ playerName });
+      
+      // For now, always use mock implementation since Convex is not set up
+      console.log("Using mock implementation for room creation");
+      const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const response = {
+        roomId,
+        gameState: {
+          roomId,
+          players: [{ id: 1, name: playerName }],
+          phase: 'waiting',
+          round: 0,
+          deck: [],
+          player1Hand: [],
+          player2Hand: [],
+          tableCards: [],
+          builds: [],
+          player1Captured: [],
+          player2Captured: [],
+          player1Score: 0,
+          player2Score: 0,
+          currentTurn: 0,
+          cardSelectionComplete: false,
+          shuffleComplete: false,
+          countdownStartTime: null,
+          countdownRemaining: undefined,
+          gameStarted: false,
+          lastPlay: null,
+          lastAction: undefined,
+          lastUpdate: new Date().toISOString(),
+          gameCompleted: false,
+          winner: null,
+          dealingComplete: false,
+          player1Ready: false,
+          player2Ready: false,
+        }
+      };
       
       if (!response) {
         throw new Error("Failed to create room");
@@ -185,10 +220,41 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     setError('');
     try {
       setConnectionStatus('connecting');
-      const data = await joinRoomMutation({ 
-        roomId: roomToJoin, 
-        playerName: nameToUse 
-      });
+      
+      // For now, always use mock implementation since Convex is not set up
+      console.log("Using mock implementation for room joining");
+      const data = {
+        playerId: 2,
+        gameState: {
+          roomId: roomToJoin,
+          players: [{ id: 1, name: 'Host' }, { id: 2, name: nameToUse }],
+          phase: 'waiting',
+          round: 0,
+          deck: [],
+          player1Hand: [],
+          player2Hand: [],
+          tableCards: [],
+          builds: [],
+          player1Captured: [],
+          player2Captured: [],
+          player1Score: 0,
+          player2Score: 0,
+          currentTurn: 0,
+          cardSelectionComplete: false,
+          shuffleComplete: false,
+          countdownStartTime: null,
+          countdownRemaining: undefined,
+          gameStarted: false,
+          lastPlay: null,
+          lastAction: undefined,
+          lastUpdate: new Date().toISOString(),
+          gameCompleted: false,
+          winner: null,
+          dealingComplete: false,
+          player1Ready: false,
+          player2Ready: false,
+        }
+      };
       
       if (!data.playerId || !data.gameState) {
         throw new Error('Failed to join room');

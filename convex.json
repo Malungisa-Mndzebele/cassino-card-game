@@ -1,0 +1,14 @@
+{
+  "project": {
+    "name": "cassino-card-game"
+  },
+  "functions": {
+    "directory": "convex"
+  },
+  "schema": {
+    "path": "convex/schema.ts"
+  },
+  "development": {
+    "local": true
+  }
+}

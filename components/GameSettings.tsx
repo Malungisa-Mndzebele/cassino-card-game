@@ -228,7 +228,7 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
 }
 
 // Hook for managing preferences
-export function useGamePreferences(defaultPreferences?: GamePreferences): [GamePreferences, (prefs: GamePreferences) => void] {
+function useGamePreferences(defaultPreferences?: GamePreferences): [GamePreferences, (prefs: GamePreferences) => void] {
   const [preferences, setPreferences] = useState<GamePreferences>(defaultPreferences || {
     hintsEnabled: false,
     statisticsEnabled: false,
@@ -266,7 +266,7 @@ export function useGamePreferences(defaultPreferences?: GamePreferences): [GameP
 }
 
 // Hook for managing statistics
-export function useGameStatistics(): [GameStatistics, (update: Partial<GameStatistics>) => void, () => void] {
+function useGameStatistics(): [GameStatistics, (update: Partial<GameStatistics>) => void, () => void] {
   const [statistics, setStatistics] = useState<GameStatistics>({
     gamesPlayed: 0,
     gamesWon: 0,
@@ -355,3 +355,5 @@ export function useGameStatistics(): [GameStatistics, (update: Partial<GameStati
 
   return [statistics, updateStatistics, reset]
 }
+
+export { useGamePreferences, useGameStatistics };
