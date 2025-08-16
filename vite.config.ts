@@ -15,7 +15,11 @@ export default defineConfig({
         }
       }
     },
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 1000,
+    // Optimize for better performance
+    target: 'es2015',
+    cssCodeSplit: true,
+    assetsInlineLimit: 4096
   },
   server: {
     port: 3000,

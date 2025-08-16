@@ -20,10 +20,12 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
 
 import { ConvexProvider } from './convexClient';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ConvexProvider>
-      <App />
-    </ConvexProvider>
-  </React.StrictMode>,
+// Add loaded class to prevent flickering
+const root = document.getElementById('root')!;
+root.classList.add('loaded');
+
+ReactDOM.createRoot(root).render(
+  <ConvexProvider>
+    <App />
+  </ConvexProvider>,
 )

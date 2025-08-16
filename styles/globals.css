@@ -175,6 +175,29 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  
+  /* Prevent flickering during initial load */
+  #root {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+  
+  #root.loaded {
+    opacity: 1;
+  }
+  
+  /* Prevent layout shift during loading */
+  html, body {
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+  
+  /* Ensure smooth rendering */
+  * {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
 }
 
 /**
