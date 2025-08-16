@@ -427,10 +427,12 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
           </div>
         </div>
 
-        <div className="relative z-10 p-4">
-          <div className="max-w-6xl mx-auto">
-            {/* Enhanced Header */}
-            <Card className="backdrop-blur-sm bg-white/95 shadow-2xl border-0 mb-6">
+        {/* Show game content when connected */}
+        {isConnected && (
+          <div className="relative z-10 p-4">
+            <div className="max-w-6xl mx-auto">
+              {/* Enhanced Header */}
+              <Card className="backdrop-blur-sm bg-white/95 shadow-2xl border-0 mb-6">
               <CardContent className="p-6">
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                   {/* Game Info */}
@@ -675,6 +677,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
             )}
           </div>
         </div>
+        )}
       </div>
     </>
   );
