@@ -152,7 +152,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./deployment/
-        server-dir: /public_html/cassino/
+        server-dir: /home/mawdqtvped/khasinogaming.com/cassino/
         exclude: |
           **/.git*
           **/.git*/**
@@ -164,7 +164,7 @@ jobs:
       run: |
         echo "🎊 Deployment completed successfully!"
         echo "Your Cassino card game should now be live at:"
-        echo "🔗 https://khasinogaming.com/cassino/"
+        echo "🔗 https://khasinogaming.com/cassino/ (or http://khasinogaming.com/cassino/ if HTTPS not configured)"
         echo ""
         echo "Deployment details:"
         echo "📦 Package size: $(du -sh deployment | cut -f1)"

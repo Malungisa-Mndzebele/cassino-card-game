@@ -191,7 +191,7 @@ if [ ! -z "$FTP_HOST" ] && [ ! -z "$FTP_USERNAME" ] && [ ! -z "$FTP_PASSWORD" ];
         set ssl:verify-certificate false;
         open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
         lcd $DEPLOY_DIR;
-        cd /public_html/cassino;
+        cd /home/mawdqtvped/khasinogaming.com/cassino;
         mirror -R --delete --verbose .;
         quit
         "

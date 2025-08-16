@@ -7,17 +7,7 @@ import { Badge } from './components/ui/badge'
 import { Button } from './components/ui/button'
 import { Card, CardContent } from './components/ui/card'
 import { Separator } from './components/ui/separator'
-<<<<<<< Current (Your changes)
-<<<<<<< Current (Your changes)
-
-import { api } from './convex/_generated/api'
-import { useMutation, useQuery } from 'convex/react'
-=======
 import { convex, api, useMutation } from './convexClient'
->>>>>>> Incoming (Background Agent changes)
-=======
-import { convex, api, useMutation } from './convexClient'
->>>>>>> Incoming (Background Agent changes)
 import { Trophy, Users, Clock, Heart, Diamond, Spade, Club, Crown, Star, Wifi, WifiOff } from 'lucide-react'
 import type { GameState } from './convex/types'
 
