@@ -70,23 +70,23 @@ export function RoomManager({
 
       {/* Enhanced Decorative Background Elements */}
       <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 left-10 transform rotate-12 floating">
-          <Heart className="w-20 h-20 text-casino-red-light glow-casino" />
+        <div className="absolute top-20 left-10 transform rotate-12 animate-bounce">
+          <Heart className="w-20 h-20 text-red-400" />
         </div>
-        <div className="absolute top-40 right-20 transform -rotate-45 floating" style={{ animationDelay: '1s' }}>
-          <Spade className="w-18 h-18 text-gray-300 glow-casino" />
+        <div className="absolute top-40 right-20 transform -rotate-45 animate-bounce" style={{ animationDelay: '1s' }}>
+          <Spade className="w-18 h-18 text-gray-300" />
         </div>
-        <div className="absolute bottom-32 left-16 transform rotate-45 floating" style={{ animationDelay: '2s' }}>
-          <Diamond className="w-22 h-22 text-casino-blue-light glow-casino" />
+        <div className="absolute bottom-32 left-16 transform rotate-45 animate-bounce" style={{ animationDelay: '2s' }}>
+          <Diamond className="w-22 h-22 text-blue-400" />
         </div>
-        <div className="absolute bottom-20 right-10 transform -rotate-12 floating" style={{ animationDelay: '3s' }}>
-          <Club className="w-20 h-20 text-gray-300 glow-casino" />
+        <div className="absolute bottom-20 right-10 transform -rotate-12 animate-bounce" style={{ animationDelay: '3s' }}>
+          <Club className="w-20 h-20 text-gray-300" />
         </div>
-        <div className="absolute top-1/2 left-1/4 transform -rotate-12 floating" style={{ animationDelay: '0.5s' }}>
-          <Crown className="w-16 h-16 text-casino-gold glow-gold" />
+        <div className="absolute top-1/2 left-1/4 transform -rotate-12 animate-bounce" style={{ animationDelay: '0.5s' }}>
+          <Crown className="w-16 h-16 text-yellow-400" />
         </div>
-        <div className="absolute top-1/3 right-1/3 transform rotate-45 floating" style={{ animationDelay: '1.5s' }}>
-          <Star className="w-14 h-14 text-casino-purple-light glow-casino" />
+        <div className="absolute top-1/3 right-1/3 transform rotate-45 animate-bounce" style={{ animationDelay: '1.5s' }}>
+          <Star className="w-14 h-14 text-purple-400" />
         </div>
       </div>
 
@@ -96,8 +96,8 @@ export function RoomManager({
           <div className="text-center mb-12">
             <div className="flex justify-center items-center mb-6">
               <div className="relative">
-                <div className="absolute -inset-2 bg-gradient-to-r from-casino-gold via-casino-purple to-casino-blue rounded-full blur-lg opacity-50 animate-pulse-slow"></div>
-                <div className="relative bg-white rounded-full p-4 shadow-glow-gold border border-casino-gold/30">
+                <div className="absolute -inset-2 bg-gradient-to-r from-yellow-400 via-purple-500 to-blue-500 rounded-full blur-lg opacity-50 animate-pulse"></div>
+                <div className="relative bg-white rounded-full p-4 shadow-lg border border-yellow-400/30">
                   <div className="w-12 h-12 bg-gradient-to-r from-emerald-600 to-green-600 rounded-full flex items-center justify-center">
                     <span className="text-white font-bold text-xl">X</span>
                   </div>
@@ -116,15 +116,15 @@ export function RoomManager({
             
             <div className="flex justify-center space-x-6 text-white/70 text-sm font-medium">
               <div className="flex items-center space-x-2">
-                <Users className="w-4 h-4 text-casino-blue" />
+                <Users className="w-4 h-4 text-blue-400" />
                 <span>2 Players</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Trophy className="w-4 h-4 text-casino-gold" />
+                <Trophy className="w-4 h-4 text-yellow-400" />
                 <span>11 Points to Win</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Star className="w-4 h-4 text-casino-purple" />
+                <Star className="w-4 h-4 text-purple-400" />
                 <span>Real-time Online</span>
               </div>
             </div>
@@ -174,7 +174,7 @@ export function RoomManager({
                     >
                       {isLoading ? (
                         <div className="flex items-center space-x-2">
-                          <div className="casino-spinner w-5 h-5"></div>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                           <span>Creating Room...</span>
                         </div>
                       ) : (
@@ -240,7 +240,7 @@ export function RoomManager({
                     >
                       {isLoading ? (
                         <div className="flex items-center space-x-2">
-                          <div className="casino-spinner w-5 h-5"></div>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                           <span>Joining Game...</span>
                         </div>
                       ) : (
