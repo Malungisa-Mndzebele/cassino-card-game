@@ -119,6 +119,9 @@ export const convex = mockConvex;
 // Export the mock API for imports
 export const api = mockApi;
 
+// Simple in-memory store to track room states
+const roomStates = new Map<string, any>();
+
 // Mock implementations for React hooks
 export function ConvexProvider({ children }: { children: React.ReactNode }) {
   return React.createElement(React.Fragment, null, children);
@@ -132,6 +135,10 @@ export function useMutation(mutationFunction: any) {
         players: [{ id: 1, name: args.playerName }],
         phase: 'waiting'
       });
+      
+      // Store the room state
+      roomStates.set(gameState.roomId, gameState);
+      
       return {
         roomId: gameState.roomId,
         playerId: 1,
@@ -141,14 +148,35 @@ export function useMutation(mutationFunction: any) {
 
     // Mock joinRoom  
     if (mutationFunction === mockApi.joinRoom.joinRoom) {
-      const gameState = createMockGameState({
-        roomId: args.roomId,
-        players: [
-          { id: 1, name: 'Player 1' },
-          { id: 2, name: args.playerName }
-        ],
-        phase: 'readyToShuffle' // Changed from 'shuffle' to 'readyToShuffle'
-      });
+      // Get existing room state or create new one
+      const existingState = roomStates.get(args.roomId);
+      let gameState;
+      
+      if (existingState) {
+        // Add the second player to existing room
+        gameState = {
+          ...existingState,
+          players: [
+            ...existingState.players,
+            { id: 2, name: args.playerName }
+          ],
+          phase: 'readyToShuffle' // Move to readyToShuffle when second player joins
+        };
+      } else {
+        // Create new room state if it doesn't exist
+        gameState = createMockGameState({
+          roomId: args.roomId,
+          players: [
+            { id: 1, name: 'Player 1' },
+            { id: 2, name: args.playerName }
+          ],
+          phase: 'readyToShuffle'
+        });
+      }
+      
+      // Update the stored room state
+      roomStates.set(args.roomId, gameState);
+      
       return {
         playerId: 2,
         gameState
@@ -229,23 +257,37 @@ export function useMutation(mutationFunction: any) {
 export function useQuery(queryFunction: any, args?: any) {
   // Mock query responses
   if (queryFunction === mockApi.getGameState.getGameState) {
-    // Determine phase based on number of players
-    const players = [
-      { id: 1, name: 'Player 1' },
-      { id: 2, name: 'Player 2' }
-    ];
+    // Only return game state if roomId is provided (meaning we're actually in a room)
+    if (!args?.roomId) {
+      return null;
+    }
     
-    // If we have 2 players, move to readyToShuffle phase
-    const phase = players.length >= 2 ? 'readyToShuffle' : 'waiting';
+    // Get the stored room state
+    const storedState = roomStates.get(args.roomId);
     
-    // Return the structure expected by the app
-    return {
-      gameState: createMockGameState({
-        roomId: args?.roomId || 'DEMO123',
-        players: players,
-        phase: phase
-      })
-    };
+    if (storedState) {
+      // Return the actual stored state
+      return {
+        gameState: storedState
+      };
+    } else {
+      // Return a default waiting room with only the creator
+      // This prevents automatic joining - players must explicitly join
+      const defaultState = createMockGameState({
+        roomId: args.roomId,
+        players: [
+          { id: 1, name: 'Player 1' }
+        ],
+        phase: 'waiting'
+      });
+      
+      // Store this default state
+      roomStates.set(args.roomId, defaultState);
+      
+      return {
+        gameState: defaultState
+      };
+    }
   }
 
   if (queryFunction === mockApi.getRooms.getRooms) {
