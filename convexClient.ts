@@ -147,7 +147,7 @@ export function useMutation(mutationFunction: any) {
           { id: 1, name: 'Player 1' },
           { id: 2, name: args.playerName }
         ],
-        phase: 'shuffle'
+        phase: 'readyToShuffle' // Changed from 'shuffle' to 'readyToShuffle'
       });
       return {
         playerId: 2,
@@ -158,6 +158,22 @@ export function useMutation(mutationFunction: any) {
     // Mock setPlayerReady
     if (mutationFunction === mockApi.setPlayerReady.setPlayerReady) {
       return { success: true };
+    }
+
+    // Mock startShuffle
+    if (mutationFunction === mockApi.startShuffle.startShuffle) {
+      // Return updated game state with shuffling phase
+      return {
+        gameState: createMockGameState({
+          roomId: args?.roomId || 'DEMO123',
+          players: [
+            { id: 1, name: 'Player 1' },
+            { id: 2, name: 'Player 2' }
+          ],
+          phase: 'shuffling',
+          shuffleComplete: true
+        })
+      };
     }
 
     // Mock startGame
@@ -213,15 +229,21 @@ export function useMutation(mutationFunction: any) {
 export function useQuery(queryFunction: any, args?: any) {
   // Mock query responses
   if (queryFunction === mockApi.getGameState.getGameState) {
+    // Determine phase based on number of players
+    const players = [
+      { id: 1, name: 'Player 1' },
+      { id: 2, name: 'Player 2' }
+    ];
+    
+    // If we have 2 players, move to readyToShuffle phase
+    const phase = players.length >= 2 ? 'readyToShuffle' : 'waiting';
+    
     // Return the structure expected by the app
     return {
       gameState: createMockGameState({
         roomId: args?.roomId || 'DEMO123',
-        players: [
-          { id: 1, name: 'Player 1' },
-          { id: 2, name: 'Player 2' }
-        ],
-        phase: 'waiting'
+        players: players,
+        phase: phase
       })
     };
   }
