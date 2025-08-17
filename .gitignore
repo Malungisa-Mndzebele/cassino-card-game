@@ -105,7 +105,6 @@ temp/
 *.sln
 *.sw?
 
-# Supabase
+# Temporary files
 .branches
 .temp
-.supabase

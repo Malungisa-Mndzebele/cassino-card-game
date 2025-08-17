@@ -34,8 +34,8 @@ if ! command -v npm &> /dev/null; then
 fi
 
 echo -e "${BLUE}📋 Pre-deployment checklist:${NC}"
-echo "   1. Have you updated /utils/supabase/info.tsx with your production keys?"
-echo "   2. Have you deployed your Supabase edge function?"
+echo "   1. Have you configured your Convex backend?"
+echo "   2. Have you deployed your Convex functions?"
 echo "   3. Is HTTPS enabled on khasinogaming.com?"
 echo ""
 
@@ -112,7 +112,7 @@ EOF
 cat > "$DEPLOY_DIR/.htaccess" << EOF
 # KhasinoGaming.com - Cassino Card Game Configuration
 
-# Enable CORS for Supabase
+# Enable CORS for Convex
 Header set Access-Control-Allow-Origin "*"
 Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
 Header set Access-Control-Allow-Headers "Authorization, Content-Type"
@@ -172,7 +172,7 @@ echo ""
 
 echo -e "${YELLOW}⚠️  Important Reminders:${NC}"
 echo "• Make sure HTTPS is enabled on your domain"
-echo "• Check that your Supabase edge function is deployed"
+echo "• Check that your Convex functions are deployed"
 echo "• Verify your production keys are configured"
 echo "• Test the game thoroughly after upload"
 echo ""

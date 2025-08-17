@@ -6,46 +6,43 @@ This guide is specifically for deploying to your **khasinogaming.com** hosting s
 
 ## 📋 Pre-Deployment Checklist
 
-- [x] Supabase project created and configured
+- [x] Convex project created and configured
 - [x] Game files built and ready
 - [x] Domain HTTPS enabled
-- [ ] Production Supabase keys updated
+- [ ] Production Convex configuration updated
 - [ ] Files uploaded to hosting service
 - [ ] Edge function deployed
 - [ ] Game tested in production
 
 ## 🔧 Step 1: Configure Production Environment
 
-### 1.1 Update Supabase Configuration
+### 1.1 Update Convex Configuration
 
-1. **Go to your Supabase project dashboard**
-2. **Copy your production keys** from Settings > API:
-   - Project URL: `https://your-project-id.supabase.co`
-   - Anon public key: `eyJhbGciOiJIUzI1NiIsInR5cCI6...`
+1. **Go to your Convex project dashboard**
+2. **Copy your production configuration** from your dashboard:
+   - Project URL: Found in your Convex dashboard
+   - Deployment URL: Found in your Convex dashboard
 
-3. **Update `/utils/supabase/info.tsx`**:
+3. **Update your Convex configuration**:
    ```typescript
-   export const projectId = 'your-actual-project-id'  // Replace this!
-   export const publicAnonKey = 'your-actual-anon-key'  // Replace this!
+   // In your convex.json or environment variables
+   export const CONVEX_URL = 'your-actual-convex-url'  // Replace this!
    ```
 
-### 1.2 Deploy Supabase Edge Function
+### 1.2 Deploy Convex Functions
 
 ```bash
-# Install Supabase CLI (if not already installed)
-npm install -g supabase
+# Install Convex CLI (if not already installed)
+npm install -g convex
 
-# Login to Supabase
-supabase login
+# Login to Convex
+npx convex login
 
-# Link your project (replace with your project ID)
-supabase link --project-ref your-project-id
-
-# Deploy the server function
-supabase functions deploy server --project-ref your-project-id
+# Deploy your functions
+npx convex deploy
 
 # Verify deployment
-supabase functions list
+npx convex list
 ```
 
 ## 🏗️ Step 2: Build Production Version
@@ -97,7 +94,7 @@ public_html/cassino/          (or public_html/ for root)
 ### 4.1 Verify HTTPS is Working
 - Visit: `https://khasinogaming.com/cassino/`
 - Ensure the lock icon appears (secure connection)
-- **HTTPS is required** for Supabase to work properly
+- **HTTPS is required** for Convex to work properly
 
 ### 4.2 Configure CORS (if needed)
 If you get CORS errors, add these headers to your `.htaccess` file:
@@ -142,21 +139,21 @@ Header set Access-Control-Allow-Headers "Authorization, Content-Type"
 - Verify all files uploaded correctly
 - Ensure `index.html` is in the correct location
 
-### ❌ "Supabase connection failed"
+### ❌ "Convex connection failed"
 **Solution:**
-- Double-check your project ID and anon key in `/utils/supabase/info.tsx`
-- Verify edge function is deployed: `supabase functions list`
-- Ensure your Supabase project is active
+- Double-check your Convex URL and configuration
+- Verify functions are deployed: `npx convex list`
+- Ensure your Convex project is active
 
 ### ❌ "CORS policy" errors
 **Solution:**
 - Verify your site uses HTTPS
 - Add CORS headers to `.htaccess` (see above)
-- Check Supabase project CORS settings
+- Check Convex project CORS settings
 
 ### ❌ "Cannot join room" or "Room not found"
 **Solution:**
-- Check Supabase edge function logs: `supabase functions logs server`
+- Check Convex function logs: `npx convex logs`
 - Verify the function URL is accessible
 - Test edge function directly in browser
 
@@ -220,7 +217,7 @@ Add to `.htaccess`:
 3. **Set up conversion goals** for game completions
 
 ### 8.2 Monitor Performance
-- **Supabase Dashboard**: Monitor function calls and database usage
+- **Convex Dashboard**: Monitor function calls and database usage
 - **Hosting Panel**: Check bandwidth and storage usage
 - **Browser Tools**: Monitor page load times
 

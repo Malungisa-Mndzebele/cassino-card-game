@@ -7,59 +7,49 @@ This guide will help you deploy your Cassino card game to your existing website.
 ## 📋 Prerequisites
 
 Before deploying, ensure you have:
-- ✅ A Supabase account with a project set up
+- ✅ A Convex account with a project set up
 - ✅ Your hosting service credentials (FTP, cPanel, etc.)
 - ✅ Node.js installed locally for building
 
-## 🔧 Step 1: Supabase Production Setup
+## 🔧 Step 1: Convex Production Setup
 
-### 1.1 Create/Configure Your Supabase Project
+### 1.1 Create/Configure Your Convex Project
 
-1. Go to [supabase.com](https://supabase.com) and create a new project (or use existing)
+1. Go to [convex.dev](https://convex.dev) and create a new project (or use existing)
 2. Note down your project details:
-   - **Project URL**: `https://your-project-id.supabase.co`
-   - **Anon Public Key**: Found in Settings > API
-   - **Service Role Key**: Found in Settings > API (keep this secret!)
+   - **Project URL**: Found in your Convex dashboard
+   - **Deployment URL**: Found in your Convex dashboard
 
-### 1.2 Deploy Your Edge Function
+### 1.2 Deploy Your Functions
 
-1. Install Supabase CLI:
+1. Install Convex CLI:
    ```bash
-   npm install -g supabase
+   npm install -g convex
    ```
 
-2. Login to Supabase:
+2. Login to Convex:
    ```bash
-   supabase login
+   npx convex login
    ```
 
-3. Link your project:
+3. Deploy your functions:
    ```bash
-   supabase link --project-ref your-project-id
+   npx convex deploy
    ```
 
-4. Deploy your edge function:
-   ```bash
-   supabase functions deploy server --project-ref your-project-id
-   ```
+### 1.3 Set Environment Variables in Convex
 
-### 1.3 Set Environment Variables in Supabase
-
-In your Supabase dashboard, go to Settings > Edge Functions and add these secrets:
-- `SUPABASE_URL`: Your project URL
-- `SUPABASE_ANON_KEY`: Your anon public key  
-- `SUPABASE_SERVICE_ROLE_KEY`: Your service role key
-- `SUPABASE_DB_URL`: Your database URL (found in Settings > Database)
+In your Convex dashboard, configure your environment variables as needed for your game functions.
 
 ## 🔧 Step 2: Configure Your Application
 
-### 2.1 Update Supabase Info File
+### 2.1 Update Convex Configuration
 
-Update `/utils/supabase/info.tsx` with your production values:
+Update your Convex configuration with your production values:
 
 ```typescript
-export const projectId = 'your-actual-project-id'
-export const publicAnonKey = 'your-actual-anon-key'
+// In your convex.json or environment variables
+export const CONVEX_URL = 'your-actual-convex-url'
 ```
 
 ### 2.2 Create Production Build
@@ -105,13 +95,13 @@ Create a folder (e.g., `cassino`) and upload there:
 
 ### For Custom Server:
 1. Configure web server (Apache/Nginx) to serve static files
-2. Set up HTTPS (required for Supabase)
+2. Set up HTTPS (required for Convex)
 3. Configure proper MIME types for `.js` and `.css` files
 
 ## 🛡️ Step 5: Security & Performance
 
 ### 5.1 HTTPS Configuration
-- ✅ Ensure your website uses HTTPS (required for Supabase)
+- ✅ Ensure your website uses HTTPS (required for Convex)
 - ✅ Update any HTTP links to HTTPS
 
 ### 5.2 CORS Configuration (if needed)
@@ -132,16 +122,16 @@ Access-Control-Allow-Headers: Authorization, Content-Type
 
 ### Common Issues & Solutions:
 
-❌ **"Failed to load Supabase"**
-- ✅ Check your project ID and keys in `/utils/supabase/info.tsx`
-- ✅ Verify Supabase project is active
+❌ **"Failed to load Convex"**
+- ✅ Check your Convex URL and configuration
+- ✅ Verify Convex project is active
 
 ❌ **"CORS Error"**  
 - ✅ Ensure your website uses HTTPS
-- ✅ Check Supabase CORS settings
+- ✅ Check Convex CORS settings
 
-❌ **"Edge function not found"**
-- ✅ Verify edge function is deployed: `supabase functions list`
+❌ **"Convex function not found"**
+- ✅ Verify functions are deployed: `npx convex list`
 - ✅ Check function name matches your code
 
 ❌ **"Cards not loading"**
@@ -152,7 +142,7 @@ Access-Control-Allow-Headers: Authorization, Content-Type
 
 ### 7.1 Monitor Performance
 - Use browser dev tools to check load times
-- Monitor Supabase usage in dashboard
+- Monitor Convex usage in dashboard
 
 ### 7.2 SEO & Sharing
 Add to your `index.html` head section:
@@ -165,9 +155,9 @@ Add to your `index.html` head section:
 
 ## 🎯 Quick Deployment Checklist
 
-- [ ] Supabase project created and configured
-- [ ] Edge function deployed successfully
-- [ ] Environment variables set in Supabase
+- [ ] Convex project created and configured
+- [ ] Functions deployed successfully
+- [ ] Environment variables set in Convex
 - [ ] Production build created (`npm run build`)
 - [ ] Files uploaded to hosting service
 - [ ] HTTPS enabled on your domain
@@ -179,7 +169,7 @@ Add to your `index.html` head section:
 If you encounter issues:
 
 1. **Check browser console** for error messages
-2. **Check Supabase logs** in your dashboard
+2. **Check Convex logs** in your dashboard
 3. **Verify all files uploaded** correctly
 4. **Test with different browsers/devices**
 
