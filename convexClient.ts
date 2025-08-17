@@ -69,6 +69,42 @@ const mockApi = {
   },
   resetGame: {
     resetGame: () => {}
+  },
+  setPlayerReady: {
+    setPlayerReady: () => {}
+  },
+  startGame: {
+    startGame: () => {}
+  },
+  dealCards: {
+    dealCards: () => {}
+  },
+  captureCards: {
+    captureCards: () => {}
+  },
+  buildCards: {
+    buildCards: () => {}
+  },
+  endTurn: {
+    endTurn: () => {}
+  },
+  endRound: {
+    endRound: () => {}
+  },
+  endGame: {
+    endGame: () => {}
+  },
+  leaveRoom: {
+    leaveRoom: () => {}
+  },
+  updatePlayerName: {
+    updatePlayerName: () => {}
+  },
+  getGameState: {
+    getGameState: () => {}
+  },
+  getRooms: {
+    getRooms: () => {}
   }
 };
 
@@ -119,11 +155,87 @@ export function useMutation(mutationFunction: any) {
       };
     }
 
+    // Mock setPlayerReady
+    if (mutationFunction === mockApi.setPlayerReady.setPlayerReady) {
+      return { success: true };
+    }
+
+    // Mock startGame
+    if (mutationFunction === mockApi.startGame.startGame) {
+      return { success: true };
+    }
+
+    // Mock dealCards
+    if (mutationFunction === mockApi.dealCards.dealCards) {
+      return { success: true };
+    }
+
+    // Mock captureCards
+    if (mutationFunction === mockApi.captureCards.captureCards) {
+      return { success: true };
+    }
+
+    // Mock buildCards
+    if (mutationFunction === mockApi.buildCards.buildCards) {
+      return { success: true };
+    }
+
+    // Mock endTurn
+    if (mutationFunction === mockApi.endTurn.endTurn) {
+      return { success: true };
+    }
+
+    // Mock endRound
+    if (mutationFunction === mockApi.endRound.endRound) {
+      return { success: true };
+    }
+
+    // Mock endGame
+    if (mutationFunction === mockApi.endGame.endGame) {
+      return { success: true };
+    }
+
+    // Mock leaveRoom
+    if (mutationFunction === mockApi.leaveRoom.leaveRoom) {
+      return { success: true };
+    }
+
+    // Mock updatePlayerName
+    if (mutationFunction === mockApi.updatePlayerName.updatePlayerName) {
+      return { success: true };
+    }
+
     // Default mock response
     return { success: true };
   };
 }
 
-export function useQuery() {
+export function useQuery(queryFunction: any, args?: any) {
+  // Mock query responses
+  if (queryFunction === mockApi.getGameState.getGameState) {
+    return createMockGameState({
+      roomId: args?.roomId || 'DEMO123',
+      players: [
+        { id: 1, name: 'Player 1' },
+        { id: 2, name: 'Player 2' }
+      ],
+      phase: 'waiting'
+    });
+  }
+
+  if (queryFunction === mockApi.getRooms.getRooms) {
+    return [
+      {
+        roomId: 'DEMO123',
+        players: [
+          { id: 1, name: 'Player 1' },
+          { id: 2, name: 'Player 2' }
+        ],
+        phase: 'waiting'
+      }
+    ];
+  }
+
+  // Default return null for other queries
   return null;
 }
