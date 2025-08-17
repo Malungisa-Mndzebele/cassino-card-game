@@ -213,14 +213,17 @@ export function useMutation(mutationFunction: any) {
 export function useQuery(queryFunction: any, args?: any) {
   // Mock query responses
   if (queryFunction === mockApi.getGameState.getGameState) {
-    return createMockGameState({
-      roomId: args?.roomId || 'DEMO123',
-      players: [
-        { id: 1, name: 'Player 1' },
-        { id: 2, name: 'Player 2' }
-      ],
-      phase: 'waiting'
-    });
+    // Return the structure expected by the app
+    return {
+      gameState: createMockGameState({
+        roomId: args?.roomId || 'DEMO123',
+        players: [
+          { id: 1, name: 'Player 1' },
+          { id: 2, name: 'Player 2' }
+        ],
+        phase: 'waiting'
+      })
+    };
   }
 
   if (queryFunction === mockApi.getRooms.getRooms) {
