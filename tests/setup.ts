@@ -1,6 +1,81 @@
 import React from 'react';
 import * as testUtils from './test-utils';
 import { afterEach, vi } from 'vitest';
+
+// Mock convexClient module
+vi.mock('../convexClient', () => ({
+  convex: {
+    mutation: () => () => Promise.resolve({}),
+    query: () => () => null,
+  },
+  api: {
+    createRoom: {
+      createRoom: () => {}
+    },
+    joinRoom: {
+      joinRoom: () => {}
+    },
+    playCard: {
+      playCard: () => {}
+    },
+    startShuffle: {
+      startShuffle: () => {}
+    },
+    selectFaceUpCards: {
+      selectFaceUpCards: () => {}
+    },
+    resetGame: {
+      resetGame: () => {}
+    },
+    setPlayerReady: {
+      setPlayerReady: () => {}
+    },
+    getGameState: {
+      getGameState: () => {}
+    },
+    getRooms: {
+      getRooms: () => {}
+    }
+  },
+  useMutation: (fn: any) => {
+    // Mock createRoom mutation
+    if (fn && fn.toString().includes('createRoom')) {
+      return async ({ playerName }: { playerName: string }) => {
+        const gameState = testUtils.createMockGameState({ roomId: 'new-room', players: [{ id: 1, name: playerName }] });
+        return {
+          roomId: 'new-room',
+          playerId: 1,
+          gameState: gameState && gameState.roomId ? gameState : { roomId: 'new-room', players: [{ id: 1, name: playerName }] }
+        };
+      };
+    }
+    // Mock joinRoom mutation
+    if (fn && fn.toString().includes('joinRoom')) {
+      return async ({ roomId, playerName }: { roomId: string, playerName: string }) => {
+        const gameState = testUtils.createMockGameState({ roomId, players: [{ id: 1, name: playerName }] });
+        return {
+          playerId: 1,
+          gameState: gameState && gameState.roomId ? gameState : { roomId, players: [{ id: 1, name: playerName }] }
+        };
+      };
+    }
+    return vi.fn();
+  },
+  useQuery: (fn: any, args?: any) => {
+    if (fn && fn.toString().includes('getGameState') && args && args !== 'skip') {
+      return {
+        gameState: testUtils.createMockGameState({ 
+          roomId: args.roomId,
+          phase: 'waiting',
+          players: []
+        })
+      };
+    }
+    return null;
+  },
+  ConvexProvider: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+}));
+
 // Mock convex/react globally for all tests
 vi.mock('convex/react', async () => {
   const actual = await vi.importActual<any>('convex/react');
