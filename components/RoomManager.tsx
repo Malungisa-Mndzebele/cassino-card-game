@@ -13,7 +13,7 @@ interface RoomManagerProps {
   playerName: string
   setPlayerName: (name: string) => void
   onCreateRoom: () => void
-  onJoinRoom: () => void
+  onJoinRoom: (roomId: string, playerName: string) => void
   error: string
   isLoading: boolean
 }
@@ -233,7 +233,7 @@ export function RoomManager({
                     </div>
 
                     <Button
-                      onClick={onJoinRoom}
+                      onClick={() => onJoinRoom(roomId, playerName)}
                       disabled={!playerName.trim() || !roomId.trim() || isLoading}
                       data-testid="join-room-submit-test"
                       className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"

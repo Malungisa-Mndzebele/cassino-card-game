@@ -157,10 +157,22 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     
     console.log('🚀 Joining room:', { roomToJoin, nameToUse });
     
-    if (!roomToJoin || !nameToUse) {
+    // Add defensive checks
+    if (!roomToJoin || typeof roomToJoin !== 'string') {
+      setError('Please enter a valid room ID');
+      return;
+    }
+    
+    if (!nameToUse || typeof nameToUse !== 'string') {
+      setError('Please enter a valid player name');
+      return;
+    }
+    
+    if (!roomToJoin.trim() || !nameToUse.trim()) {
       setError('Please enter room ID and player name');
       return;
     }
+    
     setIsLoading(true);
     setError('');
     try {
@@ -168,8 +180,8 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
       
       // Use the actual Convex mutation
       const response = await joinRoomMutation({ 
-        roomId: roomToJoin, 
-        playerName: nameToUse 
+        roomId: roomToJoin.trim(), 
+        playerName: nameToUse.trim() 
       });
       
       console.log('✅ Join room response:', response);
@@ -178,15 +190,15 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
         throw new Error("Failed to join room");
       }
       
-      setRoomId(roomToJoin);
-      setPlayerId(response.playerId);
-      setGameState(response.gameState);
+      setRoomId(roomToJoin.trim());
+      setPlayerId((response as any).playerId);
+      setGameState((response as any).gameState);
       setConnectionStatus('connected');
       
       console.log('🎯 Updated game state:', {
-        phase: response.gameState.phase,
-        players: response.gameState.players?.length || 0,
-        shouldShowDealer: response.gameState.phase === 'dealer'
+        phase: (response as any).gameState.phase,
+        players: (response as any).gameState.players?.length || 0,
+        shouldShowDealer: (response as any).gameState.phase === 'dealer'
       });
     } catch (error: any) {
       console.error("❌ Error joining room:", error);
