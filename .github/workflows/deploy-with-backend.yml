@@ -27,11 +27,27 @@ jobs:
         cd backend
         pip install -r requirements.txt
         
-    - name: Deploy to Shared Hosting
+    - name: Create backend package
       run: |
-        echo "Backend will be deployed to shared hosting server"
-        echo "Make sure SSH secrets are configured in GitHub"
-        echo "Backend URL: https://khasinogaming.com:8000"
+        mkdir -p backend-deploy
+        cp -r backend/* backend-deploy/
+        cp backend/requirements.txt backend-deploy/
+        
+        # Create startup script
+        echo '#!/usr/bin/env python3' > backend-deploy/start_backend.py
+        echo 'import os, sys, subprocess' >> backend-deploy/start_backend.py
+        echo 'os.chdir(os.path.dirname(__file__))' >> backend-deploy/start_backend.py
+        echo 'subprocess.run([sys.executable, "-m", "pip", "install", "--user", "-r", "requirements.txt"])' >> backend-deploy/start_backend.py
+        echo 'subprocess.run([sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"])' >> backend-deploy/start_backend.py
+        
+        chmod +x backend-deploy/start_backend.py
+        
+    - name: Upload backend artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-files
+        path: backend-deploy/
+        retention-days: 1
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -61,8 +77,40 @@ jobs:
         path: dist/
         retention-days: 1
 
+  deploy-backend-ssh:
+    needs: [deploy-backend]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download backend artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: backend-files
+        path: backend-deploy/
+        
+    - name: Deploy backend via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          mkdir -p ~/casino-backend
+          cd ~/casino-backend
+          pkill -f "uvicorn main:app" || true
+          pip3 install --user -r requirements.txt
+          nohup python3 start_backend.py > backend.log 2>&1 &
+          sleep 5
+          if pgrep -f "uvicorn main:app" > /dev/null; then
+            echo "✅ Backend is running successfully"
+          else
+            echo "❌ Backend failed to start"
+            cat backend.log 2>/dev/null || echo "No log file found"
+          fi
+
   deploy-frontend:
-    needs: [deploy-backend, build-frontend]
+    needs: [deploy-backend-ssh, build-frontend]
     runs-on: ubuntu-latest
     
     steps:
