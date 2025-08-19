@@ -7,9 +7,9 @@ import string
 import json
 from datetime import datetime
 
-from .database import get_db, engine
-from .models import Base, Room, Player, GameSession
-from .schemas import (
+from database import get_db, engine
+from models import Base, Room, Player, GameSession
+from schemas import (
     CreateRoomRequest, JoinRoomRequest, SetPlayerReadyRequest,
     PlayCardRequest, StartShuffleRequest, SelectFaceUpCardsRequest,
     CreateRoomResponse, JoinRoomResponse, StandardResponse, GameStateResponse, PlayerResponse
