@@ -30,8 +30,9 @@ jobs:
     - name: Deploy to Railway
       run: |
         npm install -g @railway/cli
-        echo ${{ secrets.RAILWAY_TOKEN }} | railway login
+        echo ${{ secrets.RAILWAY_TOKEN }} | railway login --browserless
         cd backend
+        railway link
         railway up
       env:
         RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
