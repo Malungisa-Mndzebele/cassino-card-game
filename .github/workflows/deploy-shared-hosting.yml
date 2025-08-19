@@ -34,7 +34,7 @@ jobs:
     - name: Build frontend for shared hosting
       run: npm run build
       env:
-        VITE_API_URL: https://khasinogaming.com/api
+        VITE_API_URL: https://khasinogaming.com:8000
         
     - name: Create backend package for shared hosting
       run: |

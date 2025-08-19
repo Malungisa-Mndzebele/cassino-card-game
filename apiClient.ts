@@ -3,7 +3,7 @@
 
 import React from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://khasinogaming.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://khasinogaming.com:8000';
 
 // Check if we're in a live environment without backend
 const isLiveEnvironment = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
