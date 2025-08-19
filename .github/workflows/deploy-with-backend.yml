@@ -30,10 +30,11 @@ jobs:
     - name: Deploy to Railway
       run: |
         npm install -g @railway/cli
-        echo ${{ secrets.RAILWAY_TOKEN }} | railway login --browserless
+        export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
+        echo $RAILWAY_TOKEN | railway login
         cd backend
         railway link
-        railway up
+        railway up --detach
       env:
         RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
