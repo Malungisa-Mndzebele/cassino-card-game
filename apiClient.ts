@@ -5,6 +5,10 @@ import React from 'react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// Check if we're in a live environment without backend
+const isLiveEnvironment = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const shouldUseMock = isLiveEnvironment && !import.meta.env.VITE_API_URL;
+
 // Convert snake_case to camelCase
 function toCamelCase(obj: any): any {
   if (obj === null || typeof obj !== 'object') {

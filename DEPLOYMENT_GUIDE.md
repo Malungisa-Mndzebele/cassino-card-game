@@ -1,185 +1,118 @@
-# Cassino Card Game - Deployment Guide
+# Casino Card Game - Deployment Guide
 
-## 🚀 Publishing Your Game
+## 🚀 Quick Deployment Options
 
-This guide will help you deploy your Cassino card game to your existing website.
+### Option 1: Railway (Recommended - Easiest)
 
-## 📋 Prerequisites
-
-Before deploying, ensure you have:
-- ✅ A Convex account with a project set up
-- ✅ Your hosting service credentials (FTP, cPanel, etc.)
-- ✅ Node.js installed locally for building
-
-## 🔧 Step 1: Convex Production Setup
-
-### 1.1 Create/Configure Your Convex Project
-
-1. Go to [convex.dev](https://convex.dev) and create a new project (or use existing)
-2. Note down your project details:
-   - **Project URL**: Found in your Convex dashboard
-   - **Deployment URL**: Found in your Convex dashboard
-
-### 1.2 Deploy Your Functions
-
-1. Install Convex CLI:
+1. **Install Railway CLI:**
    ```bash
-   npm install -g convex
+   npm install -g @railway/cli
    ```
 
-2. Login to Convex:
+2. **Login to Railway:**
    ```bash
-   npx convex login
+   railway login
    ```
 
-3. Deploy your functions:
+3. **Deploy Backend:**
    ```bash
-   npx convex deploy
+   cd backend
+   railway init
+   railway up
    ```
 
-### 1.3 Set Environment Variables in Convex
+4. **Get your Railway URL** from the dashboard (e.g., `https://your-app.railway.app`)
 
-In your Convex dashboard, configure your environment variables as needed for your game functions.
-
-## 🔧 Step 2: Configure Your Application
-
-### 2.1 Update Convex Configuration
-
-Update your Convex configuration with your production values:
-
-```typescript
-// In your convex.json or environment variables
-export const CONVEX_URL = 'your-actual-convex-url'
-```
-
-### 2.2 Create Production Build
-
-1. Install dependencies:
+5. **Set Environment Variable** in your frontend:
    ```bash
-   npm install
+   # Create .env file in root directory
+   echo "VITE_API_URL=https://your-app.railway.app" > .env
    ```
 
-2. Build for production:
+6. **Deploy Frontend** to your hosting service with the environment variable
+
+### Option 2: Render
+
+1. **Create a new Web Service** on Render
+2. **Connect your GitHub repository**
+3. **Set build command:** `pip install -r backend/requirements.txt`
+4. **Set start command:** `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+5. **Add environment variable:** `DATABASE_URL=your_postgresql_url`
+
+### Option 3: Heroku
+
+1. **Install Heroku CLI**
+2. **Create Heroku app:**
    ```bash
-   npm run build
+   heroku create your-casino-app
    ```
 
-This creates a `dist` folder with your production files.
+3. **Add PostgreSQL:**
+   ```bash
+   heroku addons:create heroku-postgresql:mini
+   ```
 
-## 🌐 Step 3: Upload to Your Website
+4. **Deploy:**
+   ```bash
+   git push heroku master
+   ```
 
-### Option A: Upload to Root Domain
-Upload contents of `dist` folder to your website's root directory:
-- `yourwebsite.com/` → Game loads at main domain
+## 🗄️ Database Setup
 
-### Option B: Upload to Subdirectory  
-Create a folder (e.g., `cassino`) and upload there:
-- `yourwebsite.com/cassino/` → Game loads at subdirectory
+### PostgreSQL (Recommended for Production)
 
-### Files to Upload:
+1. **Create a PostgreSQL database** (Railway, Render, or Heroku provide this)
+2. **Set DATABASE_URL environment variable**
+3. **Run migrations:**
+   ```bash
+   cd backend
+   alembic upgrade head
+   ```
+
+### SQLite (Development Only)
+
+- Used automatically for local development
+- Not recommended for production
+
+## 🔧 Environment Variables
+
+### Backend (.env in backend/ directory)
 ```
-📁 Your website directory
-  📄 index.html
-  📁 assets/
-    📄 index-[hash].js
-    📄 index-[hash].css
-  📁 (other generated files)
-```
-
-## 🔧 Step 4: Configure Your Hosting
-
-### For cPanel/Shared Hosting:
-1. Use File Manager or FTP client
-2. Upload to `public_html` folder
-3. Ensure `index.html` is in the correct location
-
-### For Custom Server:
-1. Configure web server (Apache/Nginx) to serve static files
-2. Set up HTTPS (required for Convex)
-3. Configure proper MIME types for `.js` and `.css` files
-
-## 🛡️ Step 5: Security & Performance
-
-### 5.1 HTTPS Configuration
-- ✅ Ensure your website uses HTTPS (required for Convex)
-- ✅ Update any HTTP links to HTTPS
-
-### 5.2 CORS Configuration (if needed)
-If you encounter CORS issues, add these headers to your server:
-```
-Access-Control-Allow-Origin: *
-Access-Control-Allow-Methods: GET, POST, OPTIONS
-Access-Control-Allow-Headers: Authorization, Content-Type
+DATABASE_URL=postgresql://user:password@host:port/database
 ```
 
-## 🧪 Step 6: Testing Your Deployment
-
-1. **Visit your game URL**
-2. **Test creating a room**
-3. **Test joining a room** (open in incognito/different browser)
-4. **Play a complete game**
-5. **Test all features** (hints, sound, statistics)
-
-### Common Issues & Solutions:
-
-❌ **"Failed to load Convex"**
-- ✅ Check your Convex URL and configuration
-- ✅ Verify Convex project is active
-
-❌ **"CORS Error"**  
-- ✅ Ensure your website uses HTTPS
-- ✅ Check Convex CORS settings
-
-❌ **"Convex function not found"**
-- ✅ Verify functions are deployed: `npx convex list`
-- ✅ Check function name matches your code
-
-❌ **"Cards not loading"**
-- ✅ Check browser console for JavaScript errors
-- ✅ Verify all files uploaded correctly
-
-## 📈 Step 7: Post-Launch Optimization
-
-### 7.1 Monitor Performance
-- Use browser dev tools to check load times
-- Monitor Convex usage in dashboard
-
-### 7.2 SEO & Sharing
-Add to your `index.html` head section:
-```html
-<meta property="og:title" content="Cassino Card Game">
-<meta property="og:description" content="Play the classic Cassino card game online with friends!">
-<meta property="og:url" content="https://yourwebsite.com/cassino">
-<meta name="description" content="Free online Cassino card game. Challenge friends to this classic card game with real-time multiplayer.">
+### Frontend (.env in root directory)
+```
+VITE_API_URL=https://your-backend-url.com
 ```
 
-## 🎯 Quick Deployment Checklist
+## 🚀 Frontend Deployment
 
-- [ ] Convex project created and configured
-- [ ] Functions deployed successfully
-- [ ] Environment variables set in Convex
-- [ ] Production build created (`npm run build`)
-- [ ] Files uploaded to hosting service
-- [ ] HTTPS enabled on your domain
-- [ ] Game tested in production environment
-- [ ] Multiple players tested simultaneously
+### Vercel
+1. **Connect your GitHub repository**
+2. **Set environment variable:** `VITE_API_URL=https://your-backend-url.com`
+3. **Deploy**
 
-## 🆘 Need Help?
+### Netlify
+1. **Connect your GitHub repository**
+2. **Set environment variable:** `VITE_API_URL=https://your-backend-url.com`
+3. **Deploy**
+
+## 🔍 Troubleshooting
+
+### Backend Issues
+- Check Railway/Render/Heroku logs
+- Verify DATABASE_URL is correct
+- Ensure all dependencies are in requirements.txt
+
+### Frontend Issues
+- Verify VITE_API_URL is set correctly
+- Check browser console for CORS errors
+- Ensure backend is running and accessible
+
+## 📞 Support
 
 If you encounter issues:
-
-1. **Check browser console** for error messages
-2. **Check Convex logs** in your dashboard
-3. **Verify all files uploaded** correctly
-4. **Test with different browsers/devices**
-
-## 🎊 You're Live!
-
-Once deployed, share your game:
-- `https://yourwebsite.com/cassino` (or your chosen path)
-- Players can create rooms and invite friends
-- No registration required - just enter names and play!
-
----
-
-**🎮 Happy Gaming!** Your Cassino card game is now live and ready for players worldwide.
+1. Check the logs in your deployment platform
+2. Verify all environment variables are set
+3. Test the backend API endpoints directly

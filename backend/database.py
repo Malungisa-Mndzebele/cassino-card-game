@@ -3,8 +3,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-# Use SQLite for testing instead of PostgreSQL
-DATABASE_URL = "sqlite:///./test_casino_game.db"
+# Use environment variable for database URL, fallback to SQLite for local development
+import os
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test_casino_game.db")
+
+# Convert SQLite URL for Heroku/Railway if needed
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # Create SQLAlchemy engine
 engine = create_engine(
