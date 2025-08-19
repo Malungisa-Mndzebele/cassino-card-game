@@ -201,7 +201,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
              setRoomId(roomToJoin.trim());
        setPlayerId((response as any).playerId);
        setGameState((response as any).gameState);
-       setConnectionStatus('connected');
+      setConnectionStatus('connected');
        
        console.log('🎯 State after join:', {
          roomId: roomToJoin.trim(),
@@ -293,8 +293,8 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
 
   // useQuery handles polling automatically
 
-     const startShuffle = async () => {
-     if (!roomId || !playerId) return;
+  const startShuffle = async () => {
+    if (!roomId || !playerId) return;
      // TODO: Replace with API mutation
     setGameState((prev) => prev ? {
       ...prev,
@@ -303,8 +303,8 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     setError('');
   };
 
-     const selectFaceUpCards = async (cardIds: string[]) => {
-     if (!roomId || !playerId) return;
+  const selectFaceUpCards = async (cardIds: string[]) => {
+    if (!roomId || !playerId) return;
      // TODO: Replace with API mutation
     setGameState((prev) => prev ? {
       ...prev,
@@ -313,8 +313,8 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     setError('');
   };
 
-     const playCard = async (cardId: string, action: string, targetCards?: string[], buildValue?: number) => {
-     if (!roomId || !playerId) return;
+  const playCard = async (cardId: string, action: string, targetCards?: string[], buildValue?: number) => {
+    if (!roomId || !playerId) return;
      // TODO: Replace with API mutation
     setGameState((prev) => prev ? {
       ...prev,
@@ -323,8 +323,8 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     setError('');
   };
 
-     const resetGame = async () => {
-     if (!roomId) return;
+  const resetGame = async () => {
+    if (!roomId) return;
      // TODO: Replace with API mutation
     setGameState(null);
     setPreviousGameState(null);
@@ -405,16 +405,16 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
         {!isConnected ? (
           <div className="relative z-10 p-4">
             <div className="max-w-6xl mx-auto">
-              <RoomManager
-                roomId={roomId}
-                setRoomId={setRoomId}
-                playerName={playerName}
-                setPlayerName={setPlayerName}
-                onCreateRoom={createRoom}
-                onJoinRoom={joinRoom}
-                error={error}
-                isLoading={isLoading}
-              />
+          <RoomManager
+            roomId={roomId}
+            setRoomId={setRoomId}
+            playerName={playerName}
+            setPlayerName={setPlayerName}
+            onCreateRoom={createRoom}
+            onJoinRoom={joinRoom}
+            error={error}
+            isLoading={isLoading}
+          />
             </div>
           </div>
         ) : (
@@ -684,11 +684,11 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                 onPlayerReady={async () => {
                   if (!roomId || !playerId) return;
                   try {
-                                         const response = await setPlayerReadyMutation({ 
+                    const response = await setPlayerReadyMutation({ 
                        room_id: roomId, 
                        player_id: playerId, 
                        is_ready: true 
-                     });
+                    });
                     if (response) {
                       setGameState(response.gameState);
                     }
@@ -700,11 +700,11 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                 onPlayerNotReady={async () => {
                   if (!roomId || !playerId) return;
                   try {
-                                         const response = await setPlayerReadyMutation({ 
+                    const response = await setPlayerReadyMutation({ 
                        room_id: roomId, 
                        player_id: playerId, 
                        is_ready: false 
-                     });
+                    });
                     if (response) {
                       setGameState(response.gameState);
                     }

@@ -237,7 +237,7 @@ describe('RoomManager Component', () => {
       
       const createPlayerInput = screen.getByTestId('player-name-input-create-test')
       expect(createPlayerInput).toHaveAttribute('placeholder', 'Enter your player name')
-
+      
       // Show join form
       const showJoinButton = screen.getByTestId('show-join-form-test')
       fireEvent.click(showJoinButton)

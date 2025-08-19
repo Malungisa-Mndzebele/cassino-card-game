@@ -1,0 +1,133 @@
+name: Deploy Casino Game (Unified Server)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install frontend dependencies
+      run: npm ci --legacy-peer-deps
+      
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        
+    - name: Build frontend for local backend
+      run: npm run build
+      env:
+        VITE_API_URL: https://khasinogaming.com/api
+        
+    - name: Create backend deployment package
+      run: |
+        mkdir -p backend-deploy
+        cp -r backend/* backend-deploy/
+        cp backend/requirements.txt backend-deploy/
+        echo "uvicorn main:app --host 0.0.0.0 --port 8000" > backend-deploy/start.sh
+        chmod +x backend-deploy/start.sh
+        
+    - name: Upload backend artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-files
+        path: backend-deploy/
+        retention-days: 1
+        
+    - name: Upload frontend artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-files
+        path: dist/
+        retention-days: 1
+
+  deploy-backend:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download backend artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: backend-files
+        path: backend-deploy/
+        
+    - name: Deploy backend via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          # Create backend directory
+          mkdir -p ~/casino-backend
+          cd ~/casino-backend
+          
+          # Stop existing backend if running
+          pkill -f "uvicorn main:app" || true
+          
+          # Install Python dependencies
+          pip3 install -r requirements.txt
+          
+          # Start backend in background
+          nohup uvicorn main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
+          
+          echo "Backend deployed and started on port 8000"
+
+  deploy-frontend:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download frontend artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-files
+        path: dist/
+        
+    - name: Deploy frontend via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_HOST }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./dist/
+        server-dir: /
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/.DS_Store
+          **/Thumbs.db
+        dangerous-clean-slate: true
+      continue-on-error: true
+        
+    - name: Verify deployment
+      run: |
+        echo "🎊 Unified deployment completed successfully!"
+        echo "Backend: https://khasinogaming.com:8000"
+        echo "Frontend: https://khasinogaming.com/"
+        echo "Game: https://khasinogaming.com/cassino/"

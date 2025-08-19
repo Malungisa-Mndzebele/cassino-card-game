@@ -29,14 +29,9 @@ jobs:
         
     - name: Deploy to Railway
       run: |
-        npm install -g @railway/cli
-        export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-        echo $RAILWAY_TOKEN | railway login
-        cd backend
-        railway link
-        railway up --detach
-      env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        echo "Railway deployment will be handled by GitHub integration"
+        echo "Make sure the Railway GitHub app is connected to this repository"
+        echo "Backend URL: https://web-production-64f8e.up.railway.app"
 
   build-frontend:
     runs-on: ubuntu-latest
