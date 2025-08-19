@@ -27,11 +27,11 @@ jobs:
         cd backend
         pip install -r requirements.txt
         
-    - name: Deploy to Railway
+    - name: Deploy to Shared Hosting
       run: |
-        echo "Railway deployment will be handled by GitHub integration"
-        echo "Make sure the Railway GitHub app is connected to this repository"
-        echo "Backend URL: https://web-production-64f8e.up.railway.app"
+        echo "Backend will be deployed to shared hosting server"
+        echo "Make sure SSH secrets are configured in GitHub"
+        echo "Backend URL: https://khasinogaming.com:8000"
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -52,7 +52,7 @@ jobs:
     - name: Build application
       run: npm run build
       env:
-        VITE_API_URL: https://web-production-64f8e.up.railway.app
+        VITE_API_URL: https://khasinogaming.com:8000
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -95,6 +95,6 @@ jobs:
     - name: Verify deployment
       run: |
         echo "🎊 Full deployment completed successfully!"
-        echo "Backend: https://web-production-64f8e.up.railway.app"
+        echo "Backend: https://khasinogaming.com:8000"
         echo "Frontend: https://khasinogaming.com/"
         echo "Game: https://khasinogaming.com/cassino/"

@@ -1,6 +1,6 @@
 # Shared Hosting Deployment Guide
 
-This guide explains how to deploy the Casino Card Game to your shared hosting server.
+This guide explains how to deploy the Casino Card Game to your Spaceship shared hosting server.
 
 ## Prerequisites
 
