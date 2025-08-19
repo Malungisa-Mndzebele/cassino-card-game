@@ -3,7 +3,7 @@ import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { Badge } from './ui/badge'
 import { Separator } from './ui/separator'
-import { convex, useMutation } from '../convexClient'
+import { useMutation } from '../apiClient'
 
 interface GameCard {
   suit: string
@@ -44,7 +44,7 @@ export function CardGame() {
 
   const pollGameState = async () => {
     if (!gameId || !playerId) return;
-    // TODO: Replace with Convex query or local mock
+    // TODO: Replace with API query or local mock
     setTimeout(() => {
       setGameState((prev) => prev || { id: gameId, players: [playerId], playerHands: { [playerId]: [] }, currentTurn: 0, currentTrick: [], scores: { [playerId]: 0 }, status: 'waiting' });
     }, 200);
@@ -54,7 +54,7 @@ export function CardGame() {
     if (!playerId || isJoining) return;
     setIsJoining(true);
     setError('');
-    // TODO: Replace with Convex mutation
+    // TODO: Replace with API mutation
     setTimeout(() => {
       setGameId('mock-game-id');
       setGameState({ id: 'mock-game-id', players: [playerId], playerHands: { [playerId]: [] }, currentTurn: 0, currentTrick: [], scores: { [playerId]: 0 }, status: 'waiting' });
@@ -64,14 +64,14 @@ export function CardGame() {
 
   const playCard = async (cardId: string) => {
     if (!gameId || !playerId || !gameState) return;
-    // TODO: Replace with Convex mutation
+    // TODO: Replace with API mutation
     setGameState((prev) => ({ ...prev, currentTrick: [...(prev?.currentTrick || []), { id: cardId, suit: 'hearts', rank: 'A' }] }));
     setError('');
   };
 
   const resetGame = async () => {
     if (!gameId) return;
-    // TODO: Replace with Convex mutation
+    // TODO: Replace with API mutation
     setGameState(null);
     setError('');
   };

@@ -1,16 +1,11 @@
 import React from 'react';
-import { ConvexProvider } from 'convex/react';
-import { convex } from '../convexClient';
+// No provider needed for API client
 import { render } from '@testing-library/react';
 import { vi } from 'vitest';
 
-// Helper to wrap components in ConvexProvider for tests
+// Helper to wrap components for tests (no provider needed for API client)
 export function renderWithProviders(ui: React.ReactElement) {
-  return render(
-    <ConvexProvider client={convex}>
-      {ui}
-    </ConvexProvider>
-  );
+  return render(ui);
 }
 
 // Mock game state creator

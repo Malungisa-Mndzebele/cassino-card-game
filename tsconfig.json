@@ -34,7 +34,7 @@
     "*.ts",
     "components/**/*.ts", 
     "components/**/*.tsx",
-    "convexClient.ts"
+    "apiClient.ts"
   ],
   "exclude": [
     "node_modules",
@@ -46,6 +46,6 @@
     "vite.config.ts",
     "vitest.config.ts",
     "jest.config.js",
-    "convex/**"
+
   ]
 }

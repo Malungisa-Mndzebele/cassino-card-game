@@ -18,8 +18,6 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
   })
 }
 
-import { ConvexProvider } from './convexClient';
-
 // Wait for DOM and CSS to be ready before showing content
 const root = document.getElementById('root')!;
 
@@ -51,7 +49,5 @@ if (document.readyState === 'loading') {
 }
 
 ReactDOM.createRoot(root).render(
-  <ConvexProvider>
-    <App />
-  </ConvexProvider>,
+  <App />
 )

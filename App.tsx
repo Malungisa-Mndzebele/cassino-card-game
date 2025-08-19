@@ -7,9 +7,9 @@ import { Badge } from './components/ui/badge'
 import { Button } from './components/ui/button'
 import { Card, CardContent } from './components/ui/card'
 import { Separator } from './components/ui/separator'
-import { convex, api, useMutation, useQuery } from './convexClient'
+import { api, useMutation, useQuery } from './apiClient'
 import { Trophy, Users, Clock, Heart, Diamond, Spade, Club, Crown, Star, Wifi, WifiOff } from 'lucide-react'
-import type { GameState } from './convex/types'
+import type { GameState } from './apiClient'
 
 // Game-related interfaces
 interface Player {
@@ -91,8 +91,16 @@ export default function App() {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected');
 
   // Derive connection state from connection status and game state
-  // Temporarily force show landing page for testing
-  const isConnected = false; // connectionStatus === 'connected' && gameState !== null && roomId !== '';
+  const isConnected = connectionStatus === 'connected' && gameState !== null && roomId !== '';
+  
+  // Debug logging
+  console.log('🔍 Connection Debug:', {
+    connectionStatus,
+    hasGameState: gameState !== null,
+    roomId,
+    isConnected,
+    gameStatePhase: gameState?.phase
+  });
 
     // Game preferences and statistics
   const defaultPreferences = {
@@ -126,8 +134,8 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     try {
       setConnectionStatus('connecting');
       
-      // Use the convex mutation (which may be mocked in tests)
-      const response = await createRoomMutation({ playerName });
+             // Use the API mutation
+      const response = await createRoomMutation({ player_name: playerName });
       
       if (!response) {
         throw new Error("Failed to create room");
@@ -178,10 +186,10 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     try {
       setConnectionStatus('connecting');
       
-      // Use the actual Convex mutation
+             // Use the actual API mutation
       const response = await joinRoomMutation({ 
-        roomId: roomToJoin.trim(), 
-        playerName: nameToUse.trim() 
+        room_id: roomToJoin.trim(), 
+        player_name: nameToUse.trim() 
       });
       
       console.log('✅ Join room response:', response);
@@ -190,10 +198,17 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
         throw new Error("Failed to join room");
       }
       
-      setRoomId(roomToJoin.trim());
-      setPlayerId((response as any).playerId);
-      setGameState((response as any).gameState);
-      setConnectionStatus('connected');
+             setRoomId(roomToJoin.trim());
+       setPlayerId((response as any).playerId);
+       setGameState((response as any).gameState);
+       setConnectionStatus('connected');
+       
+       console.log('🎯 State after join:', {
+         roomId: roomToJoin.trim(),
+         playerId: (response as any).playerId,
+         gameState: (response as any).gameState,
+         connectionStatus: 'connected'
+       });
       
       console.log('🎯 Updated game state:', {
         phase: (response as any).gameState.phase,
@@ -255,42 +270,32 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     setPreviousGameState(gameState)
   }, [gameState, previousGameState, playerId, preferences.statisticsEnabled, preferences.soundEnabled, soundReady, statistics, updateStatistics])
 
-  // No polling needed - using real-time Convex subscription instead
+     // No polling needed - using real-time API subscription instead
 
   // Real-time game state subscription - only when we have a valid roomId AND we're actually in the game
   const gameStateData = useQuery(
     api.getGameState.getGameState, 
-    roomId && roomId.trim() && roomId.length > 0 && roomId !== '' && playerId ? { roomId } : "skip"
+    roomId && roomId.trim() && roomId.length > 0 && roomId !== '' && playerId ? { room_id: roomId } : "skip"
   );
   
-  // Update local game state when Convex data changes
+  // Update local game state when API data changes
   useEffect(() => {
-    if (gameStateData && gameStateData.gameState && roomId) {
-      console.log('🔄 Game state updated from Convex:', {
-        phase: gameStateData.gameState.phase,
-        players: gameStateData.gameState.players?.length || 0,
-        roomId: gameStateData.gameState.roomId
+    if (gameStateData?.data?.gameState && roomId) {
+      console.log('🔄 Game state updated from API:', {
+        phase: gameStateData.data.gameState.phase,
+        players: gameStateData.data.gameState.players?.length || 0,
+        roomId: gameStateData.data.gameState.roomId
       });
-      setGameState(gameStateData.gameState);
+      setGameState(gameStateData.data.gameState);
       setConnectionStatus('connected');
     }
   }, [gameStateData, roomId]);
 
-  // Force refresh game state every 2 seconds to catch real-time updates
-  useEffect(() => {
-    if (roomId && playerId && connectionStatus === 'connected') {
-      const interval = setInterval(() => {
-        console.log('🔄 Periodic game state refresh for room:', roomId);
-        // The useQuery will automatically refetch
-      }, 2000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [roomId, playerId, connectionStatus]);
+  // useQuery handles polling automatically
 
-  const startShuffle = async () => {
-    if (!roomId || !playerId) return;
-    // TODO: Replace with Convex mutation
+     const startShuffle = async () => {
+     if (!roomId || !playerId) return;
+     // TODO: Replace with API mutation
     setGameState((prev) => prev ? {
       ...prev,
       shuffleComplete: true
@@ -298,9 +303,9 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     setError('');
   };
 
-  const selectFaceUpCards = async (cardIds: string[]) => {
-    if (!roomId || !playerId) return;
-    // TODO: Replace with Convex mutation
+     const selectFaceUpCards = async (cardIds: string[]) => {
+     if (!roomId || !playerId) return;
+     // TODO: Replace with API mutation
     setGameState((prev) => prev ? {
       ...prev,
       cardSelectionComplete: true
@@ -308,9 +313,9 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     setError('');
   };
 
-  const playCard = async (cardId: string, action: string, targetCards?: string[], buildValue?: number) => {
-    if (!roomId || !playerId) return;
-    // TODO: Replace with Convex mutation
+     const playCard = async (cardId: string, action: string, targetCards?: string[], buildValue?: number) => {
+     if (!roomId || !playerId) return;
+     // TODO: Replace with API mutation
     setGameState((prev) => prev ? {
       ...prev,
       lastPlay: { cardId, action, targetCards, buildValue }
@@ -318,9 +323,9 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     setError('');
   };
 
-  const resetGame = async () => {
-    if (!roomId) return;
-    // TODO: Replace with Convex mutation
+     const resetGame = async () => {
+     if (!roomId) return;
+     // TODO: Replace with API mutation
     setGameState(null);
     setPreviousGameState(null);
     setError('');
@@ -343,7 +348,34 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
   return (
     <>
       <SoundSystem onSoundReady={() => setSoundReady(true)} />
-      <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-green-800 to-teal-900 relative">
+      
+
+      
+      <div className="min-h-screen casino-bg relative overflow-hidden">
+        {/* Enhanced Decorative Background for Landing Page */}
+        {!isConnected && (
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-20 left-10 transform rotate-12 floating">
+              <Heart className="w-20 h-20 text-casino-red-light glow-casino" />
+            </div>
+            <div className="absolute top-40 right-20 transform -rotate-45 floating" style={{ animationDelay: '1s' }}>
+              <Spade className="w-18 h-18 text-gray-300 glow-casino" />
+            </div>
+            <div className="absolute bottom-32 left-16 transform rotate-45 floating" style={{ animationDelay: '2s' }}>
+              <Diamond className="w-22 h-22 text-casino-blue-light glow-casino" />
+            </div>
+            <div className="absolute bottom-20 right-10 transform -rotate-12 floating" style={{ animationDelay: '3s' }}>
+              <Club className="w-20 h-20 text-gray-300 glow-casino" />
+            </div>
+            <div className="absolute top-1/2 left-1/4 transform -rotate-12 floating" style={{ animationDelay: '0.5s' }}>
+              <Crown className="w-16 h-16 text-casino-gold glow-gold" />
+            </div>
+            <div className="absolute top-1/3 right-1/3 transform rotate-45 floating" style={{ animationDelay: '1.5s' }}>
+              <Star className="w-14 h-14 text-casino-purple-light glow-casino" />
+            </div>
+          </div>
+        )}
+
         {/* Global Settings - Always Available */}
         <div className="absolute top-4 right-4 z-50" data-testid="game-settings">
           <GameSettings
@@ -355,32 +387,36 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
 
         {/* Global Statistics Display */}
         {preferences.statisticsEnabled && (
-          <div data-testid="statistics" className="absolute top-4 left-4 z-50 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-            <div className="text-sm font-medium text-gray-800">Games: {statistics.gamesPlayed}</div>
+          <div data-testid="statistics" className="absolute top-4 left-4 z-50 backdrop-casino rounded-lg p-3 shadow-casino border border-casino-gold/20">
+            <div className="text-sm font-medium text-white">Games: {statistics.gamesPlayed}</div>
           </div>
         )}
 
         {/* Global Error Display */}
         {error && (
           <div data-testid="error-message" className="absolute top-16 left-1/2 transform -translate-x-1/2 z-40 max-w-md w-full mx-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 shadow-lg">
-              <p className="text-red-700 font-medium text-center">{error}</p>
+            <div className="backdrop-casino border border-casino-red/30 rounded-lg p-3 shadow-casino">
+              <p className="text-casino-red-light font-medium text-center">{error}</p>
             </div>
           </div>
         )}
 
         {/* Show RoomManager if not connected */}
         {!isConnected ? (
-          <RoomManager
-            roomId={roomId}
-            setRoomId={setRoomId}
-            playerName={playerName}
-            setPlayerName={setPlayerName}
-            onCreateRoom={createRoom}
-            onJoinRoom={joinRoom}
-            error={error}
-            isLoading={isLoading}
-          />
+          <div className="relative z-10 p-4">
+            <div className="max-w-6xl mx-auto">
+              <RoomManager
+                roomId={roomId}
+                setRoomId={setRoomId}
+                playerName={playerName}
+                setPlayerName={setPlayerName}
+                onCreateRoom={createRoom}
+                onJoinRoom={joinRoom}
+                error={error}
+                isLoading={isLoading}
+              />
+            </div>
+          </div>
         ) : (
           <>
             {/* Enhanced Decorative Background */}
@@ -648,11 +684,11 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                 onPlayerReady={async () => {
                   if (!roomId || !playerId) return;
                   try {
-                    const response = await setPlayerReadyMutation({ 
-                      roomId, 
-                      playerId, 
-                      isReady: true 
-                    });
+                                         const response = await setPlayerReadyMutation({ 
+                       room_id: roomId, 
+                       player_id: playerId, 
+                       is_ready: true 
+                     });
                     if (response) {
                       setGameState(response.gameState);
                     }
@@ -664,11 +700,11 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                 onPlayerNotReady={async () => {
                   if (!roomId || !playerId) return;
                   try {
-                    const response = await setPlayerReadyMutation({ 
-                      roomId, 
-                      playerId, 
-                      isReady: false 
-                    });
+                                         const response = await setPlayerReadyMutation({ 
+                       room_id: roomId, 
+                       player_id: playerId, 
+                       is_ready: false 
+                     });
                     if (response) {
                       setGameState(response.gameState);
                     }

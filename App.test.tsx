@@ -17,9 +17,9 @@ vi.mock('./components/SoundSystem', () => ({
   }
 }));
 
-// Hoist Convex hooks and provider mocks
-vi.mock('convex/react', async () => {
-  const actual = await import('convex/react');
+// Hoist API hooks and provider mocks
+vi.mock('./apiClient', async () => {
+  const actual = await import('./apiClient');
   const withOptimisticUpdate = (fn: any) => fn;
   
   // Create a mock mutation function that has the withOptimisticUpdate property
@@ -37,7 +37,7 @@ vi.mock('convex/react', async () => {
           // Remove the artificial delay to reduce act() warnings
           if (globalThis.mockError) {
             const error = new Error(globalThis.mockError);
-            error.name = 'ConvexError';
+            error.name = 'APIError';
             throw error;
           }
           const response = {
@@ -98,7 +98,7 @@ vi.mock('convex/react', async () => {
       }
       return null;
     },
-    ConvexProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    // No provider needed for API client
   };
 });
 

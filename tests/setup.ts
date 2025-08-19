@@ -2,8 +2,12 @@ import React from 'react';
 import * as testUtils from './test-utils';
 import { afterEach, vi } from 'vitest';
 
-// Mock convexClient module
-vi.mock('../convexClient', () => ({
+// Configure tests to use real API calls instead of mocks
+// Set up test environment variables
+process.env.VITE_API_URL = 'http://localhost:8000';
+
+// Mock apiClient module for tests that need it
+vi.mock('../apiClient', () => ({
   convex: {
     mutation: () => () => Promise.resolve({}),
     query: () => () => null,

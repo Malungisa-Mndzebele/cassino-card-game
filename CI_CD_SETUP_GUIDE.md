@@ -74,7 +74,7 @@ your-repository/
 ├── scripts/
 │   └── deploy-to-khasinogaming.sh  # ✅ Already created
 ├── components/
-├── convex/
+├── backend/
 ├── package.json
 ├── App.tsx
 └── ... (other project files)
