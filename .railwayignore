@@ -1,0 +1,38 @@
+# Frontend files
+src/
+public/
+index.html
+vite.config.ts
+tailwind.config.js
+postcss.config.js
+package.json
+package-lock.json
+node_modules/
+dist/
+*.tsx
+*.ts
+*.jsx
+*.js
+
+# Documentation
+README.md
+DEPLOYMENT_GUIDE.md
+*.md
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep only backend files
+!backend/
+!railway.json
+!railway.toml
+!Procfile
