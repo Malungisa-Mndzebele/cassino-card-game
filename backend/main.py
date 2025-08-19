@@ -30,6 +30,11 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "message": "Casino Card Game Backend is running"}
+
 # Add explicit CORS preflight handler
 @app.options("/{full_path:path}")
 async def options_handler(full_path: str):
