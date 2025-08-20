@@ -18,7 +18,7 @@ from schemas import (
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Casino Card Game API", version="1.0.0")
+app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path="/api")
 
 # Add CORS middleware
 app.add_middleware(
@@ -41,6 +41,11 @@ app.add_middleware(
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "message": "Casino Card Game Backend is running"}
+
+# Root endpoint for API
+@app.get("/")
+async def root():
+    return {"message": "Casino Card Game API", "version": "1.0.0"}
 
 # Add explicit CORS preflight handler
 @app.options("/{full_path:path}")
