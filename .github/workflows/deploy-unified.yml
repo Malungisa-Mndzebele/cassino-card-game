@@ -1,8 +1,8 @@
-name: Deploy Casino Game (Unified Server)
+name: Deploy Casino Game (Unified Server) - DISABLED
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ never ]
   workflow_dispatch:
 
 env:

@@ -1,8 +1,8 @@
-name: Deploy to KhasinoGaming.com
+name: Deploy to KhasinoGaming.com - DISABLED
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ never ]
   pull_request:
     branches: [ main, master ]
   workflow_dispatch: # Allow manual deployment
