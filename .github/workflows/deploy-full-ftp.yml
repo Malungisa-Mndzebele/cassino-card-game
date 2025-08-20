@@ -61,7 +61,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./dist/
-        server-dir: /cassino/
+        server-dir: /
         exclude: |
           **/.git*
           **/.git*/**
@@ -92,11 +92,11 @@ jobs:
       run: |
         echo "🎊 Full deployment completed via FTP!"
         echo ""
-        echo "✅ Frontend deployed to: /cassino/"
+        echo "✅ Frontend deployed to: / (root directory)"
         echo "✅ Backend deployed to: /backend/"
         echo ""
-        echo "🌐 Frontend: https://khasinogaming.com/cassino/"
-        echo "🎮 Game: https://khasinogaming.com/cassino/"
+        echo "🌐 Frontend: https://khasinogaming.com/"
+        echo "🎮 Game: https://khasinogaming.com/"
         echo ""
         echo "📋 Next steps for backend:"
         echo "1. SSH into your server"
