@@ -61,7 +61,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./dist/
-        server-dir: /khasinogaming.com/cassino/
+        server-dir: /cassino/
         exclude: |
           **/.git*
           **/.git*/**
@@ -78,7 +78,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./backend-deploy/
-        server-dir: /khasinogaming.com/cassino/backend/
+        server-dir: /cassino/backend/
         exclude: |
           **/.git*
           **/.git*/**
@@ -92,14 +92,14 @@ jobs:
       run: |
         echo "🎊 Full deployment completed via FTP!"
         echo ""
-        echo "✅ Frontend deployed to: /khasinogaming.com/cassino/"
-        echo "✅ Backend deployed to: /khasinogaming.com/cassino/backend/"
+        echo "✅ Frontend deployed to: /cassino/"
+        echo "✅ Backend deployed to: /cassino/backend/"
         echo ""
         echo "🌐 Frontend: https://khasinogaming.com/cassino/"
         echo "🎮 Game: https://khasinogaming.com/cassino/"
         echo ""
         echo "📋 Next steps for backend:"
         echo "1. SSH into your server"
-        echo "2. Navigate to: cd /khasinogaming.com/cassino/backend/"
+        echo "2. Navigate to: cd /cassino/backend/"
         echo "3. Run: python3 start.py"
         echo "4. Backend will be available on port 8000"
