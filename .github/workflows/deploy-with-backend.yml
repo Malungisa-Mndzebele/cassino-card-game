@@ -88,14 +88,20 @@ jobs:
         name: backend-files
         path: backend-deploy/
         
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        
     - name: Deploy backend via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        key_path: ~/.ssh/id_rsa
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        port: 2222
+        port: 22
         timeout: 60s
         command_timeout: 15m
         script: |

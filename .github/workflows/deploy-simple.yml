@@ -1,0 +1,57 @@
+name: Deploy Frontend Only (Simple)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci --legacy-peer-deps
+      
+    - name: Build application
+      run: npm run build
+      env:
+        VITE_API_URL: https://khasinogaming.com:8000
+        
+    - name: Deploy to FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_HOST }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./dist/
+        server-dir: /
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/.DS_Store
+          **/Thumbs.db
+        dangerous-clean-slate: true
+      continue-on-error: true
+        
+    - name: Success message
+      run: |
+        echo "🎊 Frontend deployed successfully!"
+        echo "🌐 Frontend: https://khasinogaming.com/"
+        echo "🎮 Game: https://khasinogaming.com/cassino/"
+        echo ""
+        echo "⚠️  Backend deployment skipped due to SSH issues"
+        echo "🔧 Backend needs to be deployed manually"
