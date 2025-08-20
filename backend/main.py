@@ -40,7 +40,7 @@ app.add_middleware(
 # Health check endpoint
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "message": "Casino Card Game Backend is running - Railway deployment test"}
+    return {"status": "healthy", "message": "Casino Card Game Backend is running"}
 
 # Add explicit CORS preflight handler
 @app.options("/{full_path:path}")

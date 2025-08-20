@@ -7,7 +7,7 @@ import os
 import os
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test_casino_game.db")
 
-# Convert SQLite URL for Heroku/Railway if needed
+# Convert postgres:// to postgresql:// for compatibility
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
