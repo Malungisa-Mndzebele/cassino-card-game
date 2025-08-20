@@ -94,19 +94,41 @@ jobs:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
         port: ${{ secrets.SSH_PORT }}
+        timeout: 60s
+        command_timeout: 15m
         script: |
+          echo "🔧 Starting backend deployment..."
           mkdir -p ~/casino-backend
           cd ~/casino-backend
-          pkill -f "uvicorn main:app" || true
+          echo "📁 Directory created: $(pwd)"
+          
+          echo "🛑 Stopping existing backend processes..."
+          pkill -f "uvicorn main:app" || echo "No existing processes found"
+          
+          echo "📦 Installing Python dependencies..."
           pip3 install --user -r requirements.txt
+          
+          echo "🚀 Starting backend server..."
           nohup python3 start_backend.py > backend.log 2>&1 &
-          sleep 5
+          
+          echo "⏳ Waiting for backend to start..."
+          sleep 10
+          
           if pgrep -f "uvicorn main:app" > /dev/null; then
             echo "✅ Backend is running successfully"
+            echo "📊 Process info:"
+            ps aux | grep uvicorn
+            echo "📋 Log file contents:"
+            cat backend.log 2>/dev/null || echo "No log file found"
           else
             echo "❌ Backend failed to start"
+            echo "📋 Log file contents:"
             cat backend.log 2>/dev/null || echo "No log file found"
+            echo "🔍 Checking Python processes:"
+            ps aux | grep python
+            exit 1
           fi
 
   deploy-frontend:
