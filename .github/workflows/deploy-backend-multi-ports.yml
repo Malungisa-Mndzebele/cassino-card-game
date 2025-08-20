@@ -1,0 +1,154 @@
+name: Deploy Backend (Try Multiple Ports)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Create backend package
+      run: |
+        mkdir -p backend-deploy
+        cp -r backend/* backend-deploy/
+        cp backend/requirements.txt backend-deploy/
+        
+        # Create startup script
+        echo '#!/usr/bin/env python3' > backend-deploy/start.py
+        echo 'import os, sys, subprocess' >> backend-deploy/start.py
+        echo 'print("📦 Installing dependencies...")' >> backend-deploy/start.py
+        echo 'subprocess.run([sys.executable, "-m", "pip", "install", "--user", "-r", "requirements.txt"])' >> backend-deploy/start.py
+        echo 'print("🚀 Starting backend server...")' >> backend-deploy/start.py
+        echo 'subprocess.run([sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"])' >> backend-deploy/start.py
+        
+    - name: Upload backend artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-files
+        path: backend-deploy/
+        retention-days: 1
+
+  deploy-backend-ssh-port-22:
+    needs: [deploy-backend]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download backend artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: backend-files
+        path: backend-deploy/
+        
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        
+    - name: Deploy backend via SSH (Port 22)
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key_path: ~/.ssh/id_rsa
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        port: 22
+        timeout: 30s
+        command_timeout: 10m
+        script: |
+          echo "🔧 Trying SSH connection on port 22..."
+          mkdir -p ~/casino-backend
+          cd ~/casino-backend
+          echo "✅ SSH connection successful on port 22!"
+          echo "📁 Directory: $(pwd)"
+          
+          echo "🛑 Stopping existing backend processes..."
+          pkill -f "uvicorn main:app" || echo "No existing processes found"
+          
+          echo "📦 Installing Python dependencies..."
+          pip3 install --user -r requirements.txt
+          
+          echo "🚀 Starting backend server..."
+          nohup python3 start.py > backend.log 2>&1 &
+          
+          echo "⏳ Waiting for backend to start..."
+          sleep 10
+          
+          if pgrep -f "uvicorn main:app" > /dev/null; then
+            echo "✅ Backend is running successfully on port 22!"
+            echo "📊 Process info:"
+            ps aux | grep uvicorn
+          else
+            echo "❌ Backend failed to start on port 22"
+            exit 1
+          fi
+
+  deploy-backend-ssh-port-2222:
+    needs: [deploy-backend]
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+    - name: Download backend artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: backend-files
+        path: backend-deploy/
+        
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        
+    - name: Deploy backend via SSH (Port 2222)
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key_path: ~/.ssh/id_rsa
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        port: 2222
+        timeout: 30s
+        command_timeout: 10m
+        script: |
+          echo "🔧 Trying SSH connection on port 2222..."
+          mkdir -p ~/casino-backend
+          cd ~/casino-backend
+          echo "✅ SSH connection successful on port 2222!"
+          echo "📁 Directory: $(pwd)"
+          
+          echo "🛑 Stopping existing backend processes..."
+          pkill -f "uvicorn main:app" || echo "No existing processes found"
+          
+          echo "📦 Installing Python dependencies..."
+          pip3 install --user -r requirements.txt
+          
+          echo "🚀 Starting backend server..."
+          nohup python3 start.py > backend.log 2>&1 &
+          
+          echo "⏳ Waiting for backend to start..."
+          sleep 10
+          
+          if pgrep -f "uvicorn main:app" > /dev/null; then
+            echo "✅ Backend is running successfully on port 2222!"
+            echo "📊 Process info:"
+            ps aux | grep uvicorn
+          else
+            echo "❌ Backend failed to start on port 2222"
+            exit 1
+          fi
