@@ -1,9 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { copy } from 'fs-extra'
+import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'copy-htaccess',
+      closeBundle: async () => {
+        await copy(
+          resolve(__dirname, 'public/.htaccess'),
+          resolve(__dirname, 'dist/.htaccess')
+        )
+      }
+    }
+  ],
   build: {
     minify: 'terser',
     sourcemap: false,
