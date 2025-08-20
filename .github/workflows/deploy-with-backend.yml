@@ -95,7 +95,7 @@ jobs:
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        port: ${{ secrets.SSH_PORT }}
+        port: 2222
         timeout: 60s
         command_timeout: 15m
         script: |
