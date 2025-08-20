@@ -1,0 +1,105 @@
+name: Deploy Full App via FTP
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install frontend dependencies
+      run: npm ci --legacy-peer-deps
+      
+    - name: Build frontend
+      run: npm run build
+      env:
+        VITE_API_URL: https://khasinogaming.com:8000
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Create backend package
+      run: |
+        mkdir -p backend-deploy
+        cp -r backend/* backend-deploy/
+        cp backend/requirements.txt backend-deploy/
+        
+        # Create startup script
+        echo '#!/usr/bin/env python3' > backend-deploy/start.py
+        echo 'import os, sys, subprocess' >> backend-deploy/start.py
+        echo 'print("📦 Installing dependencies...")' >> backend-deploy/start.py
+        echo 'subprocess.run([sys.executable, "-m", "pip", "install", "--user", "-r", "requirements.txt"])' >> backend-deploy/start.py
+        echo 'print("🚀 Starting backend server...")' >> backend-deploy/start.py
+        echo 'subprocess.run([sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"])' >> backend-deploy/start.py
+        
+        # Create README
+        echo '# Casino Backend' > backend-deploy/README.md
+        echo 'Run: python3 start.py' >> backend-deploy/README.md
+        
+    - name: Deploy frontend via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_HOST }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./dist/
+        server-dir: /
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/.DS_Store
+          **/Thumbs.db
+        dangerous-clean-slate: true
+      continue-on-error: true
+        
+    - name: Deploy backend via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_HOST }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./backend-deploy/
+        server-dir: /backend/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/.DS_Store
+          **/Thumbs.db
+        dangerous-clean-slate: true
+      continue-on-error: true
+        
+    - name: Success message
+      run: |
+        echo "🎊 Full deployment completed via FTP!"
+        echo ""
+        echo "✅ Frontend deployed to: /"
+        echo "✅ Backend deployed to: /backend/"
+        echo ""
+        echo "🌐 Frontend: https://khasinogaming.com/"
+        echo "🎮 Game: https://khasinogaming.com/cassino/"
+        echo ""
+        echo "📋 Next steps for backend:"
+        echo "1. SSH into your server"
+        echo "2. Navigate to: cd /backend/"
+        echo "3. Run: python3 start.py"
+        echo "4. Backend will be available on port 8000"
