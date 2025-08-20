@@ -1,8 +1,8 @@
-name: Deploy Frontend Only (Simple)
+name: Deploy Frontend Only (Simple) - DISABLED
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ never ]
   workflow_dispatch:
 
 env:

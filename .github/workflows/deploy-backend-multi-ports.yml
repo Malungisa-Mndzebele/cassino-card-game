@@ -1,8 +1,8 @@
-name: Deploy Backend (Try Multiple Ports)
+name: Deploy Backend (Try Multiple Ports) - DISABLED
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ never ]
   workflow_dispatch:
 
 env:

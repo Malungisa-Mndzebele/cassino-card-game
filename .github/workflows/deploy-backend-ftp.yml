@@ -1,8 +1,8 @@
-name: Deploy Backend via FTP
+name: Deploy Backend via FTP - DISABLED
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ never ]
   workflow_dispatch:
 
 env:

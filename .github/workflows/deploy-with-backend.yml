@@ -1,8 +1,8 @@
-name: Deploy Casino Game with Backend
+name: Deploy Casino Game with Backend (DISABLED)
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ never ]
   workflow_dispatch:
 
 env:
