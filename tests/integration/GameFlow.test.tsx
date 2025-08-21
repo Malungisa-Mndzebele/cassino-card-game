@@ -84,37 +84,38 @@ vi.mock('../../components/RoomManager', () => ({
     
     return (
       <div data-testid="room-manager">
+        {error && <div data-testid="error-message">{error}</div>}
         
         {showJoinForm ? (
           <div data-testid="join-form">
             <input 
-              data-testid="room-id-input" 
+              data-testid="room-id-input-test" 
               value={roomId} 
               onChange={(e) => setRoomId(e.target.value)} 
               placeholder="Room ID"
             />
             <input 
-              data-testid="player-name-input-create" 
+              data-testid="player-name-input-create-test" 
               value={playerName} 
               onChange={(e) => setPlayerName(e.target.value)} 
               placeholder="Player Name"
             />
-            <button onClick={onJoinRoom} disabled={isLoading} data-testid="join-room-btn">
+            <button onClick={onJoinRoom} disabled={isLoading} data-testid="join-room-submit-test">
               {isLoading ? 'Joining...' : 'Join Room'}
             </button>
           </div>
         ) : (
           <div data-testid="create-form">
             <input 
-              data-testid="player-name-input-create" 
+              data-testid="player-name-input-create-test" 
               value={playerName} 
               onChange={(e) => setPlayerName(e.target.value)} 
               placeholder="Player Name"
             />
-            <button onClick={onCreateRoom} disabled={isLoading} data-testid="create-room-btn">
+            <button onClick={onCreateRoom} disabled={isLoading} data-testid="create-room-test">
               {isLoading ? 'Creating...' : 'Create Room'}
             </button>
-            <button onClick={() => setShowJoinForm(true)} data-testid="show-join-form-btn">
+            <button onClick={() => setShowJoinForm(true)} data-testid="show-join-form-test">
               Join Room
             </button>
           </div>
@@ -155,26 +156,30 @@ vi.mock('../../components/GameSettings', () => ({
   }
 }));
 
-// Mock Convex mutations
-vi.mock('convex/react', async () => {
-  const actual = await import('convex/react');
+// Mock API client
+vi.mock('../../apiClient', async () => {
+  const actual = await import('../../apiClient');
   
   return {
     ...actual,
-    useMutation: (fn: any) => {
-      if (fn.name === 'createRoom') {
-        return vi.fn().mockImplementation(async ({ playerName }: { playerName: string }) => {
-          return {
-            roomId: 'TEST123',
-            playerId: 1,
-            gameState: testUtils.createMockGameState({
-              roomId: 'TEST123',
-              phase: 'waiting',
-              players: [{ id: 1, name: playerName }]
-            })
-          };
-        });
-      }
+         useMutation: (fn: any) => {
+       if (fn.name === 'createRoom') {
+         return vi.fn().mockImplementation(async ({ playerName }: { playerName: string }) => {
+           // Check if there's a global error set
+           if (globalThis.mockError) {
+             throw new Error(globalThis.mockError);
+           }
+           return {
+             roomId: 'TEST123',
+             playerId: 1,
+             gameState: testUtils.createMockGameState({
+               roomId: 'TEST123',
+               phase: 'waiting',
+               players: [{ id: 1, name: playerName }]
+             })
+           };
+         });
+       }
       
       if (fn.name === 'joinRoom') {
         return vi.fn().mockImplementation(async ({ roomId, playerName }: { roomId: string, playerName: string }) => {
@@ -228,7 +233,6 @@ vi.mock('convex/react', async () => {
       }
       return null;
     },
-    ConvexProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   };
 });
 
@@ -259,9 +263,9 @@ describe('Complete Game Flow Integration', () => {
       renderWithProviders(<App />);
       
       expect(screen.getByTestId('create-form')).toBeInTheDocument();
-      expect(screen.getByTestId('player-name-input-create')).toBeInTheDocument();
-      expect(screen.getByTestId('create-room-btn')).toBeInTheDocument();
-      expect(screen.getByTestId('show-join-form-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('player-name-input-create-test')).toBeInTheDocument();
+      expect(screen.getByTestId('create-room-test')).toBeInTheDocument();
+      expect(screen.getByTestId('show-join-form-test')).toBeInTheDocument();
     });
   });
 
@@ -273,18 +277,18 @@ describe('Complete Game Flow Integration', () => {
       expect(screen.getByTestId('create-form')).toBeInTheDocument();
       
       // Click to show join form
-      await user.click(screen.getByTestId('show-join-form-btn'));
+      await user.click(screen.getByTestId('show-join-form-test'));
       
       // Should now show join form
       expect(screen.getByTestId('join-form')).toBeInTheDocument();
-      expect(screen.getByTestId('room-id-input')).toBeInTheDocument();
-      expect(screen.getByTestId('join-room-btn')).toBeInTheDocument();
+              expect(screen.getByTestId('room-id-input-test')).toBeInTheDocument();
+              expect(screen.getByTestId('join-room-submit-test')).toBeInTheDocument();
     });
 
     it('should handle player name input', async () => {
       renderWithProviders(<App />);
       
-      const playerNameInput = screen.getByTestId('player-name-input-create');
+      const playerNameInput = screen.getByTestId('player-name-input-create-test');
       await user.type(playerNameInput, 'Test Player');
       
       expect(playerNameInput).toHaveValue('Test Player');
@@ -294,9 +298,9 @@ describe('Complete Game Flow Integration', () => {
       renderWithProviders(<App />);
       
       // Switch to join form
-      await user.click(screen.getByTestId('show-join-form-btn'));
+      await user.click(screen.getByTestId('show-join-form-test'));
       
-      const roomIdInput = screen.getByTestId('room-id-input');
+              const roomIdInput = screen.getByTestId('room-id-input-test');
       await user.type(roomIdInput, 'ABC123');
       
       expect(roomIdInput).toHaveValue('ABC123');
@@ -445,21 +449,26 @@ describe('Complete Game Flow Integration', () => {
       expect(container.firstChild).toBeNull();
     });
 
-    it('should handle network errors gracefully', async () => {
-      renderWithProviders(<App />);
-      
-      // Simulate a network error by setting the global error
-      globalThis.mockError = 'Network error';
-      
-      // Try to create a room
-      await user.type(screen.getByTestId('player-name-input-create'), 'Player 1');
-      await user.click(screen.getByTestId('create-room-btn'));
-      
-      // Should show error message
-      await waitFor(() => {
-        expect(screen.getByTestId('error-message')).toBeInTheDocument();
-      });
-    });
+         it('should handle network errors gracefully', async () => {
+       renderWithProviders(<App />);
+       
+       // Simulate a network error by setting the global error
+       globalThis.mockError = 'Network error';
+       
+       // Try to create a room
+       await user.type(screen.getByTestId('player-name-input-create-test'), 'Player 1');
+       await user.click(screen.getByTestId('create-room-test'));
+       
+               // Should show error message
+        await waitFor(() => {
+          const errorMessages = screen.getAllByTestId('error-message');
+          expect(errorMessages.length).toBeGreaterThan(0);
+          expect(errorMessages[0]).toHaveTextContent('Network error');
+        });
+       
+       // Clean up global error
+       delete globalThis.mockError;
+     });
   });
 
   describe('Component Integration', () => {

@@ -118,7 +118,7 @@ export function RoomManager({
 
           {/* Error Display */}
           {error && (
-            <div className="max-w-md mx-auto mb-6">
+            <div className="max-w-md mx-auto mb-6" data-testid="error-message">
               <div className="backdrop-casino border border-casino-red/30 rounded-lg p-3 shadow-casino">
                 <p className="text-casino-red-light font-medium text-center">{error}</p>
               </div>
