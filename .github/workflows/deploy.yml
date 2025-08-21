@@ -1,8 +1,8 @@
-name: Deploy to KhasinoGaming.com - DISABLED
+name: Deploy to KhasinoGaming.com
 
 on:
   push:
-    branches: [ never ]
+    branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
   workflow_dispatch: # Allow manual deployment
@@ -89,6 +89,9 @@ jobs:
         
         # Copy built files
         cp -r dist/* deployment/
+        
+        # Copy backend files
+        cp -r backend deployment/
         
         # Copy documentation
         cp README.md deployment/ 2>/dev/null || echo "README.md not found"
@@ -203,6 +206,11 @@ jobs:
         echo "🎊 Deployment completed successfully!"
         echo "Your Cassino card game should now be live at:"
         echo "🔗 https://khasinogaming.com/cassino/ (or http://khasinogaming.com/cassino/ if HTTPS not configured)"
+        echo ""
+        echo "Backend files deployed to: /backend/"
+        echo "To start the backend, SSH into your server and run:"
+        echo "  cd /home/mawdqtvped/khasinogaming.com/cassino/backend"
+        echo "  python3 start.py"
         echo ""
         echo "Deployment details:"
         echo "📦 Package size: $(du -sh deployment | cut -f1)"
