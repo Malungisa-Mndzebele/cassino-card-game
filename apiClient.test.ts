@@ -33,7 +33,7 @@ describe('API Client', () => {
 
       const result = await api.createRoom.createRoom({ player_name: 'Test Player' });
 
-      expect(fetch).toHaveBeenCalledWith('/api/rooms/create', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8000/rooms/create', {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -75,7 +75,7 @@ describe('API Client', () => {
         player_name: 'Joiner'
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/rooms/join', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8000/rooms/join', {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -121,7 +121,7 @@ describe('API Client', () => {
         is_ready: true
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/rooms/player-ready', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8000/rooms/player-ready', {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -160,7 +160,7 @@ describe('API Client', () => {
 
       const result = await api.getGameState.getGameState({ room_id: 'ABC123' });
 
-      expect(fetch).toHaveBeenCalledWith('/api/rooms/ABC123/state', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8000/rooms/ABC123/state', {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -198,7 +198,7 @@ describe('API Client', () => {
         target_cards: ['K_spades']
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/game/play-card', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8000/game/play-card', {
         headers: {
           'Content-Type': 'application/json'
         },

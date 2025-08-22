@@ -13,50 +13,83 @@ A FastAPI backend for the multiplayer Casino card game with PostgreSQL database.
 
 ## Setup Instructions
 
-### 1. Install Dependencies
+### Quick Start (Recommended)
+
+**For Windows:**
+```bash
+cd backend
+start_local.bat
+python startup.py
+```
+
+**For macOS/Linux:**
+```bash
+cd backend
+chmod +x start_local.sh
+./start_local.sh
+python startup.py
+```
+
+### Manual Setup
+
+#### 1. Install Dependencies
 
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-### 2. Set Up PostgreSQL Database
+#### 2. Database Setup
 
+**Option A: PostgreSQL with Docker (Recommended)**
+```bash
+# Start PostgreSQL container
+docker-compose up -d postgres
+
+# Switch to PostgreSQL
+python switch_db.py postgresql
+```
+
+**Option B: Local PostgreSQL Installation**
 1. Install PostgreSQL on your system
 2. Create a new database:
    ```sql
    CREATE DATABASE casino_game;
-   CREATE USER casino_user WITH PASSWORD 'your_password';
+   CREATE USER casino_user WITH PASSWORD 'casino_password';
    GRANT ALL PRIVILEGES ON DATABASE casino_game TO casino_user;
    ```
 
-### 3. Configure Environment Variables
-
-Create a `.env` file in the backend directory:
-
-```env
-# Database Configuration
-DATABASE_URL=postgresql://casino_user:your_password@localhost/casino_game
-
-# API Configuration
-API_HOST=0.0.0.0
-API_PORT=8000
-
-# CORS Configuration
-CORS_ORIGINS=["http://localhost:3000", "http://localhost:3001"]
-
-# Security
-SECRET_KEY=your-secret-key-here-change-in-production
+**Option C: SQLite (Simple)**
+```bash
+python switch_db.py sqlite
 ```
 
-### 4. Run the Backend
+#### 3. Configure Environment Variables
+
+The setup scripts will automatically create a `.env` file. You can also create it manually:
 
 ```bash
-# Development
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cp env.example .env
+```
 
-# Production
-uvicorn main:app --host 0.0.0.0 --port 8000
+Edit `.env` to configure your database:
+
+```env
+# For PostgreSQL
+DATABASE_URL=postgresql://casino_user:casino_password@localhost:5432/casino_game
+
+# For SQLite
+# DATABASE_URL=sqlite:///./test_casino_game.db
+```
+
+#### 4. Run the Backend
+
+```bash
+# Using startup script (recommended)
+python startup.py
+
+# Or directly with uvicorn
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 5. API Documentation

@@ -15,23 +15,16 @@ from schemas import (
     CreateRoomResponse, JoinRoomResponse, StandardResponse, GameStateResponse, PlayerResponse
 )
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Note: Database tables are now managed by Alembic migrations
+# Run migrations with: alembic upgrade head
 
 app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path="/api")
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://localhost:3001", 
-        "http://127.0.0.1:3000", 
-        "http://127.0.0.1:3001",
-        "https://khasinogaming.com",
-        "https://www.khasinogaming.com"
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],

@@ -3,9 +3,18 @@ services:
     name: casino-backend
     env: python
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: cd backend && python startup.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
       - key: DATABASE_URL
-        value: sqlite:///./casino_game.db
+        fromDatabase:
+          name: casino-postgres
+          property: connectionString
+    plan: free
+
+  - type: pserv
+    name: casino-postgres
+    env: postgresql
+    plan: free
+    ipAllowList: []
