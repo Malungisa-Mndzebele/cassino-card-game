@@ -672,6 +672,156 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
               </Card>
             )}
 
+            {/* Ready Buttons for Waiting Phase */}
+            {gameState?.phase === 'waiting' && playerId && (
+              <Card className="w-full max-w-2xl mx-auto">
+                <CardContent className="p-6">
+                  <div className="text-center space-y-4">
+                    <h2 className="text-2xl font-bold text-gray-800">Waiting for Players</h2>
+                    <p className="text-gray-600">
+                      Room: <span className="font-mono font-bold text-blue-600">{roomId}</span>
+                    </p>
+                    <div className="flex justify-center space-x-4">
+                      <div className="text-center">
+                        <div className={`w-3 h-3 rounded-full ${gameState.player1Ready ? 'bg-green-500' : 'bg-gray-300'} mb-2`}></div>
+                        <span className="text-sm text-gray-600">Player 1</span>
+                      </div>
+                      <div className="text-center">
+                        <div className={`w-3 h-3 rounded-full ${gameState.player2Ready ? 'bg-green-500' : 'bg-gray-300'} mb-2`}></div>
+                        <span className="text-sm text-gray-600">Player 2</span>
+                      </div>
+                    </div>
+                    
+                    {!gameState.player1Ready && playerId === 1 && (
+                      <div className="space-y-3">
+                        <p className="text-gray-600">Are you ready to start the game?</p>
+                        <div className="flex space-x-4 justify-center">
+                          <Button
+                            onClick={async () => {
+                              if (!roomId || !playerId) return;
+                              try {
+                                const response = await setPlayerReadyMutation({ 
+                                   room_id: roomId, 
+                                   player_id: playerId, 
+                                   is_ready: true 
+                                });
+                                if (response) {
+                                  setGameState(response.gameState);
+                                }
+                              } catch (error: any) {
+                                console.error('Error setting player ready:', error);
+                                setError(error?.message || 'Failed to set player ready status');
+                              }
+                            }}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            I'm Ready!
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              if (!roomId || !playerId) return;
+                              try {
+                                const response = await setPlayerReadyMutation({ 
+                                   room_id: roomId, 
+                                   player_id: playerId, 
+                                   is_ready: false 
+                                });
+                                if (response) {
+                                  setGameState(response.gameState);
+                                }
+                              } catch (error: any) {
+                                console.error('Error setting player not ready:', error);
+                                setError(error?.message || 'Failed to set player ready status');
+                              }
+                            }}
+                            variant="outline"
+                          >
+                            Not Ready
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!gameState.player2Ready && playerId === 2 && (
+                      <div className="space-y-3">
+                        <p className="text-gray-600">Are you ready to start the game?</p>
+                        <div className="flex space-x-4 justify-center">
+                          <Button
+                            onClick={async () => {
+                              if (!roomId || !playerId) return;
+                              try {
+                                const response = await setPlayerReadyMutation({ 
+                                   room_id: roomId, 
+                                   player_id: playerId, 
+                                   is_ready: true 
+                                });
+                                if (response) {
+                                  setGameState(response.gameState);
+                                }
+                              } catch (error: any) {
+                                console.error('Error setting player ready:', error);
+                                setError(error?.message || 'Failed to set player ready status');
+                              }
+                            }}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            I'm Ready!
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              if (!roomId || !playerId) return;
+                              try {
+                                const response = await setPlayerReadyMutation({ 
+                                   room_id: roomId, 
+                                   player_id: playerId, 
+                                   is_ready: false 
+                                });
+                                if (response) {
+                                  setGameState(response.gameState);
+                                }
+                              } catch (error: any) {
+                                console.error('Error setting player not ready:', error);
+                                setError(error?.message || 'Failed to set player ready status');
+                              }
+                            }}
+                            variant="outline"
+                          >
+                            Not Ready
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {gameState.player1Ready && playerId === 1 && (
+                      <div className="text-center">
+                        <div className="bg-green-100 border border-green-300 rounded-lg p-4">
+                          <p className="text-green-800 font-medium">You're Ready!</p>
+                          <p className="text-green-600 text-sm">
+                            {gameState.player2Ready 
+                              ? "Both players are ready! The game will begin shortly..." 
+                              : "Waiting for Player 2 to confirm they're ready..."}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {gameState.player2Ready && playerId === 2 && (
+                      <div className="text-center">
+                        <div className="bg-green-100 border border-green-300 rounded-lg p-4">
+                          <p className="text-green-800 font-medium">You're Ready!</p>
+                          <p className="text-green-600 text-sm">
+                            {gameState.player1Ready 
+                              ? "Both players are ready! The game will begin shortly..." 
+                              : "Waiting for Player 1 to confirm they're ready..."}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Game Phases */}
             {gameState?.phase && gameState.phase !== 'waiting' && playerId && (
               <GamePhases

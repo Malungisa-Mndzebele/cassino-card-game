@@ -233,6 +233,11 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: Session = Depends
     
     db.commit()
     
+    # Auto-transition to dealer phase when both players are ready
+    if room.player1_ready and room.player2_ready and room.game_phase == "waiting":
+        room.game_phase = "dealer"
+        db.commit()
+    
     return StandardResponse(
         success=True,
         message="Player ready status updated",
