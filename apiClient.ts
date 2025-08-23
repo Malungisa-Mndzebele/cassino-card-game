@@ -12,6 +12,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname =
 const isLiveEnvironment = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 const shouldUseMock = isLiveEnvironment && !import.meta.env.VITE_API_URL;
 
+// Log the current configuration for debugging
+console.log('🔧 API Client Configuration:', {
+  hostname: window.location.hostname,
+  API_BASE_URL,
+  isLiveEnvironment,
+  shouldUseMock,
+  VITE_API_URL: import.meta.env.VITE_API_URL
+});
+
 // Convert snake_case to camelCase
 function toCamelCase(obj: any): any {
   if (obj === null || typeof obj !== 'object') {
@@ -30,24 +39,40 @@ function toCamelCase(obj: any): any {
   return camelCaseObj;
 }
 
-// Generic API call function
+// Generic API call function with better error handling
 async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  });
+  
+  console.log(`🌐 API Call: ${url}`);
+  
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return toCamelCase(data);
+  } catch (error) {
+    console.error(`❌ API Call Failed: ${url}`, error);
+    
+    // Provide helpful error messages based on the environment
+    if (isLiveEnvironment && !import.meta.env.VITE_API_URL) {
+      throw new Error(`Backend not available at ${url}. Please ensure the backend is deployed and accessible.`);
+    } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      throw new Error(`Cannot connect to backend at ${url}. Please ensure the backend is running locally with: cd backend && python startup.py`);
+    } else {
+      throw new Error(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
-
-  const data = await response.json();
-  return toCamelCase(data);
 }
 
 // Game state interface
