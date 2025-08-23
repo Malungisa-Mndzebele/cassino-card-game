@@ -256,13 +256,7 @@ python -m pytest
 
 #### 1. Docker (Recommended)
 
-#### 2. Render.com
-```bash
-# Deploy with Docker
-./deploy-prod.sh
-```
-
-#### 3. Manual Server Deployment
+#### 2. Manual Server Deployment
 Follow the instructions in `PRODUCTION_DEPLOYMENT.md`
 
 ### Environment Variables

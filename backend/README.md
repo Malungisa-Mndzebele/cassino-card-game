@@ -185,45 +185,7 @@ docker build -t casino-backend .
 docker run -p 8000:8000 casino-backend
 ```
 
-### Option 3: Using Render.com
 
-1. Connect your GitHub repository to Render
-2. Use the existing `render.yaml` configuration
-3. Set environment variables in Render dashboard
-4. Deploy automatically on push
-```yaml
-version: '3.8'
-services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: casino_game
-      POSTGRES_USER: casino_user
-      POSTGRES_PASSWORD: your_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  backend:
-    build: .
-    environment:
-      DATABASE_URL: postgresql://casino_user:your_password@db/casino_game
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-
-volumes:
-  postgres_data:
-```
-
-### Option 4: Render.com
-
-1. Connect your GitHub repository to Render
-2. Use the existing `render.yaml` configuration
-3. Set environment variables in Render dashboard
-4. Deploy automatically on push
 
 ## Environment Variables
 
