@@ -161,46 +161,9 @@ alembic upgrade head
 
 ## Production Deployment
 
-### Option 1: Hyperlift (Recommended - Automatic Deployment)
+### Option 1: Using Docker (Recommended)
 
-Hyperlift is a Platform-as-a-Service (PaaS) that provides automatic deployment and infrastructure management.
-
-#### Setup Instructions
-
-1. **Connect GitHub Repository**
-   - Sign up at [Hyperlift](https://hyperlift.com)
-   - Connect your GitHub repository
-   - Hyperlift will automatically detect your Dockerfile
-
-2. **Configure Environment Variables**
-   In your Hyperlift dashboard, set these environment variables:
-   ```env
-   DATABASE_URL=postgresql://user:password@host:5432/casino_game
-   CORS_ORIGINS=https://your-frontend-domain.com
-   PORT=8000
-   HOST=0.0.0.0
-   ```
-
-3. **Database Setup**
-   - Use Hyperlift's managed PostgreSQL service
-   - Or connect to an external PostgreSQL database
-   - Update `DATABASE_URL` with your database credentials
-
-4. **Automatic Deployment**
-   - Hyperlift automatically builds your Dockerfile
-   - Deploys the image to a containerized runtime
-   - Manages all server and networking infrastructure
-   - Provides automatic scaling and health monitoring
-
-#### Benefits of Hyperlift
-- ✅ **Zero Infrastructure Management**: No server setup required
-- ✅ **Automatic Scaling**: Handles traffic spikes automatically
-- ✅ **Built-in Monitoring**: Health checks and performance metrics
-- ✅ **SSL/TLS**: Automatic HTTPS certificates
-- ✅ **Global CDN**: Fast worldwide access
-- ✅ **Git Integration**: Automatic deployments on push
-
-### Option 2: Using Docker
+### Option 2: Using Docker Compose
 
 1. Create a `Dockerfile`:
 ```dockerfile
@@ -222,9 +185,12 @@ docker build -t casino-backend .
 docker run -p 8000:8000 casino-backend
 ```
 
-### Option 3: Using Docker Compose
+### Option 3: Using Render.com
 
-Create a `docker-compose.yml`:
+1. Connect your GitHub repository to Render
+2. Use the existing `render.yaml` configuration
+3. Set environment variables in Render dashboard
+4. Deploy automatically on push
 ```yaml
 version: '3.8'
 services:
@@ -297,18 +263,4 @@ uvicorn main:app --reload --log-level debug
 uvicorn main:app --log-level info
 ```
 
-### Hyperlift-Specific Issues
 
-1. **Build Failures**
-   - Check Dockerfile syntax
-   - Verify all dependencies in requirements.txt
-   - Review build logs in Hyperlift dashboard
-
-2. **Environment Variables**
-   - Ensure all required variables are set in Hyperlift dashboard
-   - Check variable names match your application
-
-3. **Database Connection**
-   - Verify DATABASE_URL format
-   - Check database credentials
-   - Ensure database is accessible from Hyperlift's network

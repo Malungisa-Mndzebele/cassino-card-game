@@ -254,56 +254,15 @@ python -m pytest
 
 ### Production Deployment Options
 
-#### 1. Hyperlift (Recommended - Automatic Deployment)
+#### 1. Docker (Recommended)
 
-Hyperlift is a Platform-as-a-Service (PaaS) that provides automatic deployment and infrastructure management.
-
-**Setup Instructions:**
-1. **Connect GitHub Repository**
-   - Sign up at [Hyperlift](https://hyperlift.com)
-   - Connect your GitHub repository
-   - Hyperlift will automatically detect your Dockerfile
-
-2. **Configure Environment Variables**
-   In your Hyperlift dashboard, set these environment variables:
-   ```env
-   DATABASE_URL=postgresql://user:password@host:5432/casino_game
-   CORS_ORIGINS=https://your-frontend-domain.com
-   PORT=8000
-   HOST=0.0.0.0
-   ```
-
-3. **Database Setup**
-   - Use Hyperlift's managed PostgreSQL service
-   - Or connect to an external PostgreSQL database
-   - Update `DATABASE_URL` with your database credentials
-
-4. **Automatic Deployment**
-   - Hyperlift automatically builds your Dockerfile
-   - Deploys the image to a containerized runtime
-   - Manages all server and networking infrastructure
-   - Provides automatic scaling and health monitoring
-
-**Benefits:**
-- ✅ **Zero Infrastructure Management**: No server setup required
-- ✅ **Automatic Scaling**: Handles traffic spikes automatically
-- ✅ **Built-in Monitoring**: Health checks and performance metrics
-- ✅ **SSL/TLS**: Automatic HTTPS certificates
-- ✅ **Global CDN**: Fast worldwide access
-- ✅ **Git Integration**: Automatic deployments on push
-
-#### 2. Docker (Manual Deployment)
+#### 2. Render.com
 ```bash
 # Deploy with Docker
 ./deploy-prod.sh
 ```
 
-#### 3. Render.com
-- Connect your GitHub repository to Render
-- The `render.yaml` file will automatically configure the deployment
-- Get the Render URL and update frontend configuration
-
-#### 4. Manual Server Deployment
+#### 3. Manual Server Deployment
 Follow the instructions in `PRODUCTION_DEPLOYMENT.md`
 
 ### Environment Variables
@@ -358,24 +317,7 @@ CORS_ORIGINS=["https://your-domain.com"]
 1. Check the logs: `./logs.sh`
 2. Review `DOCKER_SETUP.md` for detailed instructions
 3. Check `PRODUCTION_DEPLOYMENT.md` for deployment issues
-4. For Hyperlift issues, check the Hyperlift dashboard logs and documentation
-5. Open an issue on GitHub
-
-### Hyperlift-Specific Issues
-
-1. **Build Failures**
-   - Check Dockerfile syntax
-   - Verify all dependencies in requirements.txt
-   - Review build logs in Hyperlift dashboard
-
-2. **Environment Variables**
-   - Ensure all required variables are set in Hyperlift dashboard
-   - Check variable names match your application
-
-3. **Database Connection**
-   - Verify DATABASE_URL format
-   - Check database credentials
-   - Ensure database is accessible from Hyperlift's network
+4. Open an issue on GitHub
 
 ## 🤝 Contributing
 
