@@ -12,9 +12,7 @@ Deploy the Casino Card Game backend to your server at `khasinogaming.com:8000` s
 
 ### Step 1: Connect to Your Server
 ```bash
-ssh root@khasinogaming.com
-# or
-ssh your-username@khasinogaming.com
+ssh cassino@khasinogaming.com
 ```
 
 ### Step 2: Install Docker and Docker Compose
