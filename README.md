@@ -14,12 +14,14 @@ This is a faithful digital recreation of the traditional Cassino card game featu
 - **Hints system** with strategic suggestions
 - **Game statistics** tracking
 - **Mobile-responsive** design
-- **Docker containerization** for easy deployment
+- **Self-hosted infrastructure** with Docker containerization
 - **PostgreSQL database** for production reliability
 
 ## 🚀 Live Demo
 
 Play the game at: **[https://khasinogaming.com/cassino/](https://khasinogaming.com/cassino/)**
+
+> **Note**: The backend is currently being deployed to the production server. For immediate testing, use the local development environment.
 
 ## 🎲 How to Play
 
@@ -66,13 +68,13 @@ Play the game at: **[https://khasinogaming.com/cassino/](https://khasinogaming.c
 
 ### Infrastructure
 - **Docker** and **Docker Compose** for containerization
-- **Nginx** reverse proxy (optional)
+- **Self-hosted deployment** with full infrastructure control
 - **pgAdmin** for database management
 
 ## 📁 Project Structure
 
 ```
-Multiplayer Card Game/
+Casino Card Game/
 ├── components/              # React components
 │   ├── ui/                 # shadcn/ui components
 │   ├── Card.tsx            # Card display component
@@ -89,11 +91,12 @@ Multiplayer Card Game/
 │   ├── requirements.txt    # Python dependencies
 │   ├── Dockerfile          # Backend Docker image
 │   └── ...
-├── docker-compose.yml      # Production Docker setup
-├── docker-compose.dev.yml  # Development Docker setup
+├── docker-compose.yml      # Full-stack Docker setup
+├── docker-compose.dev.yml  # Development environment
 ├── docker-compose.prod.yml # Production deployment
 ├── deploy-prod.bat         # Windows deployment script
 ├── deploy-prod.sh          # Linux/macOS deployment script
+├── SERVER_DEPLOYMENT_GUIDE.md # Self-hosting instructions
 ├── tests/                  # Test files
 ├── public/                 # Static assets
 └── ...
@@ -116,9 +119,9 @@ start-app.bat dev     # Windows
 # pgAdmin: http://localhost:8080
 ```
 
-#### Production Deployment
+#### Production Deployment (Local)
 ```bash
-# Deploy to production
+# Deploy to production locally
 ./deploy-prod.sh      # Linux/macOS
 # OR
 deploy-prod.bat       # Windows
@@ -252,12 +255,27 @@ python -m pytest
 
 ## 📦 Deployment
 
-### Production Deployment Options
+### Self-Hosting (Recommended)
 
-#### 1. Docker (Recommended)
+This project is designed for self-hosting with complete infrastructure control:
 
-#### 2. Manual Server Deployment
-Follow the instructions in `PRODUCTION_DEPLOYMENT.md`
+#### Local Production Deployment
+```bash
+# Deploy locally for testing
+./deploy-prod.sh
+```
+
+#### Server Deployment
+Follow the comprehensive guide in `SERVER_DEPLOYMENT_GUIDE.md` to deploy to your own server.
+
+**Benefits of Self-Hosting:**
+- ✅ **Complete Infrastructure Control** - Full access to server configuration
+- ✅ **No Third-Party Dependencies** - No reliance on external services
+- ✅ **Custom Domain Configuration** - Direct control over DNS and routing
+- ✅ **Full Access to Logs and Monitoring** - Complete visibility into performance
+- ✅ **Cost-Effective Long-Term** - No ongoing subscription fees
+- ✅ **Data Privacy** - Your data stays on your infrastructure
+- ✅ **Custom Security Policies** - Implement your own security measures
 
 ### Environment Variables
 
@@ -310,7 +328,7 @@ CORS_ORIGINS=["https://your-domain.com"]
 ### Getting Help
 1. Check the logs: `./logs.sh`
 2. Review `DOCKER_SETUP.md` for detailed instructions
-3. Check `PRODUCTION_DEPLOYMENT.md` for deployment issues
+3. Check `SERVER_DEPLOYMENT_GUIDE.md` for server deployment
 4. Open an issue on GitHub
 
 ## 🤝 Contributing
@@ -345,7 +363,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If you encounter any issues:
 
 1. Check the troubleshooting section above
-2. Review the documentation in `DOCKER_SETUP.md` and `PRODUCTION_DEPLOYMENT.md`
+2. Review the documentation in `DOCKER_SETUP.md` and `SERVER_DEPLOYMENT_GUIDE.md`
 3. Open an issue on GitHub
 4. Check the logs: `./logs.sh`
 
