@@ -5,10 +5,12 @@ from datetime import datetime
 # Request schemas
 class CreateRoomRequest(BaseModel):
     player_name: str
+    ip_address: Optional[str] = None
 
 class JoinRoomRequest(BaseModel):
     room_id: str
     player_name: str
+    ip_address: Optional[str] = None
 
 class SetPlayerReadyRequest(BaseModel):
     room_id: str
@@ -38,6 +40,7 @@ class PlayerResponse(BaseModel):
     name: str
     ready: bool
     joined_at: datetime
+    ip_address: Optional[str] = None
 
 class GameStateResponse(BaseModel):
     room_id: str

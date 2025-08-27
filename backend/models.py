@@ -55,6 +55,7 @@ class Player(Base):
     name = Column(String(50), nullable=False)
     ready = Column(Boolean, default=False)
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
+    ip_address = Column(String(45), nullable=True)  # IPv6 addresses can be up to 45 characters
     
     # Relationship
     room = relationship("Room", back_populates="players")

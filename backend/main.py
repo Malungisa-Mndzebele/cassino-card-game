@@ -14,9 +14,26 @@ from schemas import (
     PlayCardRequest, StartShuffleRequest, SelectFaceUpCardsRequest,
     CreateRoomResponse, JoinRoomResponse, StandardResponse, GameStateResponse, PlayerResponse
 )
+from fastapi import Request
 
 # Note: Database tables are now managed by Alembic migrations
 # Run migrations with: alembic upgrade head
+
+# Dependency to get client IP address
+def get_client_ip(request: Request) -> str:
+    """Extract client IP address from request"""
+    # Check for forwarded headers (when behind proxy/load balancer)
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    
+    # Check for real IP header
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip
+    
+    # Fallback to client host
+    return request.client.host if request.client.host else "127.0.0.1"
 
 app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path="/api")
 
@@ -143,7 +160,7 @@ def game_state_to_response(room: Room) -> GameStateResponse:
 
 # API Endpoints
 @app.post("/rooms/create", response_model=CreateRoomResponse)
-async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db)):
+async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Create a new game room"""
     # Generate unique room ID
     room_id = generate_room_id()
@@ -156,8 +173,12 @@ async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db))
     db.commit()
     db.refresh(room)
     
-    # Create first player
-    player = Player(room_id=room_id, name=request.player_name)
+    # Create first player with IP address
+    player = Player(
+        room_id=room_id, 
+        name=request.player_name,
+        ip_address=request.ip_address or client_ip
+    )
     db.add(player)
     db.commit()
     db.refresh(player)
@@ -169,7 +190,7 @@ async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db))
     )
 
 @app.post("/rooms/join", response_model=JoinRoomResponse)
-async def join_room(request: JoinRoomRequest, db: Session = Depends(get_db)):
+async def join_room(request: JoinRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Join an existing game room"""
     # Check if room exists
     room = db.query(Room).filter(Room.id == request.room_id).first()
@@ -188,8 +209,12 @@ async def join_room(request: JoinRoomRequest, db: Session = Depends(get_db)):
     if existing_player:
         raise HTTPException(status_code=400, detail="Player name already taken")
     
-    # Create player
-    player = Player(room_id=request.room_id, name=request.player_name)
+    # Create player with IP address
+    player = Player(
+        room_id=request.room_id, 
+        name=request.player_name,
+        ip_address=request.ip_address or client_ip
+    )
     db.add(player)
     db.commit()
     db.refresh(player)
