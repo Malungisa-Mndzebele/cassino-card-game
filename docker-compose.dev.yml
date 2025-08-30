@@ -69,8 +69,8 @@ services:
       dockerfile: frontend.Dockerfile.dev
     container_name: casino-frontend-dev
     environment:
-      - REACT_APP_API_URL=http://localhost:8000
-      - REACT_APP_WS_URL=ws://localhost:8000
+      - REACT_APP_API_URL=http://backend:8000
+      - REACT_APP_WS_URL=ws://backend:8000
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
     ports:

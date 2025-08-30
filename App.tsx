@@ -79,6 +79,8 @@ const initialGameState: GameState = {
 export default function App() {
   // Game state management
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
   const [previousGameState, setPreviousGameState] = useState<GameState | null>(null);
   const [playerId, setPlayerId] = useState<number | null>(null);
   const [roomId, setRoomId] = useState<string>('');
@@ -92,6 +94,35 @@ export default function App() {
 
   // Derive connection state from connection status and game state
   const isConnected = connectionStatus === 'connected' && gameState !== null && roomId !== '';
+  
+  // Helper function to determine if current player is player 1 or 2
+  const isPlayer1 = () => {
+    if (!gameState || !playerId) return false;
+    const players = gameState.players || [];
+    if (players.length === 0) return false;
+    
+    // Sort players by joined_at to determine order
+    const sortedPlayers = [...players].sort((a, b) => 
+      new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()
+    );
+    
+    // First player (by join time) is player 1
+    return sortedPlayers[0]?.id === playerId;
+  };
+  
+  const isPlayer2 = () => {
+    if (!gameState || !playerId) return false;
+    const players = gameState.players || [];
+    if (players.length < 2) return false;
+    
+    // Sort players by joined_at to determine order
+    const sortedPlayers = [...players].sort((a, b) => 
+      new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()
+    );
+    
+    // Second player (by join time) is player 2
+    return sortedPlayers[1]?.id === playerId;
+  };
   
   // Debug logging
   console.log('🔍 Connection Debug:', {
@@ -240,7 +271,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
 
     // Game finished - update statistics
     if (gameState.phase === 'finished' && previousGameState.phase !== 'finished' && playerId) {
-      const myScore = playerId === 1 ? gameState.player1Score : gameState.player2Score
+      const myScore = isPlayer1() ? gameState.player1Score : gameState.player2Score
       const isWinner = gameState.winner === playerId
       const isTie = gameState.winner === 'tie'
 
@@ -269,6 +300,35 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
 
     setPreviousGameState(gameState)
   }, [gameState, previousGameState, playerId, preferences.statisticsEnabled, preferences.soundEnabled, soundReady, statistics, updateStatistics])
+
+  // Countdown effect when both players are ready
+  useEffect(() => {
+    if (gameState && gameState.player1Ready && gameState.player2Ready && countdown === null) {
+      console.log('🎯 Both players ready, starting countdown!');
+      setCountdown(10);
+      
+      const interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(interval);
+            setCountdownInterval(null);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      setCountdownInterval(interval);
+    }
+    
+    // Cleanup interval on unmount or when game state changes
+    return () => {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        setCountdownInterval(null);
+      }
+    };
+  }, [gameState?.player1Ready, gameState?.player2Ready, countdown, countdownInterval]);
 
      // No polling needed - using real-time API subscription instead
 
@@ -340,8 +400,8 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
   }
 
   // Get current scores for header display
-  const myScore = playerId === 1 ? gameState?.player1Score ?? 0 : gameState?.player2Score ?? 0;
-  const opponentScore = playerId === 1 ? gameState?.player2Score ?? 0 : gameState?.player1Score ?? 0;
+        const myScore = isPlayer1() ? gameState?.player1Score ?? 0 : gameState?.player2Score ?? 0;
+      const opponentScore = isPlayer1() ? gameState?.player2Score ?? 0 : gameState?.player1Score ?? 0;
   const myName = gameState?.players?.find(p => p.id === playerId)?.name || 'You';
   const opponentName = gameState?.players?.find(p => p.id !== playerId)?.name || 'Opponent';
 
@@ -692,19 +752,22 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                       </div>
                     </div>
                     
-                    {!gameState.player1Ready && playerId === 1 && (
+                    {/* Show ready buttons to both players simultaneously - only when both players have joined */}
+                    {gameState.phase === 'waiting' && playerId && gameState.players && gameState.players.length >= 2 && (
                       <div className="space-y-3">
                         <p className="text-gray-600">Are you ready to start the game?</p>
                         <div className="flex space-x-4 justify-center">
                           <Button
                             onClick={async () => {
                               if (!roomId || !playerId) return;
+                              console.log('🎯 Player clicking ready:', { roomId, playerId, isPlayer1: isPlayer1() });
                               try {
                                 const response = await setPlayerReadyMutation({ 
                                    room_id: roomId, 
                                    player_id: playerId, 
                                    is_ready: true 
                                 });
+                                console.log('✅ Player ready response:', response);
                                 if (response) {
                                   setGameState(response.gameState);
                                 }
@@ -714,8 +777,9 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                               }
                             }}
                             className="bg-green-600 hover:bg-green-700"
+                            disabled={isPlayer1() ? gameState.player1Ready : gameState.player2Ready}
                           >
-                            I'm Ready!
+                            {isPlayer1() ? (gameState.player1Ready ? 'Ready!' : 'I\'m Ready!') : (gameState.player2Ready ? 'Ready!' : 'I\'m Ready!')}
                           </Button>
                           <Button
                             onClick={async () => {
@@ -735,6 +799,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                               }
                             }}
                             variant="outline"
+                            disabled={isPlayer1() ? !gameState.player1Ready : !gameState.player2Ready}
                           >
                             Not Ready
                           </Button>
@@ -742,78 +807,32 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                       </div>
                     )}
                     
-                    {!gameState.player2Ready && playerId === 2 && (
-                      <div className="space-y-3">
-                        <p className="text-gray-600">Are you ready to start the game?</p>
-                        <div className="flex space-x-4 justify-center">
-                          <Button
-                            onClick={async () => {
-                              if (!roomId || !playerId) return;
-                              try {
-                                const response = await setPlayerReadyMutation({ 
-                                   room_id: roomId, 
-                                   player_id: playerId, 
-                                   is_ready: true 
-                                });
-                                if (response) {
-                                  setGameState(response.gameState);
-                                }
-                              } catch (error: any) {
-                                console.error('Error setting player ready:', error);
-                                setError(error?.message || 'Failed to set player ready status');
-                              }
-                            }}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            I'm Ready!
-                          </Button>
-                          <Button
-                            onClick={async () => {
-                              if (!roomId || !playerId) return;
-                              try {
-                                const response = await setPlayerReadyMutation({ 
-                                   room_id: roomId, 
-                                   player_id: playerId, 
-                                   is_ready: false 
-                                });
-                                if (response) {
-                                  setGameState(response.gameState);
-                                }
-                              } catch (error: any) {
-                                console.error('Error setting player not ready:', error);
-                                setError(error?.message || 'Failed to set player ready status');
-                              }
-                            }}
-                            variant="outline"
-                          >
-                            Not Ready
-                          </Button>
+                    {/* Show waiting message when only one player has joined */}
+                    {gameState.phase === 'waiting' && playerId && gameState.players && gameState.players.length === 1 && (
+                      <div className="text-center">
+                        <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
+                          <p className="text-yellow-800 font-medium">Waiting for second player to join...</p>
+                          <p className="text-yellow-600 text-sm">Share the room code with a friend to start playing!</p>
                         </div>
                       </div>
                     )}
                     
-                    {gameState.player1Ready && playerId === 1 && (
+                    {/* Countdown display when both players are ready */}
+                    {countdown !== null && countdown > 0 && (
                       <div className="text-center">
-                        <div className="bg-green-100 border border-green-300 rounded-lg p-4">
-                          <p className="text-green-800 font-medium">You're Ready!</p>
-                          <p className="text-green-600 text-sm">
-                            {gameState.player2Ready 
-                              ? "Both players are ready! The game will begin shortly..." 
-                              : "Waiting for Player 2 to confirm they're ready..."}
-                          </p>
+                        <div className="bg-blue-100 border border-blue-300 rounded-lg p-4">
+                          <p className="text-blue-800 font-medium text-lg">Game starting in...</p>
+                          <p className="text-blue-600 text-3xl font-bold">{countdown}</p>
                         </div>
                       </div>
                     )}
                     
-                    {gameState.player2Ready && playerId === 2 && (
+                    {/* Both players ready message */}
+                    {gameState.player1Ready && gameState.player2Ready && countdown === null && (
                       <div className="text-center">
                         <div className="bg-green-100 border border-green-300 rounded-lg p-4">
-                          <p className="text-green-800 font-medium">You're Ready!</p>
-                          <p className="text-green-600 text-sm">
-                            {gameState.player1Ready 
-                              ? "Both players are ready! The game will begin shortly..." 
-                              : "Waiting for Player 1 to confirm they're ready..."}
-                          </p>
+                          <p className="text-green-800 font-medium">Both players are ready!</p>
+                          <p className="text-green-600 text-sm">The game will begin shortly...</p>
                         </div>
                       </div>
                     )}

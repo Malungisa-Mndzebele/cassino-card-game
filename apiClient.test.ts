@@ -223,6 +223,11 @@ describe('API Client', () => {
     });
 
     it('should handle API errors', async () => {
+      // Mock the environment to avoid the "Cannot connect to backend" message
+      const originalLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = { hostname: 'example.com' };
+
       (fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 404,
@@ -230,17 +235,32 @@ describe('API Client', () => {
         json: async () => ({ detail: 'Room not found' })
       });
 
-      await expect(
-        api.getGameState.getGameState({ room_id: 'INVALID' })
-      ).rejects.toThrow('Room not found');
+      try {
+        await expect(
+          api.getGameState.getGameState({ room_id: 'INVALID' })
+        ).rejects.toThrow('Room not found');
+      } finally {
+        // Restore original location
+        (window as any).location = originalLocation;
+      }
     });
 
     it('should handle network errors', async () => {
+      // Mock the environment to avoid the "Cannot connect to backend" message
+      const originalLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = { hostname: 'example.com' };
+
       (fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
-      await expect(
-        api.createRoom.createRoom({ player_name: 'Test' })
-      ).rejects.toThrow('Network error');
+      try {
+        await expect(
+          api.createRoom.createRoom({ player_name: 'Test' })
+        ).rejects.toThrow('Network error');
+      } finally {
+        // Restore original location
+        (window as any).location = originalLocation;
+      }
     });
   });
 

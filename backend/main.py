@@ -129,7 +129,8 @@ def game_state_to_response(room: Room) -> GameStateResponse:
             id=p.id,
             name=p.name,
             ready=p.ready,
-            joined_at=p.joined_at
+            joined_at=p.joined_at,
+            ip_address=p.ip_address
         ) for p in room.players],
         phase=room.game_phase,
         round=room.round_number,
@@ -250,10 +251,11 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: Session = Depends
     player.ready = request.is_ready
     db.commit()
     
-    # Update room ready status
-    if request.player_id == 1:
+    # Update room ready status based on player position in room
+    players_in_room = sorted(room.players, key=lambda p: p.joined_at)
+    if len(players_in_room) >= 1 and player.id == players_in_room[0].id:
         room.player1_ready = request.is_ready
-    else:
+    elif len(players_in_room) >= 2 and player.id == players_in_room[1].id:
         room.player2_ready = request.is_ready
     
     db.commit()
