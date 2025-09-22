@@ -24,12 +24,22 @@ jobs:
         cache: 'npm'
         
     - name: Install frontend dependencies
-      run: npm ci --legacy-peer-deps
+      run: npm ci
       
-    - name: Build frontend
-      run: npm run build
-      env:
-        VITE_API_URL: https://khasinogaming.com:8000
+    - name: Prepare frontend files
+      run: |
+        echo "📁 Preparing frontend files for deployment..."
+        # Create deployment directory
+        mkdir -p dist
+        # Copy all frontend files
+        cp index.html dist/
+        cp App.js dist/
+        cp dev-server.js dist/
+        cp -r public dist/
+        cp -r frontend dist/
+        cp package.json dist/
+        cp package-lock.json dist/
+        echo "✅ Frontend files prepared"
         
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -38,21 +48,23 @@ jobs:
         
     - name: Create backend package
       run: |
+        echo "📦 Creating backend deployment package..."
         mkdir -p backend-deploy
         cp -r backend/* backend-deploy/
-        cp backend/requirements.txt backend-deploy/
         
-        # Create startup script
+        # Create startup script for native deployment
         echo '#!/usr/bin/env python3' > backend-deploy/start.py
         echo 'import os, sys, subprocess' >> backend-deploy/start.py
         echo 'print("📦 Installing dependencies...")' >> backend-deploy/start.py
-        echo 'subprocess.run([sys.executable, "-m", "pip", "install", "--user", "-r", "requirements.txt"])' >> backend-deploy/start.py
+        echo 'subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])' >> backend-deploy/start.py
         echo 'print("🚀 Starting backend server...")' >> backend-deploy/start.py
-        echo 'subprocess.run([sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"])' >> backend-deploy/start.py
+        echo 'subprocess.run([sys.executable, "start_production.py"])' >> backend-deploy/start.py
         
         # Create README
-        echo '# Casino Backend' > backend-deploy/README.md
+        echo '# Casino Backend - Native Deployment' > backend-deploy/README.md
         echo 'Run: python3 start.py' >> backend-deploy/README.md
+        echo 'Or: python3 start_production.py' >> backend-deploy/README.md
+        echo "✅ Backend package created"
         
     - name: Deploy frontend via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
