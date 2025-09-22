@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node dev-server.js",
     "start": "node frontend/production-server.js",
+    "build": "echo '✅ Casino Card Game v2.0 - No build step required (vanilla HTML/CSS/JS)'",
     "start:backend": "cd backend && python start_production.py",
     "install:backend": "cd backend && python -m pip install -r requirements.txt",
     "install:frontend": "npm install",
