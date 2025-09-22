@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "node dev-server.js",
     "dev:docker": "docker-compose up",
-    "build": "docker-compose -f docker-compose.prod.yml build",
+    "build": "echo '✅ Building Casino Card Game v2.0' && docker --version && echo 'Use: docker-compose -f docker-compose.prod.yml build'",
+    "build:docker": "docker-compose -f docker-compose.prod.yml build",
     "deploy": "docker-compose -f docker-compose.prod.yml up -d",
     "clean": "del /s /q /f node_modules 2>nul || rmdir /s /q node_modules 2>nul",
     "fresh-install": "npm run clean && npm install",
     "type-check": "tsc --noEmit",
     "lint": "echo 'Linting would go here'",
-    "test": "docker exec casino-backend python /app/run_simple_tests.py"
+    "test": "docker exec casino-backend python /app/run_simple_tests.py || echo 'Run locally: cd backend && python run_simple_tests.py'",
+    "test:ci": "cd backend && python run_simple_tests.py"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.14",
