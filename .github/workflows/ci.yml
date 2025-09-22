@@ -103,10 +103,10 @@ jobs:
           echo "🚀 Starting deployment to khasinogaming.com..."
           
           # Navigate to project directory
-          cd /path/to/cassino-card-game || {
+          cd /home/mawdqtvped/khasinogaming.com/cassino || {
             echo "❌ Project directory not found. Cloning repository..."
-            git clone https://github.com/Malungisa-Mndzebele/cassino-card-game.git
-            cd cassino-card-game
+            git clone https://github.com/Malungisa-Mndzebele/cassino-card-game.git /home/mawdqtvped/khasinogaming.com/cassino
+            cd /home/mawdqtvped/khasinogaming.com/cassino
           }
           
           # Pull latest changes

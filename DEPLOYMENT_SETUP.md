@@ -28,8 +28,8 @@ Go to your GitHub repository → Settings → Secrets and variables → Actions
 Add these secrets:
 
 ### Required Secrets:
-- **`HOST`**: Your server IP or domain (e.g., `khasinogaming.com` or `123.456.789.0`)
-- **`USERNAME`**: Your server username (e.g., `root`, `ubuntu`, `deploy`)
+- **`HOST`**: `khasinogaming.com`
+- **`USERNAME`**: `cassino`
 - **`SSH_KEY`**: Your private SSH key content (the entire content of `~/.ssh/khasinogaming_deploy`)
 - **`PORT`**: SSH port (usually `22`)
 
@@ -46,18 +46,17 @@ SSH into your server and prepare it:
 
 ```bash
 # Connect to your server
-ssh username@khasinogaming.com
+ssh cassino@khasinogaming.com
 
 # Install required software
 sudo apt update
 sudo apt install -y nodejs npm python3 python3-pip postgresql git curl
 
-# Create project directory
-mkdir -p /var/www/cassino-card-game
-cd /var/www/cassino-card-game
+# Navigate to project directory
+cd /home/mawdqtvped/khasinogaming.com/cassino
 
-# Clone the repository
-git clone https://github.com/Malungisa-Mndzebele/cassino-card-game.git .
+# Clone the repository (if not already cloned)
+git clone https://github.com/Malungisa-Mndzebele/cassino-card-game.git . || git pull origin master
 
 # Install dependencies
 npm run install:all
@@ -78,11 +77,8 @@ cd ..
 Edit the GitHub Actions workflow file `.github/workflows/ci.yml` and update the deployment path:
 
 ```yaml
-# Change this line:
-cd /path/to/cassino-card-game || {
-
-# To your actual path:
-cd /var/www/cassino-card-game || {
+# The path is already updated to:
+cd /home/mawdqtvped/khasinogaming.com/cassino || {
 ```
 
 ## 🌐 Step 5: Configure Nginx (Optional)
@@ -191,10 +187,10 @@ sudo certbot --nginx -d khasinogaming.com -d www.khasinogaming.com
 
 ```bash
 # SSH into your server
-ssh username@khasinogaming.com
+ssh cassino@khasinogaming.com
 
 # Navigate to project
-cd /var/www/cassino-card-game
+cd /home/mawdqtvped/khasinogaming.com/cassino
 
 # Pull latest changes
 git pull origin master
