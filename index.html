@@ -79,6 +79,19 @@
             margin-bottom: 3rem;
         }
         
+        /* Ensure proper grid layout on all screen sizes */
+        @media (min-width: 768px) {
+            .actions {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 767px) {
+            .actions {
+                grid-template-columns: 1fr;
+            }
+        }
+        
         .action-card {
             background: rgba(255,255,255,0.1);
             padding: 2rem;
@@ -142,6 +155,25 @@
             gap: 1rem;
         }
         
+        /* Ensure rules display in 3 columns on larger screens */
+        @media (min-width: 900px) {
+            .rules-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 899px) and (min-width: 600px) {
+            .rules-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 599px) {
+            .rules-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
         .rule h4 {
             margin-bottom: 0.5rem;
         }
@@ -183,7 +215,36 @@
         .loading {
             opacity: 0.7;
             pointer-events: none;
-      }
+        }
+        
+        /* Fallback for older browsers */
+        @supports not (display: grid) {
+            .actions {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .action-card {
+                flex: 1;
+                min-width: 300px;
+                max-width: 400px;
+                margin: 1rem;
+            }
+            
+            .rules-grid {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-around;
+            }
+            
+            .rule {
+                flex: 1;
+                min-width: 250px;
+                max-width: 300px;
+                margin: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
