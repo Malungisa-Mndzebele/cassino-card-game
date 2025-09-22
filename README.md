@@ -176,20 +176,23 @@ Casino Card Game/
 
 ### **🎮 Ready to Play! (5-minute setup)**
 
-#### **1. Start the Game (Docker - Recommended)**
+#### **1. Start the Game (Native - No Docker)**
 ```bash
-# Start all services
-docker-compose up -d
+# Install all dependencies
+npm run install:all
 
-# Verify everything is running
-docker ps
-curl http://localhost:8000/health
+# Start the application
+npm start
+
+# Or use the startup script
+# On Linux/Mac: ./start.sh
+# On Windows: start.bat
 ```
 
 #### **2. Access the Game**
 - **🎮 Play the Game**: http://localhost:3000
 - **🔧 Backend API**: http://localhost:8000
-- **📊 Database Admin**: http://localhost:8080 (pgAdmin)
+- **🏥 Health Check**: http://localhost:8000/health
 
 #### **3. Invite a Friend**
 1. **Player 1**: Open http://localhost:3000 → Click "Create Room"
@@ -201,26 +204,23 @@ curl http://localhost:8000/health
 
 ### **🔧 Development Commands**
 ```bash
-# Start development environment
-docker-compose up -d
+# Start frontend only
+npm start
 
-# Run backend tests
+# Start backend only
+npm run start:backend
+
+# Run tests
 npm test
 
-# Build for production
-npm run build
+# Install dependencies
+npm run install:all
 
-# Deploy to production
-npm run deploy
-
-# View logs
-docker-compose logs
-
-# Stop services
-docker-compose down
+# View deployment guide
+npm run deploy:guide
 ```
 
-### Option 2: Local Development
+### **📖 Production Deployment**
 
 #### Prerequisites
 - Node.js 18+
