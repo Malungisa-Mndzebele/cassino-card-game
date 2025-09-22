@@ -853,12 +853,43 @@
                     console.log('✅ API connection successful');
                 } else {
                     console.warn('⚠️ API connection issues');
+                    showBackendSetupInstructions();
                 }
             } catch (error) {
                 console.error('❌ API connection failed:', error);
-                showError('Backend connection failed. Please check if the server is running.');
+                showBackendSetupInstructions();
             }
         });
+
+        // Show backend setup instructions
+        function showBackendSetupInstructions() {
+            const errorDiv = document.createElement('div');
+            errorDiv.id = 'backend-setup';
+            errorDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(239, 68, 68, 0.9);
+                color: white;
+                padding: 1rem;
+                border-radius: 8px;
+                max-width: 400px;
+                z-index: 1000;
+                font-size: 0.9rem;
+            `;
+            errorDiv.innerHTML = `
+                <h4 style="margin-bottom: 0.5rem;">🚨 Backend Not Running</h4>
+                <p style="margin-bottom: 0.5rem;">The game backend is not accessible. To start the backend:</p>
+                <ol style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                    <li>SSH into your server: <code>ssh cassino@khasinogaming.com</code></li>
+                    <li>Navigate to: <code>cd /home/mawdqtvped/khasinogaming.com/cassino</code></li>
+                    <li>Start backend: <code>cd backend && python3 start_production.py</code></li>
+                    <li>Start frontend: <code>node frontend/production-server.js</code></li>
+                </ol>
+                <button onclick="this.parentElement.remove()" style="background: white; color: #ef4444; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; margin-top: 0.5rem;">Close</button>
+            `;
+            document.body.appendChild(errorDiv);
+        }
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
