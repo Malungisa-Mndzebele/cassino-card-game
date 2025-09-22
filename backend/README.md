@@ -18,16 +18,16 @@ A FastAPI backend for the multiplayer Casino card game with PostgreSQL database.
 **For Windows:**
 ```bash
 cd backend
-start_local.bat
-python startup.py
+install_dependencies.bat
+python start_production.py
 ```
 
 **For macOS/Linux:**
 ```bash
 cd backend
-chmod +x start_local.sh
-./start_local.sh
-python startup.py
+chmod +x install_dependencies.sh
+./install_dependencies.sh
+python start_production.py
 ```
 
 ### Manual Setup
@@ -41,16 +41,7 @@ pip install -r requirements.txt
 
 #### 2. Database Setup
 
-**Option A: PostgreSQL with Docker (Recommended)**
-```bash
-# Start PostgreSQL container
-docker-compose up -d postgres
-
-# Switch to PostgreSQL
-python switch_db.py postgresql
-```
-
-**Option B: Local PostgreSQL Installation**
+**Option A: Local PostgreSQL Installation (Recommended)**
 1. Install PostgreSQL on your system
 2. Create a new database:
    ```sql
@@ -59,9 +50,10 @@ python switch_db.py postgresql
    GRANT ALL PRIVILEGES ON DATABASE casino_game TO casino_user;
    ```
 
-**Option C: SQLite (Simple)**
+**Option B: SQLite (Simple)**
 ```bash
-python switch_db.py sqlite
+# Use SQLite for development (no setup required)
+# The app will automatically create test_casino_game.db
 ```
 
 #### 3. Configure Environment Variables
@@ -85,8 +77,8 @@ DATABASE_URL=postgresql://casino_user:casino_password@localhost:5432/casino_game
 #### 4. Run the Backend
 
 ```bash
-# Using startup script (recommended)
-python startup.py
+# Using production script (recommended)
+python start_production.py
 
 # Or directly with uvicorn
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
@@ -161,29 +153,31 @@ alembic upgrade head
 
 ## Production Deployment
 
-### Option 1: Using Docker (Recommended)
+### Native Deployment
 
-### Option 2: Using Docker Compose
-
-1. Create a `Dockerfile`:
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . .
-EXPOSE 8000
-
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-2. Build and run:
+1. Install dependencies:
 ```bash
-docker build -t casino-backend .
-docker run -p 8000:8000 casino-backend
+pip install -r requirements.txt
 ```
+
+2. Set up PostgreSQL database:
+```sql
+CREATE DATABASE casino_game;
+CREATE USER casino_user WITH PASSWORD 'casino_password';
+GRANT ALL PRIVILEGES ON DATABASE casino_game TO casino_user;
+```
+
+3. Run database migrations:
+```bash
+python -m alembic upgrade head
+```
+
+4. Start the production server:
+```bash
+python start_production.py
+```
+
+For complete deployment instructions, see the main `DEPLOYMENT_GUIDE.md` file.
 
 
 

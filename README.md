@@ -1,6 +1,6 @@
 # 🎮 Casino Card Game
 
-A real-time multiplayer implementation of the classic Cassino card game built with React, TypeScript, and FastAPI with PostgreSQL database and Docker containerization.
+A real-time multiplayer implementation of the classic Cassino card game built with React, TypeScript, and FastAPI with PostgreSQL database for native deployment.
 
 ![Casino Card Game](https://via.placeholder.com/800x400/065f46/ffffff?text=Casino+Card+Game)
 
@@ -14,7 +14,7 @@ This is a faithful digital recreation of the traditional Cassino card game featu
 - **Hints system** with strategic suggestions
 - **Game statistics** tracking
 - **Mobile-responsive** design
-- **Docker-based development** with simplified workflow
+- **Native deployment** with simplified workflow
 - **PostgreSQL database** for production reliability
 - **Comprehensive test suite** with 20+ backend tests
 
@@ -35,13 +35,13 @@ This is a faithful digital recreation of the traditional Cassino card game featu
 ### 🧹 **Project Cleanup & Optimization** 
 - **Simplified Dependencies**: Reduced from 20+ dev dependencies to 6 essential ones
 - **Removed Vite/Vitest**: Replaced with Express.js development server and simple Python test runner
-- **Streamlined Build Process**: Docker-based workflow with minimal configuration
+- **Streamlined Build Process**: Native deployment workflow with minimal configuration
 - **Clean Project Structure**: Removed redundant files and configurations
 
 ### 🧪 **Enhanced Testing & Reliability**
 - **20 Backend Tests**: All passing - comprehensive game logic testing
 - **Simple Test Runner**: No external dependencies required
-- **Docker Integration**: Tests run seamlessly in containers
+- **Native Integration**: Tests run seamlessly in local environment
 - **API Verification**: All endpoints tested and working correctly
 
 ### 🚀 **Production Ready Features**
@@ -134,10 +134,10 @@ Play the game at: **[https://khasinogaming.com/cassino/](https://khasinogaming.c
 - **Complete game logic** with 20+ comprehensive tests
 
 ### Infrastructure
-- **Docker** and **Docker Compose** for containerization
+- **Native deployment** with Python and Node.js
 - **Simplified development workflow** with minimal dependencies
 - **Self-hosted deployment** with full infrastructure control
-- **pgAdmin** for database management
+- **PostgreSQL** for database management
 
 ## 📁 Project Structure
 
@@ -160,14 +160,9 @@ Casino Card Game/
 │   ├── test_game_logic_simple.py # Game logic tests
 │   ├── alembic/            # Database migrations
 │   ├── requirements.txt    # Python dependencies
-│   └── Dockerfile          # Backend Docker image
-├── docker-compose.yml      # Full-stack Docker setup
-├── docker-compose.dev.yml  # Development environment
-├── docker-compose.prod.yml # Production deployment
-├── docker-compose.secure.yml # Secure production setup
+├── start.sh / start.bat    # Native startup scripts
 ├── dev-server.js           # Express.js development server
-├── build.sh / build.bat    # Build scripts
-├── SERVER_DEPLOYMENT_GUIDE.md # Self-hosting instructions
+├── DEPLOYMENT_GUIDE.md     # Production deployment instructions
 ├── public/                 # Static assets
 └── ...
 ```
