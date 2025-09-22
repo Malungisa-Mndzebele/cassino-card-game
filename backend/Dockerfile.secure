@@ -1,0 +1,72 @@
+# Multi-stage build for security
+FROM python:3.11-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create build directory
+WORKDIR /build
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Production stage
+FROM python:3.11-slim as production
+
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin -c "Docker image user" appuser
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    # Only essential runtime libraries
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install runtime dependencies only
+# Copy requirements and install system-wide so modules are available at runtime
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Set Python path
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Security: Remove sensitive files if they exist
+RUN find . -name "*.bat" -delete \
+    && find . -name "convert_ssh_key.py" -delete \
+    && find . -name "start_local.*" -delete \
+    && find . -name "startup_local.*" -delete \
+    && find . -name "*.key" -delete \
+    && find . -name "*.pem" -delete \
+    && find . -name "*.ppk" -delete \
+    && rm -rf Lib/ lib/ __pycache__/ .pytest_cache/ \
+    && find . -name "*.pyc" -delete \
+    && find . -name "*.pyo" -delete
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /tmp/app && chown appuser:appuser /tmp/app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+
+# Start application via startup script (runs migrations first)
+CMD ["python", "startup.py"]

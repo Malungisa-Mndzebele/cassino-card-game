@@ -15,6 +15,7 @@ from schemas import (
     CreateRoomResponse, JoinRoomResponse, StandardResponse, GameStateResponse, PlayerResponse
 )
 from fastapi import Request
+from game_logic import CasinoGameLogic, GameCard, Build
 
 # Note: Database tables are now managed by Alembic migrations
 # Run migrations with: alembic upgrade head
@@ -98,28 +99,29 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# Initialize game logic
+game_logic = CasinoGameLogic()
+
 # Utility functions
 def generate_room_id() -> str:
     """Generate a 6-character room ID"""
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
-def create_deck() -> List[Dict[str, Any]]:
-    """Create a standard deck of cards"""
-    suits = ['hearts', 'diamonds', 'clubs', 'spades']
-    ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
-    deck = []
-    
-    for suit in suits:
-        for rank in ranks:
-            deck.append({
-                'id': f"{rank}_{suit}",
-                'suit': suit,
-                'rank': rank,
-                'value': 1 if rank == 'A' else min(10, int(rank)) if rank.isdigit() else 10
-            })
-    
-    random.shuffle(deck)
-    return deck
+def convert_game_cards_to_dict(cards: List[GameCard]) -> List[Dict[str, Any]]:
+    """Convert GameCard objects to dictionary format for JSON storage"""
+    return [{"id": card.id, "suit": card.suit, "rank": card.rank, "value": card.value} for card in cards]
+
+def convert_dict_to_game_cards(cards_dict: List[Dict[str, Any]]) -> List[GameCard]:
+    """Convert dictionary format to GameCard objects"""
+    return [GameCard(id=card["id"], suit=card["suit"], rank=card["rank"], value=card["value"]) for card in cards_dict]
+
+def convert_builds_to_dict(builds: List[Build]) -> List[Dict[str, Any]]:
+    """Convert Build objects to dictionary format for JSON storage"""
+    return [{"id": build.id, "cards": convert_game_cards_to_dict(build.cards), "value": build.value, "owner": build.owner} for build in builds]
+
+def convert_dict_to_builds(builds_dict: List[Dict[str, Any]]) -> List[Build]:
+    """Convert dictionary format to Build objects"""
+    return [Build(id=build["id"], cards=convert_dict_to_game_cards(build["cards"]), value=build["value"], owner=build["owner"]) for build in builds_dict]
 
 def game_state_to_response(room: Room) -> GameStateResponse:
     """Convert room model to game state response"""
@@ -225,14 +227,14 @@ async def join_room(request: JoinRoomRequest, db: Session = Depends(get_db), cli
         game_state=game_state_to_response(room)
     )
 
-@app.get("/rooms/{room_id}/state", response_model=Dict[str, GameStateResponse])
+@app.get("/rooms/{room_id}/state", response_model=GameStateResponse)
 async def get_game_state(room_id: str, db: Session = Depends(get_db)):
     """Get current game state"""
     room = db.query(Room).filter(Room.id == room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     
-    return {"game_state": game_state_to_response(room)}
+    return game_state_to_response(room)
 
 @app.post("/rooms/player-ready", response_model=StandardResponse)
 async def set_player_ready(request: SetPlayerReadyRequest, db: Session = Depends(get_db)):
@@ -290,48 +292,189 @@ async def start_shuffle(request: StartShuffleRequest, db: Session = Depends(get_
 
 @app.post("/game/select-face-up-cards", response_model=StandardResponse)
 async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: Session = Depends(get_db)):
-    """Select face-up cards for the game"""
+    """Select face-up cards for the game and deal initial cards"""
     room = db.query(Room).filter(Room.id == request.room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     
+    # Check if it's the right player's turn (Player 1 should select face-up cards)
+    players_in_room = sorted(room.players, key=lambda p: p.joined_at)
+    if len(players_in_room) == 0 or request.player_id != players_in_room[0].id:
+        raise HTTPException(status_code=400, detail="Only Player 1 can select face-up cards")
+    
     room.card_selection_complete = True
     room.game_phase = "round1"
     room.game_started = True
+    room.round_number = 1
+    room.current_turn = 1
     
-    # Deal cards (simplified for now)
-    deck = create_deck()
-    room.deck = deck[4:]  # Remove 4 cards for table
-    room.table_cards = deck[:4]  # First 4 cards on table
-    room.player1_hand = deck[4:8]  # Next 4 cards to player 1
-    room.player2_hand = deck[8:12]  # Next 4 cards to player 2
+    # Create and deal cards using game logic
+    deck = game_logic.create_deck()
+    table_cards, player1_hand, player2_hand, remaining_deck = game_logic.deal_initial_cards(deck)
+    
+    # Store in database
+    room.deck = convert_game_cards_to_dict(remaining_deck)
+    room.table_cards = convert_game_cards_to_dict(table_cards)
+    room.player1_hand = convert_game_cards_to_dict(player1_hand)
+    room.player2_hand = convert_game_cards_to_dict(player2_hand)
+    room.dealing_complete = True
     
     db.commit()
     
     return StandardResponse(
         success=True,
-        message="Face-up cards selected",
+        message="Cards dealt successfully",
         game_state=game_state_to_response(room)
     )
 
 @app.post("/game/play-card", response_model=StandardResponse)
 async def play_card(request: PlayCardRequest, db: Session = Depends(get_db)):
-    """Play a card (capture, build, or trail)"""
+    """Play a card (capture, build, or trail) with complete game logic"""
     room = db.query(Room).filter(Room.id == request.room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     
-    # TODO: Implement actual game logic
+    # Check if game is in progress
+    if room.game_phase not in ["round1", "round2"]:
+        raise HTTPException(status_code=400, detail="Game is not in progress")
+    
+    # Check if it's the player's turn
+    players_in_room = sorted(room.players, key=lambda p: p.joined_at)
+    expected_player_id = players_in_room[room.current_turn - 1].id if room.current_turn <= len(players_in_room) else None
+    
+    if expected_player_id != request.player_id:
+        raise HTTPException(status_code=400, detail="Not your turn")
+    
+    # Convert database data to game objects
+    player1_hand = convert_dict_to_game_cards(room.player1_hand or [])
+    player2_hand = convert_dict_to_game_cards(room.player2_hand or [])
+    table_cards = convert_dict_to_game_cards(room.table_cards or [])
+    builds = convert_dict_to_builds(room.builds or [])
+    player1_captured = convert_dict_to_game_cards(room.player1_captured or [])
+    player2_captured = convert_dict_to_game_cards(room.player2_captured or [])
+    
+    # Determine which player is playing based on join order
+    if len(players_in_room) < 2:
+        raise HTTPException(status_code=400, detail="Not enough players")
+    
+    is_player1 = request.player_id == players_in_room[0].id
+    player_hand = player1_hand if is_player1 else player2_hand
+    player_captured = player1_captured if is_player1 else player2_captured
+    
+    # Find the card being played
+    hand_card = None
+    for card in player_hand:
+        if card.id == request.card_id:
+            hand_card = card
+            break
+    
+    if not hand_card:
+        raise HTTPException(status_code=400, detail="Card not found in player's hand")
+    
+    # Execute the action based on type
+    if request.action == "capture":
+        # Validate capture
+        target_cards = [card for card in table_cards if card.id in (request.target_cards or [])]
+        target_builds = [build for build in builds if build.id in (request.target_cards or [])]
+        
+        if not game_logic.validate_capture(hand_card, target_cards, target_builds):
+            raise HTTPException(status_code=400, detail="Invalid capture")
+        
+        # Execute capture
+        captured_cards, remaining_builds, remaining_table_cards = game_logic.execute_capture(
+            hand_card, target_cards, target_builds, request.player_id
+        )
+        
+        # Update game state
+        player_hand.remove(hand_card)
+        player_captured.extend(captured_cards)
+        table_cards = [card for card in table_cards if card not in target_cards]
+        builds = remaining_builds
+        
+    elif request.action == "build":
+        # Validate build
+        target_cards = [card for card in table_cards if card.id in (request.target_cards or [])]
+        
+        if not game_logic.validate_build(hand_card, target_cards, request.build_value or 0, player_hand):
+            raise HTTPException(status_code=400, detail="Invalid build")
+        
+        # Execute build
+        remaining_table_cards, new_build = game_logic.execute_build(
+            hand_card, target_cards, request.build_value or 0, request.player_id
+        )
+        
+        # Update game state
+        player_hand.remove(hand_card)
+        table_cards = [card for card in table_cards if card not in target_cards]
+        builds.append(new_build)
+        
+    elif request.action == "trail":
+        # Execute trail
+        new_table_cards = game_logic.execute_trail(hand_card)
+        
+        # Update game state
+        player_hand.remove(hand_card)
+        table_cards.extend(new_table_cards)
+        
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action")
+    
+    # Update database with new game state
+    room.player1_hand = convert_game_cards_to_dict(player1_hand)
+    room.player2_hand = convert_game_cards_to_dict(player2_hand)
+    room.table_cards = convert_game_cards_to_dict(table_cards)
+    room.builds = convert_builds_to_dict(builds)
+    room.player1_captured = convert_game_cards_to_dict(player1_captured)
+    room.player2_captured = convert_game_cards_to_dict(player2_captured)
+    
+    # Update last play information
     room.last_play = {
         "card_id": request.card_id,
         "action": request.action,
         "target_cards": request.target_cards,
-        "build_value": request.build_value
+        "build_value": request.build_value,
+        "player_id": request.player_id
     }
     room.last_action = request.action
     
-    # Switch turns
-    room.current_turn = 2 if room.current_turn == 1 else 1
+    # Check if round is complete
+    if game_logic.is_round_complete(player1_hand, player2_hand):
+        # Deal new cards for round 2 if available
+        remaining_deck = convert_dict_to_game_cards(room.deck or [])
+        
+        if len(remaining_deck) > 0 and room.round_number == 1:
+            # Deal round 2 cards
+            new_player1_hand, new_player2_hand, new_deck = game_logic.deal_round_cards(
+                remaining_deck, player1_hand, player2_hand
+            )
+            
+            room.player1_hand = convert_game_cards_to_dict(new_player1_hand)
+            room.player2_hand = convert_game_cards_to_dict(new_player2_hand)
+            room.deck = convert_game_cards_to_dict(new_deck)
+            room.round_number = 2
+            room.game_phase = "round2"
+            room.current_turn = 1  # Reset turn to player 1 for round 2
+        else:
+            # Game is complete
+            room.game_phase = "finished"
+            room.game_completed = True
+            
+            # Calculate final scores
+            p1_base_score = game_logic.calculate_score(player1_captured)
+            p2_base_score = game_logic.calculate_score(player2_captured)
+            p1_bonus, p2_bonus = game_logic.calculate_bonus_scores(player1_captured, player2_captured)
+            
+            room.player1_score = p1_base_score + p1_bonus
+            room.player2_score = p2_base_score + p2_bonus
+            
+            # Determine winner
+            room.winner = game_logic.determine_winner(
+                room.player1_score, room.player2_score,
+                len(player1_captured), len(player2_captured)
+            )
+    else:
+        # Switch turns
+        room.current_turn = 2 if room.current_turn == 1 else 1
     
     db.commit()
     

@@ -91,6 +91,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [soundReady, setSoundReady] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected');
+  const [ws, setWs] = useState<WebSocket | null>(null);
 
   // Derive connection state from connection status and game state
   const isConnected = connectionStatus === 'connected' && gameState !== null && roomId !== '';
@@ -173,7 +174,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
       }
       
       setRoomId(response.roomId);
-      setPlayerId(1); // Player 1 is the room creator
+      setPlayerId(response.playerId);
       setGameState(response.gameState);
       setConnectionStatus('connected');
     } catch (error: any) {
@@ -261,6 +262,48 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
       setIsLoading(false);
     }
   };
+
+  // WebSocket: connect when we have a roomId; receive notifications and refresh state
+  useEffect(() => {
+    if (!roomId) return;
+
+    // Determine WS URL
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = isLocal
+      ? `ws://localhost:8000/ws/${roomId}`
+      : `${protocol}://${window.location.host}/ws/${roomId}`;
+
+    try {
+      const socket = new WebSocket(wsUrl);
+      setWs(socket);
+
+      socket.onmessage = async () => {
+        try {
+          if (!roomId) return;
+          const res = await api.getGameState.getGameState({ room_id: roomId });
+          if (res?.game_state) {
+            // toCamelCase maps to gameState
+            setGameState((res as any).gameState || (res as any).game_state);
+          } else if ((res as any).gameState) {
+            setGameState((res as any).gameState);
+          }
+        } catch (e) {
+          // swallow
+        }
+      };
+
+      socket.onclose = () => {
+        setWs(null);
+      };
+
+      return () => {
+        try { socket.close(); } catch {}
+      };
+    } catch {
+      // ignore ws errors; polling still works
+    }
+  }, [roomId]);
 
   // Track game state changes for statistics and sound effects
   useEffect(() => {
@@ -355,41 +398,90 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
 
   const startShuffle = async () => {
     if (!roomId || !playerId) return;
-     // TODO: Replace with API mutation
-    setGameState((prev) => prev ? {
-      ...prev,
-      shuffleComplete: true
-    } : null);
-    setError('');
+    try {
+      const response = await api.startShuffle.startShuffle({ room_id: roomId, player_id: playerId });
+      if (response) {
+        setGameState((response as any).gameState);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'state_update', roomId }));
+        }
+      }
+      setError('');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to start shuffle');
+    }
   };
 
   const selectFaceUpCards = async (cardIds: string[]) => {
     if (!roomId || !playerId) return;
-     // TODO: Replace with API mutation
-    setGameState((prev) => prev ? {
-      ...prev,
-      cardSelectionComplete: true
-    } : null);
-    setError('');
+    try {
+      const response = await api.selectFaceUpCards.selectFaceUpCards({ room_id: roomId, player_id: playerId, card_ids: cardIds || [] });
+      if (response) {
+        setGameState((response as any).gameState);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'state_update', roomId }));
+        }
+      }
+      setError('');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to select face-up cards');
+    }
   };
 
   const playCard = async (cardId: string, action: string, targetCards?: string[], buildValue?: number) => {
     if (!roomId || !playerId) return;
-     // TODO: Replace with API mutation
-    setGameState((prev) => prev ? {
-      ...prev,
-      lastPlay: { cardId, action, targetCards, buildValue }
-    } : null);
-    setError('');
+    try {
+      const response = await api.playCard.playCard({ room_id: roomId, player_id: playerId, card_id: cardId, action, target_cards: targetCards, build_value: buildValue });
+      if (response) {
+        setGameState((response as any).gameState);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'state_update', roomId }));
+        }
+      }
+      setError('');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to play card');
+    }
   };
 
   const resetGame = async () => {
     if (!roomId) return;
-     // TODO: Replace with API mutation
-    setGameState(null);
-    setPreviousGameState(null);
-    setError('');
+    try {
+      const response = await api.resetGame.resetGame({ room_id: roomId });
+      if ((response as any).gameState) {
+        setGameState((response as any).gameState);
+      } else {
+        setGameState(null);
+      }
+      setPreviousGameState(null);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'state_update', roomId }));
+      }
+      setError('');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to reset game');
+    }
   };
+
+  // Align phases: when both players ready and countdown completes, have Player 1 advance to dealing
+  useEffect(() => {
+    if (!gameState || !roomId || !playerId) return;
+    const bothReady = gameState.player1Ready && gameState.player2Ready;
+    if (bothReady && countdown === null && gameState.phase === 'dealer' && isPlayer1()) {
+      // If no explicit selection phase is used, proceed to deal
+      (async () => {
+        try {
+          const response = await api.selectFaceUpCards.selectFaceUpCards({ room_id: roomId, player_id: playerId, card_ids: [] });
+          if (response) {
+            setGameState((response as any).gameState);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'state_update', roomId }));
+            }
+          }
+        } catch {}
+      })();
+    }
+  }, [gameState?.player1Ready, gameState?.player2Ready, countdown, gameState?.phase, roomId, playerId]);
 
   const disconnectGame = () => {
     setConnectionStatus('disconnected')

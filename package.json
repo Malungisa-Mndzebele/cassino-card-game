@@ -3,28 +3,16 @@
   "version": "1.0.0",
   "description": "Real-time multiplayer Cassino card game for khasinogaming.com",
   "homepage": "https://khasinogaming.com/cassino",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:ci": "npm ci --legacy-peer-deps && vite build",
-    "preview": "vite preview",
-    "test": "vitest",
-    "test:watch": "vitest watch",
-    "test:coverage": "vitest run --coverage",
-    "test:ci": "vitest run --coverage --reporter=verbose",
-    "deploy": "npm run build && echo 'Build complete! Upload the dist/ folder contents to your web server.'",
-    "deploy:build": "npm run build && npm run deploy:prepare",
-    "deploy:prepare": "echo 'Preparing deployment package...' && cp DEPLOYMENT_GUIDE.md dist/ && cp README.md dist/",
-    "deploy:local": "./scripts/deploy-to-khasinogaming.sh",
-    "clean": "del /s /q /f dist node_modules 2>nul || rmdir /s /q dist node_modules 2>nul",
+    "dev": "node dev-server.js",
+    "dev:docker": "docker-compose up",
+    "build": "docker-compose -f docker-compose.prod.yml build",
+    "deploy": "docker-compose -f docker-compose.prod.yml up -d",
+    "clean": "del /s /q /f node_modules 2>nul || rmdir /s /q node_modules 2>nul",
     "fresh-install": "npm run clean && npm install",
     "type-check": "tsc --noEmit",
-    "type-check:ci": "tsc --noEmit --skipLibCheck",
     "lint": "echo 'Linting would go here'",
-    "test:unit": "vitest run 'src/**/*.test.(ts|tsx)'",
-    "test:integration": "vitest run 'tests/integration/**/*.test.(ts|tsx)'",
-    "test:game-creation": "vitest --no-watch tests/integration/GameCreation.test.tsx --reporter=verbose"
+    "test": "docker exec casino-backend python /app/run_simple_tests.py"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -52,6 +40,8 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@tailwindcss/postcss": "^4.1.11",
     "class-variance-authority": "^0.7.1",
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6",
     "lucide-react": "latest",
     "motion": "latest",
     "react": "^18.2.0",
@@ -62,26 +52,12 @@
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.6.4",
-    "@testing-library/react": "^14.3.1",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/fs-extra": "^11.0.4",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "@vitejs/plugin-react": "^4.2.0",
-    "@vitest/coverage-v8": "^2.1.9",
     "autoprefixer": "^10.4.21",
-    "fs-extra": "^11.3.1",
-    "jsdom": "^26.1.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
-    "terser": "^5.43.1",
-    "ts-jest": "^29.1.0",
-    "ts-node": "^10.9.0",
-    "typescript": "^5.0.0",
-    "vite": "^5.0.0",
-    "vitest": "^2.1.9"
+    "typescript": "^5.0.0"
   },
   "keywords": [
     "cassino",
@@ -120,14 +96,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "extensionsToTreatAsEsm": [
-    ".ts",
-    ".tsx"
-  ],
-  "globals": {
-    "ts-jest": {
-      "useESM": true
-    }
   }
 }

@@ -108,3 +108,87 @@ temp/
 # Temporary files
 .branches
 .temp
+
+# ============================================
+# SECURITY-SENSITIVE FILES - NEVER COMMIT
+# ============================================
+
+# Private keys and certificates
+*.key
+*.pem
+*.p12
+*.pfx
+*.ppk
+*.ssh
+id_rsa*
+id_ed25519*
+id_ecdsa*
+
+# Credential files
+*.bat
+*.sh
+convert_ssh_key.py
+start_local.*
+startup_local.*
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Python virtual environments and packages
+backend/Lib/
+backend/lib/
+backend/venv/
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docker secrets
+docker-secrets/
+secrets/
+.secrets/
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Configuration with secrets
+config.local.*
+settings.local.*
+.env.*
+!.env.example
+!.env.template
+!env.template
+
+# JWT tokens and session data
+jwt_secret*
+session_secret*
+auth_token*
+
+# Database dumps
+*.sql
+*.dump
+backup_*
+
+# Terraform state files
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Kubernetes secrets
+k8s-secrets/
+*.yaml.secret

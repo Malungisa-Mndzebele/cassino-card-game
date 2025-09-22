@@ -1,9 +1,0 @@
-App.test.tsx
-components/Card.test.tsx
-components/GameActions.test.tsx
-components/GameSettings.test.tsx
-components/RoomManager.test.tsx
-components/SoundSystem.test.tsx
-tests/integration/GameCreation.test.tsx
-tests/integration/GameFlow.test.tsx
-tests/setup.ts
