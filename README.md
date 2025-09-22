@@ -18,43 +18,33 @@ This is a faithful digital recreation of the traditional Cassino card game featu
 - **PostgreSQL database** for production reliability
 - **Comprehensive test suite** with 20+ backend tests
 
-## ✨ Latest Updates (v2.1 - Final Clean State)
-
-### 🧹 **Complete Project Cleanup**
-- **✅ Docker Completely Removed**: All Docker files, configurations, and references eliminated
-- **✅ Vite/Vitest Completely Removed**: All build tools and test frameworks eliminated
-- **✅ Vanilla Frontend**: Pure HTML/CSS/JavaScript - no build step required
-- **✅ Native Deployment**: Direct server deployment without containers
-- **✅ Streamlined Dependencies**: Only essential packages remain
-- **✅ Clean Repository**: All unnecessary files and documentation removed
-
-## ✨ Previous Updates (v2.0)
+## ✨ Features
 
 ### 🎮 **Fully Functional Multiplayer Game**
-- **✅ WORKING MULTIPLAYER**: Two players can now play complete games from start to finish
+- **Real-time Multiplayer**: Two players can play complete games from start to finish
 - **Real-time Synchronization**: WebSocket + polling ensures both players stay in sync
 - **Complete Game Logic**: All 20 backend tests passing - capture, build, trail mechanics working
 - **End-to-End Flow**: Room creation → joining → ready system → game start → full gameplay
 
-### 🔧 **Major Technical Improvements**
+### 🔧 **Technical Features**
 - **Fixed API Issues**: Room state endpoint returning correct data format
 - **WebSocket Integration**: Real-time updates between players working flawlessly
 - **Player Role Management**: Only Player 1 can start games, proper turn management
 - **Comprehensive Debugging**: Detailed logging for troubleshooting multiplayer issues
 
-### 🧹 **Project Cleanup & Optimization** 
-- **Simplified Dependencies**: Reduced from 20+ dev dependencies to essential ones only
-- **Removed Vite/Vitest**: Replaced with Express.js development server and simple Python test runner
-- **Removed Docker**: Complete native deployment workflow with minimal configuration
-- **Clean Project Structure**: Removed all redundant files and configurations
+### 🧹 **Clean Architecture** 
+- **Vanilla Frontend**: Pure HTML/CSS/JavaScript - no build step required
+- **Native Deployment**: Direct server deployment without containers
+- **Streamlined Dependencies**: Only essential packages remain
+- **Clean Repository**: All unnecessary files and documentation removed
 
-### 🧪 **Enhanced Testing & Reliability**
+### 🧪 **Testing & Reliability**
 - **20 Backend Tests**: All passing - comprehensive game logic testing
 - **Simple Test Runner**: No external dependencies required
 - **Native Integration**: Tests run seamlessly in local environment
 - **API Verification**: All endpoints tested and working correctly
 
-### 🚀 **Production Ready Features**
+### 🚀 **Production Ready**
 - **Complete Game Flow**: From room creation to winner determination
 - **Robust Error Handling**: Graceful handling of connection issues and edge cases
 - **Manual Sync Options**: Backup sync methods for reliability
@@ -64,9 +54,7 @@ This is a faithful digital recreation of the traditional Cassino card game featu
 
 Play the game at: **[https://khasinogaming.com/cassino/](https://khasinogaming.com/cassino/)**
 
-> **Note**: The backend is currently being deployed to the production server. For immediate testing, use the local development environment.
-
-## 🎮 Multiplayer Game Flow (WORKING!)
+## 🎮 How to Play
 
 ### **Step 1: Room Setup**
 1. **Player 1**: Click "Create Room" → Get room code (e.g., "A76JRS")
@@ -88,9 +76,9 @@ Play the game at: **[https://khasinogaming.com/cassino/](https://khasinogaming.c
 2. **Real-time updates**: Both players see moves instantly
 3. **Complete game**: Play through both rounds until winner is determined
 
-## ✅ **Current Status: FULLY FUNCTIONAL**
+## ✅ **Status: FULLY FUNCTIONAL**
 
-### **🎮 Multiplayer Features Working:**
+### **🎮 Multiplayer Features:**
 - ✅ **Room Creation & Joining**: Players can create and join rooms with codes
 - ✅ **Real-time Synchronization**: WebSocket + polling keeps players in sync
 - ✅ **Player Ready System**: Both players must ready up before game starts
@@ -100,11 +88,11 @@ Play the game at: **[https://khasinogaming.com/cassino/](https://khasinogaming.c
 - ✅ **Scoring System**: Full 11-point scoring with bonuses and win detection
 - ✅ **Error Handling**: Graceful handling of disconnections and edge cases
 
-### **🔧 Technical Features Working:**
+### **🔧 Technical Features:**
 - ✅ **Backend API**: All 8 endpoints functional and tested
 - ✅ **Database**: PostgreSQL with proper data persistence
 - ✅ **WebSocket**: Real-time bidirectional communication
-- ✅ **Docker**: Complete containerized development and deployment
+- ✅ **Native Deployment**: Complete native development and deployment setup
 - ✅ **Testing**: 20 comprehensive backend tests passing
 - ✅ **Frontend**: Vanilla JS landing page with full game integration
 
