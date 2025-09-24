@@ -115,33 +115,113 @@ jobs:
           
           # Install/update dependencies
           echo "📦 Installing dependencies..."
-          npm run install:all
+          
+          # Install backend dependencies
+          echo "🐍 Installing Python dependencies..."
+          cd backend
+          python3 -m pip install --user -r requirements.txt || {
+            echo "❌ Failed to install Python dependencies"
+            exit 1
+          }
+          cd ..
+          
+          # Install frontend dependencies
+          echo "📦 Installing Node.js dependencies..."
+          npm ci || {
+            echo "❌ Failed to install Node.js dependencies"
+            exit 1
+          }
           
           # Stop existing services
           echo "🛑 Stopping existing services..."
           pkill -f "node frontend/production-server.js" || true
           pkill -f "python.*start_production.py" || true
           
+          # Wait for processes to stop
+          sleep 5
+          
           # Start backend
           echo "🚀 Starting backend server..."
           cd backend
           nohup python3 start_production.py > backend.log 2>&1 &
+          BACKEND_PID=$!
           cd ..
           
-          # Wait for backend to start
-          sleep 5
+          # Wait for backend to start and verify
+          echo "⏳ Waiting for backend to start..."
+          for i in {1..12}; do
+            sleep 5
+            if curl -s http://localhost:8000/health > /dev/null; then
+              echo "✅ Backend started successfully"
+              break
+            fi
+            if [ $i -eq 12 ]; then
+              echo "❌ Backend failed to start. Logs:"
+              cat backend/backend.log
+              exit 1
+            fi
+            echo "⏳ Still waiting for backend... (attempt $i/12)"
+          done
           
           # Start frontend
           echo "🎨 Starting frontend server..."
           nohup node frontend/production-server.js > frontend.log 2>&1 &
+          FRONTEND_PID=$!
           
-          # Wait for services to start
-          sleep 3
+          # Wait for frontend to start and verify
+          echo "⏳ Waiting for frontend to start..."
+          for i in {1..12}; do
+            sleep 5
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "✅ Frontend started successfully"
+              break
+            fi
+            if [ $i -eq 12 ]; then
+              echo "❌ Frontend failed to start. Logs:"
+              cat frontend.log
+              exit 1
+            fi
+            echo "⏳ Still waiting for frontend... (attempt $i/12)"
+          done
           
-          # Verify deployment
-          echo "✅ Verifying deployment..."
-          curl -f http://localhost:8000/health || echo "⚠️ Backend health check failed"
-          curl -f http://localhost:3000 || echo "⚠️ Frontend check failed"
+          # Final verification
+          echo "🔍 Verifying services..."
+          
+          # Check backend health
+          BACKEND_HEALTH=$(curl -s http://localhost:8000/health)
+          if [[ $BACKEND_HEALTH == *"healthy"* ]]; then
+            echo "✅ Backend health check passed"
+          else
+            echo "❌ Backend health check failed:"
+            echo "$BACKEND_HEALTH"
+            echo "Backend logs:"
+            cat backend/backend.log
+            exit 1
+          fi
+          
+          # Check frontend
+          if curl -s http://localhost:3000 > /dev/null; then
+            echo "✅ Frontend check passed"
+          else
+            echo "❌ Frontend check failed. Logs:"
+            cat frontend.log
+            exit 1
+          fi
+          
+          # Check processes
+          if ps -p $BACKEND_PID > /dev/null; then
+            echo "✅ Backend process running (PID: $BACKEND_PID)"
+          else
+            echo "❌ Backend process not running"
+            exit 1
+          fi
+          
+          if ps -p $FRONTEND_PID > /dev/null; then
+            echo "✅ Frontend process running (PID: $FRONTEND_PID)"
+          else
+            echo "❌ Frontend process not running"
+            exit 1
+          fi
           
           echo "🎉 Deployment completed!"
           echo "🌐 Game available at: https://khasinogaming.com/cassino/"
