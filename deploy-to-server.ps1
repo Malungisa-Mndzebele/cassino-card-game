@@ -1,6 +1,8 @@
 # Casino Card Game Deployment Script
 # Run this script to deploy to khasinogaming.com
 
+$ErrorActionPreference = "Stop"
+
 $ServerHost = "khasinogaming.com"
 $ServerUser = "cassino"
 $ServerPath = "/home/mawdqtvped/khasinogaming.com/cassino"
@@ -36,15 +38,20 @@ Write-Host
 
 # Deploy using SSH
 $deployScript = @'
+#!/bin/bash
+set -e
+
 echo "🚀 Starting deployment..."
 
 # Navigate to project directory
-cd /home/mawdqtvped/khasinogaming.com/cassino || {
+if [ ! -d "/home/mawdqtvped/khasinogaming.com/cassino" ]; then
     echo "❌ Project directory not found. Creating it..."
     mkdir -p /home/mawdqtvped/khasinogaming.com/cassino
     cd /home/mawdqtvped/khasinogaming.com/cassino
     git clone https://github.com/Malungisa-Mndzebele/cassino-card-game.git .
-}
+else
+    cd /home/mawdqtvped/khasinogaming.com/cassino
+fi
 
 # Pull latest changes
 echo "📥 Pulling latest changes..."
@@ -150,8 +157,18 @@ echo "🌐 Game is now live at: https://khasinogaming.com/cassino/"
 '@
 
 try {
-    $deployment = ssh "${ServerUser}@${ServerHost}" "bash -s" << $deployScript 2>&1
+    # Save the script to a temporary file
+    $tempScript = [System.IO.Path]::GetTempFileName()
+    $deployScript | Out-File -FilePath $tempScript -Encoding UTF8
+
+    # Copy the script to the server and execute it
+    Write-Host "📤 Uploading deployment script..." -ForegroundColor Yellow
+    scp $tempScript "${ServerUser}@${ServerHost}:deploy.sh"
+    
+    Write-Host "🔧 Running deployment script..." -ForegroundColor Yellow
+    $deployment = ssh "${ServerUser}@${ServerHost}" "chmod +x deploy.sh && ./deploy.sh && rm deploy.sh" 2>&1
     Write-Host $deployment
+    
     if ($LASTEXITCODE -ne 0) { throw $deployment }
     
     Write-Host
@@ -162,6 +179,12 @@ catch {
     Write-Host
     Write-Host "❌ Deployment failed!" -ForegroundColor Red
     Write-Host "Error: $_" -ForegroundColor Red
+}
+finally {
+    # Clean up temporary file
+    if (Test-Path $tempScript) {
+        Remove-Item $tempScript -Force
+    }
 }
 
 Write-Host

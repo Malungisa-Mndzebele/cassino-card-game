@@ -92,139 +92,95 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Deploy to khasinogaming.com
-      uses: appleboy/ssh-action@v1.0.3
+    - name: Prepare deployment files
+      run: |
+        echo "📦 Preparing files for deployment..."
+        
+        # Create deployment directory
+        mkdir -p dist
+        
+        # Copy frontend files
+        cp index.html dist/
+        cp App.js dist/ || echo "No App.js (using vanilla JS)"
+        cp manifest.json dist/ || echo "No manifest.json"
+        cp favicon.svg dist/ || echo "No favicon.svg"
+        cp -r public dist/ || echo "No public directory"
+        cp -r frontend dist/ || echo "No frontend directory"
+        cp package.json dist/
+        cp package-lock.json dist/ || echo "No package-lock.json"
+        
+        # Copy backend files
+        mkdir -p dist/backend
+        cp -r backend/* dist/backend/
+        
+        # Create PHP wrapper for Python backend
+        cat > dist/backend/start.php << 'EOF'
+        <?php
+        // Set headers for JSON response
+        header('Content-Type: application/json');
+        
+        // Get the request path
+        $request_uri = $_SERVER['REQUEST_URI'];
+        $path = parse_url($request_uri, PHP_URL_PATH);
+        
+        // Remove /backend from the start if present
+        $path = preg_replace('/^\/backend/', '', $path);
+        
+        // Forward the request to Python backend
+        $python_url = "http://localhost:8000" . $path;
+        $method = $_SERVER['REQUEST_METHOD'];
+        
+        // Get request body for POST/PUT requests
+        $body = file_get_contents('php://input');
+        
+        // Set up cURL request
+        $ch = curl_init($python_url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        
+        if ($method === 'POST' || $method === 'PUT') {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                'Content-Type: application/json',
+                'Content-Length: ' . strlen($body)
+            ));
+        }
+        
+        // Execute request
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        // Set response code
+        http_response_code($http_code);
+        
+        // Output response
+        echo $response;
+        EOF
+        
+        # Create .htaccess for frontend routing
+        cat > dist/.htaccess << 'EOF'
+        RewriteEngine On
+        
+        # Handle backend requests
+        RewriteRule ^api/(.*)$ backend/start.php [QSA,L]
+        
+        # Handle frontend routes
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule ^ index.html [QSA,L]
+        EOF
+        
+        echo "✅ Deployment files prepared"
+    
+    - name: Deploy to Spaceship via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.SSH_KEY }}
-        port: ${{ secrets.PORT }}
-        script: |
-          echo "🚀 Starting deployment to khasinogaming.com..."
-          
-          # Navigate to project directory
-          cd /home/mawdqtvped/khasinogaming.com/cassino || {
-            echo "❌ Project directory not found. Cloning repository..."
-            git clone https://github.com/Malungisa-Mndzebele/cassino-card-game.git /home/mawdqtvped/khasinogaming.com/cassino
-            cd /home/mawdqtvped/khasinogaming.com/cassino
-          }
-          
-          # Pull latest changes
-          echo "📥 Pulling latest changes..."
-          git pull origin master
-          
-          # Install/update dependencies
-          echo "📦 Installing dependencies..."
-          
-          # Install backend dependencies
-          echo "🐍 Installing Python dependencies..."
-          cd backend
-          python3 -m pip install --user -r requirements.txt || {
-            echo "❌ Failed to install Python dependencies"
-            exit 1
-          }
-          cd ..
-          
-          # Install frontend dependencies
-          echo "📦 Installing Node.js dependencies..."
-          npm ci || {
-            echo "❌ Failed to install Node.js dependencies"
-            exit 1
-          }
-          
-          # Stop existing services
-          echo "🛑 Stopping existing services..."
-          pkill -f "node frontend/production-server.js" || true
-          pkill -f "python.*start_production.py" || true
-          
-          # Wait for processes to stop
-          sleep 5
-          
-          # Start backend
-          echo "🚀 Starting backend server..."
-          cd backend
-          nohup python3 start_production.py > backend.log 2>&1 &
-          BACKEND_PID=$!
-          cd ..
-          
-          # Wait for backend to start and verify
-          echo "⏳ Waiting for backend to start..."
-          for i in {1..12}; do
-            sleep 5
-            if curl -s http://localhost:8000/health > /dev/null; then
-              echo "✅ Backend started successfully"
-              break
-            fi
-            if [ $i -eq 12 ]; then
-              echo "❌ Backend failed to start. Logs:"
-              cat backend/backend.log
-              exit 1
-            fi
-            echo "⏳ Still waiting for backend... (attempt $i/12)"
-          done
-          
-          # Start frontend
-          echo "🎨 Starting frontend server..."
-          nohup node frontend/production-server.js > frontend.log 2>&1 &
-          FRONTEND_PID=$!
-          
-          # Wait for frontend to start and verify
-          echo "⏳ Waiting for frontend to start..."
-          for i in {1..12}; do
-            sleep 5
-            if curl -s http://localhost:3000 > /dev/null; then
-              echo "✅ Frontend started successfully"
-              break
-            fi
-            if [ $i -eq 12 ]; then
-              echo "❌ Frontend failed to start. Logs:"
-              cat frontend.log
-              exit 1
-            fi
-            echo "⏳ Still waiting for frontend... (attempt $i/12)"
-          done
-          
-          # Final verification
-          echo "🔍 Verifying services..."
-          
-          # Check backend health
-          BACKEND_HEALTH=$(curl -s http://localhost:8000/health)
-          if [[ $BACKEND_HEALTH == *"healthy"* ]]; then
-            echo "✅ Backend health check passed"
-          else
-            echo "❌ Backend health check failed:"
-            echo "$BACKEND_HEALTH"
-            echo "Backend logs:"
-            cat backend/backend.log
-            exit 1
-          fi
-          
-          # Check frontend
-          if curl -s http://localhost:3000 > /dev/null; then
-            echo "✅ Frontend check passed"
-          else
-            echo "❌ Frontend check failed. Logs:"
-            cat frontend.log
-            exit 1
-          fi
-          
-          # Check processes
-          if ps -p $BACKEND_PID > /dev/null; then
-            echo "✅ Backend process running (PID: $BACKEND_PID)"
-          else
-            echo "❌ Backend process not running"
-            exit 1
-          fi
-          
-          if ps -p $FRONTEND_PID > /dev/null; then
-            echo "✅ Frontend process running (PID: $FRONTEND_PID)"
-          else
-            echo "❌ Frontend process not running"
-            exit 1
-          fi
-          
-          echo "🎉 Deployment completed!"
-          echo "🌐 Game available at: https://khasinogaming.com/cassino/"
+        server: server28.shared.spaceship.host
+        username: cassino@khasinogaming.com
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./dist/
+        server-dir: /
     
     - name: Deployment Status
       run: |
