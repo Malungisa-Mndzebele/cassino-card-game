@@ -260,76 +260,73 @@ npm test
 docker exec casino-backend python /app/run_simple_tests.py
 ```
 
-## 🐳 Docker Setup
+## 🌐 Hosting Setup
 
 ### Development Stack
 The development environment includes:
 - **Frontend**: Express.js server with proxy to backend
 - **Backend**: FastAPI with auto-reload
-- **Database**: PostgreSQL with pgAdmin
-- **Network**: Isolated Docker network
+- **Database**: PostgreSQL for data storage
+- **Network**: Local development setup
 
 ### Production Stack
-The production environment includes:
-- **Frontend**: Static files served by Nginx
-- **Backend**: FastAPI with PostgreSQL
-- **Health checks**: Automatic monitoring
-- **Restart policies**: Automatic recovery
-- **Volume persistence**: Database data preservation
+The production environment on Spaceship hosting includes:
+- **Frontend**: Static files served via cPanel
+- **Backend**: FastAPI with PHP proxy
+- **Database**: PostgreSQL database
+- **Deployment**: GitHub Actions with FTP
 
 ### Management Commands
 ```bash
-# Start development environment
-docker-compose up -d
+# Start development server
+npm run dev
 
-# Start production environment
-docker-compose -f docker-compose.prod.yml up -d
+# Start production server
+npm start
 
-# Stop all services
-docker-compose down
+# Run tests
+npm test
 
-# View logs
-docker-compose logs
-
-# Clean up (remove all data)
-docker-compose down -v
+# Deploy to production
+git push origin master  # Triggers GitHub Actions deployment
 ```
 
 ## 🗄️ Database Setup
 
 ### Local Development
 ```bash
-# Start PostgreSQL with Docker
-cd backend
-./start_local.sh    # Linux/macOS
-# OR
-start_local.bat     # Windows
+# Install PostgreSQL locally
+# Windows: https://www.postgresql.org/download/windows/
+# Linux: sudo apt install postgresql
+# macOS: brew install postgresql
 
-# Connect to pgAdmin
-# URL: http://localhost:8080
-# Email: admin@casino.com
-# Password: admin123
+# Start PostgreSQL service
+# Windows: net start postgresql
+# Linux/macOS: sudo service postgresql start
+
+# Create database and user
+psql -U postgres
+CREATE DATABASE casino_game;
+CREATE USER casino_user WITH PASSWORD 'casino_password';
+GRANT ALL PRIVILEGES ON DATABASE casino_game TO casino_user;
 ```
 
 ### Production
-The production deployment automatically:
-- Creates PostgreSQL container
-- Runs database migrations
-- Sets up proper networking
-- Configures health checks
+The production database is managed through cPanel:
+- Create PostgreSQL database in cPanel
+- Run migrations with Alembic
+- Configure connection string
+- Set up backups through cPanel
 
 ## 🧪 Testing
 
 ```bash
 # Run backend tests
-npm test
-
-# Or run directly
-docker exec casino-backend python /app/run_simple_tests.py
-
-# Run tests locally (if Python is installed)
 cd backend
 python run_simple_tests.py
+
+# Or use npm script
+npm test
 ```
 
 ### Test Coverage
@@ -346,31 +343,42 @@ python run_simple_tests.py
 
 ## 📦 Deployment
 
-### Self-Hosting (Recommended)
+### Spaceship Hosting Deployment
 
-This project is designed for self-hosting with complete infrastructure control:
+This project is deployed on Spaceship hosting with cPanel:
 
-#### Local Production Deployment
+#### Server Details
+- **Host**: khasinogaming.com
+- **FTP Server**: server28.shared.spaceship.host
+- **Path**: /home/mawdqtvped/khasinogaming.com/cassino
+
+#### Automatic Deployment
+The project uses GitHub Actions for automatic deployment:
+
+1. **Push to master** triggers deployment
+2. **Tests run** automatically
+3. **Files upload** via FTP
+4. **Game goes live** at https://khasinogaming.com/cassino/
+
+#### Manual Deployment
+You can also deploy manually via FTP:
 ```bash
-# Deploy locally for testing
-docker-compose -f docker-compose.prod.yml up -d
-
-# Or use npm scripts
-npm run deploy
+# Using FileZilla or any FTP client:
+Host: server28.shared.spaceship.host
+Username: cassino@khasinogaming.com
+Path: /home/mawdqtvped/khasinogaming.com/cassino
+Port: 21
 ```
 
-#### Server Deployment
-Follow the comprehensive guide in `SERVER_DEPLOYMENT_GUIDE.md` to deploy to your own server.
-
-**Benefits of Self-Hosting:**
-- ✅ **Complete Infrastructure Control** - Full access to server configuration
-- ✅ **No Third-Party Dependencies** - No reliance on external services
-- ✅ **Custom Domain Configuration** - Direct control over DNS and routing
-- ✅ **Full Access to Logs and Monitoring** - Complete visibility into performance
-- ✅ **Cost-Effective Long-Term** - No ongoing subscription fees
-- ✅ **Data Privacy** - Your data stays on your infrastructure
-- ✅ **Custom Security Policies** - Implement your own security measures
-- ✅ **Simplified Development** - Docker-based workflow with minimal dependencies
+**Benefits of Spaceship Hosting:**
+- ✅ **Simple FTP Deployment** - Easy file uploads
+- ✅ **cPanel Access** - User-friendly control panel
+- ✅ **PHP Support** - Built-in PHP for backend proxy
+- ✅ **Automatic HTTPS** - SSL certificates included
+- ✅ **Cost-Effective** - Shared hosting pricing
+- ✅ **Easy Setup** - No complex configuration
+- ✅ **24/7 Support** - Hosting provider assistance
+- ✅ **One-Click Installs** - Common tools and frameworks
 
 ### Environment Variables
 
@@ -418,33 +426,34 @@ app.use('/api', createProxyMiddleware({
 
 #### Connection Timeout
 - Check if backend is running: `curl http://localhost:8000/health`
-- Verify Docker containers: `docker ps`
-- Check logs: `docker-compose logs backend`
+- Verify services are running: `ps aux | grep python`
+- Check logs: `cat backend/backend.log`
 
 #### Frontend Not Loading
-- Check if frontend container is running: `docker ps`
-- Verify Express.js server: `docker logs casino-frontend`
+- Check if frontend server is running: `ps aux | grep node`
+- Verify Express.js server: `cat frontend.log`
 - Check proxy configuration in `dev-server.js`
 
 #### Database Issues
 - Run migrations: `alembic upgrade head`
-- Check database connection
+- Check database connection in cPanel
 - Verify environment variables
 
 #### CORS Errors
 - Update CORS_ORIGINS in backend configuration
-- Ensure frontend domain is included
+- Ensure khasinogaming.com is included
 
 #### Test Failures
 - Run tests: `npm test`
-- Check backend logs: `docker logs casino-backend`
-- Verify game logic: `docker exec casino-backend python /app/run_simple_tests.py`
+- Check backend logs: `cat backend/backend.log`
+- Verify game logic: `cd backend && python run_simple_tests.py`
 
 ### Getting Help
-1. Check the logs: `docker-compose logs`
-2. Review `SERVER_DEPLOYMENT_GUIDE.md` for server deployment
+1. Check the logs in backend/backend.log and frontend.log
+2. Review cPanel error logs
 3. Run tests to verify functionality: `npm test`
-4. Open an issue on GitHub
+4. Contact Spaceship hosting support
+5. Open an issue on GitHub
 
 ## 🤝 Contributing
 
@@ -471,7 +480,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Traditional Cassino card game rules
 - [shadcn/ui](https://ui.shadcn.com/) for beautiful UI components
 - [FastAPI](https://fastapi.tiangolo.com/) for robust backend
-- [Docker](https://www.docker.com/) for containerization
+- [Spaceship](https://spaceship.host/) for reliable hosting
 - [PostgreSQL](https://www.postgresql.org/) for reliable database
 
 ## 📞 Support
@@ -479,9 +488,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If you encounter any issues:
 
 1. Check the troubleshooting section above
-2. Review the documentation in `DOCKER_SETUP.md` and `SERVER_DEPLOYMENT_GUIDE.md`
-3. Open an issue on GitHub
-4. Check the logs: `./logs.sh`
+2. Review cPanel logs and error messages
+3. Contact Spaceship hosting support
+4. Open an issue on GitHub
+5. Check the logs in backend/backend.log and frontend.log
 
 ---
 
