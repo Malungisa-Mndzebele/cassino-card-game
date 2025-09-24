@@ -473,8 +473,8 @@ async def play_card(request: PlayCardRequest, db: Session = Depends(get_db)):
                 len(player1_captured), len(player2_captured)
             )
     else:
-    # Switch turns
-    room.current_turn = 2 if room.current_turn == 1 else 1
+        # Switch turns
+        room.current_turn = 2 if room.current_turn == 1 else 1
     
     db.commit()
     
