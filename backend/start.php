@@ -18,8 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $request_uri = $_SERVER['REQUEST_URI'];
 $path = parse_url($request_uri, PHP_URL_PATH);
 
-// Remove /cassino/api prefix
+// Remove /cassino/api prefix and ensure no double /api/
 $path = preg_replace('/^\/cassino\/api/', '', $path);
+$path = preg_replace('/^\/api/', '', $path);
 
 // Forward to Python backend
 $python_url = "http://localhost:8000" . $path;
@@ -30,9 +31,11 @@ $body = file_get_contents('php://input');
 
 // Log request details
 error_log(sprintf(
-    "Request: %s %s\nBody: %s",
-    $method,
+    "Original Request URI: %s\nProcessed Path: %s\nFinal URL: %s\nMethod: %s\nBody: %s",
+    $request_uri,
+    $path,
     $python_url,
+    $method,
     $body
 ));
 
