@@ -1,25 +1,55 @@
+# Enable rewrite engine
 RewriteEngine On
+
+# Set base path
+RewriteBase /cassino/
 
 # Handle CORS preflight requests
 RewriteCond %{REQUEST_METHOD} OPTIONS
 RewriteRule ^(.*)$ $1 [R=200,L]
 
 # Rewrite API requests to PHP proxy
-RewriteRule ^cassino/api/(.*)$ cassino/backend/start.php [QSA,L]
+RewriteCond %{REQUEST_URI} ^/cassino/api/
+RewriteRule ^api/(.*)$ backend/start.php [QSA,L]
 
 # Rewrite WebSocket requests
 RewriteCond %{HTTP:Upgrade} websocket [NC]
 RewriteCond %{HTTP:Connection} upgrade [NC]
-RewriteRule ^cassino/ws/(.*)$ ws://localhost:8000/ws/$1 [P,L]
+RewriteRule ^ws/(.*)$ ws://localhost:8000/ws/$1 [P,L]
 
-# Serve static files directly
+# Serve static files if they exist
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
 # Serve manifest.json and favicon.svg
-RewriteRule ^cassino/manifest\.json$ cassino/manifest.json [L]
-RewriteRule ^cassino/favicon\.svg$ cassino/favicon.svg [L]
+RewriteRule ^manifest\.json$ manifest.json [L]
+RewriteRule ^favicon\.svg$ favicon.svg [L]
 
 # Fallback to index.html for client-side routing
-RewriteRule ^cassino/.*$ cassino/index.html [QSA,L]
+RewriteRule ^.*$ index.html [QSA,L]
+
+# PHP settings
+<IfModule mod_php.c>
+    php_flag display_errors on
+    php_value error_reporting E_ALL
+    php_value max_execution_time 30
+    php_value memory_limit 128M
+    php_value post_max_size 8M
+    php_value upload_max_filesize 2M
+    php_flag log_errors on
+    php_value error_log /home/mawdqtvped/khasinogaming.com/cassino/php_errors.log
+</IfModule>
+
+# Additional security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # CORS headers
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type"
+</IfModule>
