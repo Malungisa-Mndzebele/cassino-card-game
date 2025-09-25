@@ -18,9 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $request_uri = $_SERVER['REQUEST_URI'];
 $path = parse_url($request_uri, PHP_URL_PATH);
 
-// Remove /cassino/api prefix and ensure no double /api/
-$path = preg_replace('/^\/cassino\/api/', '', $path);
-$path = preg_replace('/^\/api/', '', $path);
+// Clean up the path - remove all variations of /api/ and /cassino/
+$path = preg_replace('/(^|\/)api\//', '/', $path);
+$path = preg_replace('/(^|\/)cassino\//', '/', $path);
+$path = preg_replace('/\/+/', '/', $path); // Replace multiple slashes with single slash
 
 // Forward to Python backend
 $python_url = "http://localhost:8000" . $path;
@@ -31,7 +32,7 @@ $body = file_get_contents('php://input');
 
 // Log request details
 error_log(sprintf(
-    "Original Request URI: %s\nProcessed Path: %s\nFinal URL: %s\nMethod: %s\nBody: %s",
+    "Request Details:\nOriginal URI: %s\nCleaned Path: %s\nFinal URL: %s\nMethod: %s\nBody: %s",
     $request_uri,
     $path,
     $python_url,
@@ -51,7 +52,8 @@ curl_setopt_array($ch, [
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json',
         'Accept: application/json'
-    ]
+    ],
+    CURLOPT_VERBOSE => true
 ]);
 
 // Handle request body for POST/PUT
@@ -66,7 +68,7 @@ $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 
 // Log response details
 error_log(sprintf(
-    "Response: %d\nContent-Type: %s\nBody: %s",
+    "Response Details:\nStatus Code: %d\nContent-Type: %s\nBody: %s",
     $http_code,
     $content_type,
     $response
@@ -107,7 +109,8 @@ if (json_last_error() !== JSON_ERROR_NONE) {
     header('Content-Type: application/json');
     echo json_encode([
         'error' => 'Invalid JSON response from backend service',
-        'details' => json_last_error_msg()
+        'details' => json_last_error_msg(),
+        'raw_response' => $response
     ]);
     exit();
 }
