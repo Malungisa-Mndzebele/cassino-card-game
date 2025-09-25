@@ -1,0 +1,14 @@
+RewriteEngine On
+
+# Rewrite API requests to PHP proxy
+RewriteRule ^cassino/api/(.*)$ cassino/backend/start.php [QSA,L]
+
+# Serve manifest.json and other static files
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cassino/(.*)$ cassino/$1 [QSA,L]
+
+# Fallback to index.html for client-side routing
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cassino/.*$ cassino/index.html [QSA,L]

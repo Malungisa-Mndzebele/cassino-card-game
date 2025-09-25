@@ -1,14 +1,14 @@
 {
   "name": "Casino Card Game",
   "short_name": "Casino",
-  "description": "Play Casino card game online with friends",
-  "start_url": "/",
+  "description": "Multiplayer Casino card game",
+  "start_url": "/cassino/",
   "display": "standalone",
-  "background_color": "#065f46",
-  "theme_color": "#065f46",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/cassino/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     }
