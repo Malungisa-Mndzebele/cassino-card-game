@@ -18,7 +18,7 @@ from test_main_simple import TestCasinoAPI
 
 def run_test_class(test_class):
     """Run all test methods in a test class"""
-    print(f"\n🧪 Running tests for {test_class.__name__}...")
+    print(f"\nRunning tests for {test_class.__name__}...")
     
     # Create instance of test class
     test_instance = test_class()
@@ -36,7 +36,7 @@ def run_test_class(test_class):
     
     # Run each test
     for method_name in test_methods:
-        print(f"\n⚡ Running {method_name}...")
+        print(f"\nRunning {method_name}...")
         
         try:
             # Run setup if it exists
@@ -47,11 +47,11 @@ def run_test_class(test_class):
             method = getattr(test_instance, method_name)
             method()
             
-            print(f"✅ {method_name} passed")
+            print(f"[PASS] {method_name}")
             passed += 1
             
         except Exception as e:
-            print(f"❌ {method_name} failed:")
+            print(f"[FAIL] {method_name}:")
             print(f"   {str(e)}")
             print(f"   {traceback.format_exc()}")
             failed += 1
@@ -61,8 +61,8 @@ def run_test_class(test_class):
 
 def main():
     """Run all tests"""
-    print("🚀 Starting Casino Card Game Tests")
-    print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("Starting Casino Card Game Tests")
+    print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 50)
     
     # Track overall results
@@ -84,14 +84,14 @@ def main():
     
     # Print summary
     print("\n" + "=" * 50)
-    print("📊 Test Summary:")
-    print(f"✅ Passed: {total_passed}")
-    print(f"❌ Failed: {total_failed}")
-    print(f"📈 Success Rate: {(total_passed / (total_passed + total_failed)) * 100:.1f}%")
+    print("Test Summary:")
+    print(f"Passed: {total_passed}")
+    print(f"Failed: {total_failed}")
+    print(f"Success Rate: {(total_passed / (total_passed + total_failed)) * 100:.1f}%")
     
     # Print errors if any
     if all_errors:
-        print("\n❌ Failed Tests:")
+        print("\nFailed Tests:")
         for test_name, error, traceback in all_errors:
             print(f"\n{test_name}:")
             print(f"Error: {error}")

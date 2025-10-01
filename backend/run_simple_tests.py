@@ -20,7 +20,7 @@ def run_tests():
     failed = 0
     errors = []
     
-    print("🧪 Running Casino Card Game Logic Tests")
+    print("Running Casino Card Game Logic Tests")
     print("=" * 50)
     
     for test_method in test_methods:
@@ -28,25 +28,25 @@ def run_tests():
             print(f"Running {test_method}...", end=" ")
             test_instance.setup_method()
             getattr(test_instance, test_method)()
-            print("✅ PASSED")
+            print("PASSED")
             passed += 1
         except Exception as e:
-            print(f"❌ FAILED: {str(e)}")
+            print(f"FAILED: {str(e)}")
             failed += 1
             errors.append(f"{test_method}: {str(e)}")
     
     print("\n" + "=" * 50)
-    print(f"📊 Test Results: {passed} passed, {failed} failed")
+    print(f"Test Results: {passed} passed, {failed} failed")
     
     if errors:
-        print("\n❌ Failed Tests:")
+        print("\nFailed Tests:")
         for error in errors:
             print(f"  - {error}")
     
     if failed == 0:
-        print("\n🎉 All tests passed! Game logic is working correctly.")
+        print("\nAll tests passed! Game logic is working correctly.")
     else:
-        print(f"\n⚠️  {failed} tests failed. Please check the implementation.")
+        print(f"\n{failed} tests failed. Please check the implementation.")
     
     return failed == 0
 

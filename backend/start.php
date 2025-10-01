@@ -19,9 +19,16 @@ $request_uri = $_SERVER['REQUEST_URI'];
 $path = parse_url($request_uri, PHP_URL_PATH);
 
 // Clean up the path - remove all variations of /api/ and /cassino/
-$path = preg_replace('/(^|\/)api\//', '/', $path);
 $path = preg_replace('/(^|\/)cassino\//', '/', $path);
+$path = preg_replace('/(^|\/)api\//', '/', $path);
 $path = preg_replace('/\/+/', '/', $path); // Replace multiple slashes with single slash
+
+// Log original and processed paths
+error_log(sprintf(
+    "Path Processing:\nOriginal: %s\nProcessed: %s",
+    $request_uri,
+    $path
+));
 
 // Forward to Python backend
 $python_url = "http://localhost:8000" . $path;
@@ -32,11 +39,9 @@ $body = file_get_contents('php://input');
 
 // Log request details
 error_log(sprintf(
-    "Request Details:\nOriginal URI: %s\nCleaned Path: %s\nFinal URL: %s\nMethod: %s\nBody: %s",
-    $request_uri,
-    $path,
-    $python_url,
+    "Request Details:\nMethod: %s\nPython URL: %s\nBody: %s",
     $method,
+    $python_url,
     $body
 ));
 

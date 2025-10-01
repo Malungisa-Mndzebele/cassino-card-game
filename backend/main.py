@@ -36,7 +36,7 @@ def get_client_ip(request: Request) -> str:
     # Fallback to client host
     return request.client.host if request.client.host else "127.0.0.1"
 
-app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path="/api")
+app = FastAPI(title="Casino Card Game API", version="1.0.0")
 
 # Add CORS middleware
 app.add_middleware(
