@@ -40,11 +40,11 @@ Upload these files to: `/home/mawdqtvped/khasinogaming.com/cassino/`
 
 ### 1. Upload Files via FTP
 ```
-Server: server28.shared.spaceship.host
+Server: [YOUR_FTP_HOST]
 Port: 21
-Username: cassino@khasinogaming.com
-Password: @QWERTYasd
-Directory: /home/mawdqtvped/khasinogaming.com/cassino/
+Username: [YOUR_FTP_USERNAME]
+Password: [YOUR_FTP_PASSWORD]
+Directory: [YOUR_SERVER_PATH]
 ```
 
 - [ ] Connected to FTP server
@@ -53,7 +53,7 @@ Directory: /home/mawdqtvped/khasinogaming.com/cassino/
 
 ### 2. SSH into Server
 ```bash
-ssh cassino@khasinogaming.com
+ssh [YOUR_SSH_USERNAME]@[YOUR_SERVER]
 # Or use cPanel Terminal if SSH not available
 ```
 
