@@ -1,11 +1,9 @@
 RewriteEngine On
 
 # Proxy API requests through PHP
-RewriteCond %{REQUEST_URI} ^/cassino/api/
-RewriteRule ^api/(.*)$ api_proxy.php?path=$1 [QSA,L]
+RewriteRule ^api/(.*)$ api_proxy.php [QSA,L]
 
 # Handle frontend routes
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [QSA,L]
-
