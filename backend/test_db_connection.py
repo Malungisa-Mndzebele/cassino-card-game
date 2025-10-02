@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Test database connection to Spaceship MySQL database
+Test database connection to MySQL database
+Run this on the server after deployment to verify database connectivity
 """
 
 import sys
@@ -16,7 +17,16 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 print("=" * 60)
 print("Database Connection Test")
 print("=" * 60)
-print(f"Database URL: {DATABASE_URL.replace(os.getenv('DATABASE_URL').split('@')[0].split('://')[1], '***:***')}")
+
+# Mask password in output
+if DATABASE_URL:
+    display_url = DATABASE_URL.split('@')[0].split('://')[1]
+    safe_url = DATABASE_URL.replace(display_url, '***:***')
+    print(f"Database URL: {safe_url}")
+else:
+    print("ERROR: DATABASE_URL not found in environment")
+    sys.exit(1)
+
 print()
 
 try:
@@ -41,8 +51,11 @@ try:
         result = connection.execute(text("SHOW TABLES"))
         tables = result.fetchall()
         print(f"\n📊 Existing tables: {len(tables)}")
-        for table in tables:
-            print(f"  - {table[0]}")
+        if tables:
+            for table in tables:
+                print(f"  - {table[0]}")
+        else:
+            print("  (No tables yet - run migrations with: alembic upgrade head)")
         
     print("\n" + "=" * 60)
     print("✅ Database connection test PASSED!")
@@ -56,9 +69,10 @@ except Exception as e:
     print("❌ Database connection test FAILED!")
     print("=" * 60)
     print("\nTroubleshooting tips:")
-    print("1. Verify the database credentials in .env file")
-    print("2. Check if remote MySQL access is enabled in Spaceship")
-    print("3. Ensure your IP is whitelisted for remote database access")
-    print("4. Try connecting from the server itself (localhost)")
+    print("1. Verify DATABASE_URL in .env file")
+    print("2. Ensure database credentials are correct")
+    print("3. Check if MySQL service is running")
+    print("4. Verify database user has proper permissions")
+    print("5. If remote connection, check firewall/whitelist")
     sys.exit(1)
 

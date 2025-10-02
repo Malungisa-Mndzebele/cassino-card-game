@@ -1,0 +1,85 @@
+name: Deploy Backend to Spaceship Server
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  deploy:
+    name: Deploy to Spaceship
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies locally (for testing)
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Deploy to Spaceship via FTP
+        uses: SamKirkland/FTP-Deploy-Action@4.3.3
+        with:
+          server: server28.shared.spaceship.host
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./backend/
+          server-dir: /home/mawdqtvped/khasinogaming.com/cassino/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/venv/**
+            **/__pycache__/**
+            **/*.pyc
+            **/.env
+            **/test_casino_game.db
+            **/test_*.py
+      
+      - name: Deploy via SSH (Alternative)
+        if: false # Disabled by default, enable if SSH is available
+        uses: appleboy/ssh-action@master
+        with:
+          host: server28.shared.spaceship.host
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd /home/mawdqtvped/khasinogaming.com/cassino
+            
+            # Activate virtual environment
+            source venv/bin/activate || true
+            
+            # Update dependencies
+            pip install -r requirements.txt
+            
+            # Run migrations
+            alembic upgrade head
+            
+            # Restart the server (adjust based on your process manager)
+            pkill -f "python start_production.py" || true
+            nohup python start_production.py > server.log 2>&1 &
+            
+            echo "Deployment completed!"
+      
+      - name: Deployment Summary
+        run: |
+          echo "✅ Backend files uploaded to Spaceship server"
+          echo "📁 Location: /home/mawdqtvped/khasinogaming.com/cassino/"
+          echo ""
+          echo "⚠️  Manual steps required on server:"
+          echo "1. SSH into server: ssh cassino@khasinogaming.com"
+          echo "2. Navigate to: cd /home/mawdqtvped/khasinogaming.com/cassino"
+          echo "3. Run deployment: ./deploy_to_spaceship.sh"
+          echo "4. Start server: ./start_server.sh"
+
