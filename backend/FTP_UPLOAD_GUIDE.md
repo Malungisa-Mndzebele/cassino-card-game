@@ -5,11 +5,11 @@
 | Setting | Value |
 |---------|-------|
 | **Protocol** | FTP or FTPS |
-| **Host** | server28.shared.spaceship.host |
+| **Host** | [See your hosting credentials] |
 | **Port** | 21 (FTP) or 21 (FTPS Explicit) |
-| **Username** | cassino@khasinogaming.com |
-| **Password** | @QWERTYasd |
-| **Target Directory** | /home/mawdqtvped/khasinogaming.com/cassino |
+| **Username** | [Your FTP username] |
+| **Password** | [Your FTP password] |
+| **Target Directory** | [Your server path] |
 
 ## Recommended FTP Clients
 
@@ -17,9 +17,9 @@
 1. Download from: https://filezilla-project.org/
 2. Open FileZilla
 3. Fill in connection details:
-   - Host: `server28.shared.spaceship.host`
-   - Username: `cassino@khasinogaming.com`
-   - Password: `@QWERTYasd`
+   - Host: `[Your FTP host]`
+   - Username: `[Your FTP username]`
+   - Password: `[Your FTP password]`
    - Port: `21`
 4. Click "Quickconnect"
 
@@ -32,10 +32,10 @@
 ### Command Line (Linux/Mac)
 ```bash
 # Using lftp
-lftp -u cassino@khasinogaming.com,@QWERTYasd server28.shared.spaceship.host
+lftp -u [FTP_USERNAME],[FTP_PASSWORD] [FTP_HOST]
 
 # Upload directory
-mirror -R backend/ /home/mawdqtvped/khasinogaming.com/cassino/
+mirror -R backend/ [SERVER_PATH]/
 ```
 
 ## Files to Upload

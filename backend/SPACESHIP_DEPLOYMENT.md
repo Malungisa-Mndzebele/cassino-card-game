@@ -14,8 +14,8 @@ This guide will help you deploy the Casino Card Game backend to your Spaceship h
 ### Step 1: Connect to Server via SSH
 
 ```bash
-ssh cassino@khasinogaming.com
-# Password: @QWERTYasd
+ssh [username]@[your-server]
+# Use your SSH password
 ```
 
 **Note**: If SSH is not enabled, contact Spaceship support to enable it, or use alternative methods like cPanel Terminal.
@@ -23,13 +23,13 @@ ssh cassino@khasinogaming.com
 ### Step 2: Navigate to Your Application Directory
 
 ```bash
-cd /home/mawdqtvped/khasinogaming.com/cassino
+cd [your-server-path]/cassino
 ```
 
 If the directory doesn't exist, create it:
 ```bash
-mkdir -p /home/mawdqtvped/khasinogaming.com/cassino
-cd /home/mawdqtvped/khasinogaming.com/cassino
+mkdir -p [your-server-path]/cassino
+cd [your-server-path]/cassino
 ```
 
 ### Step 3: Upload Backend Files
