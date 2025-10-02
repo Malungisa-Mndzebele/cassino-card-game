@@ -8,23 +8,23 @@ After=network.target mysql.service
 
 [Service]
 Type=simple
-User=[YOUR_USERNAME]
-Group=[YOUR_USERNAME]
-WorkingDirectory=[YOUR_SERVER_PATH]
-Environment="PATH=[YOUR_SERVER_PATH]/venv/bin"
-ExecStart=[YOUR_SERVER_PATH]/venv/bin/python start_production.py
+User=mawdqtvped
+Group=mawdqtvped
+WorkingDirectory=/home/mawdqtvped/khasinogaming.com/cassino
+Environment="PATH=/home/mawdqtvped/khasinogaming.com/cassino/venv/bin"
+ExecStart=/home/mawdqtvped/khasinogaming.com/cassino/venv/bin/python start_production.py
 Restart=always
 RestartSec=10
 
 # Logging
-StandardOutput=append:[YOUR_SERVER_PATH]/logs/stdout.log
-StandardError=append:[YOUR_SERVER_PATH]/logs/stderr.log
+StandardOutput=append:/home/mawdqtvped/khasinogaming.com/cassino/logs/stdout.log
+StandardError=append:/home/mawdqtvped/khasinogaming.com/cassino/logs/stderr.log
 
 [Install]
 WantedBy=multi-user.target
 
 # Installation instructions:
-# 1. Create logs directory: mkdir -p [YOUR_SERVER_PATH]/logs
+# 1. Create logs directory: mkdir -p /home/mawdqtvped/khasinogaming.com/cassino/logs
 # 2. Copy this file to: /etc/systemd/system/casino-backend.service
 # 3. Reload systemd: sudo systemctl daemon-reload
 # 4. Enable service: sudo systemctl enable casino-backend
