@@ -316,7 +316,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     if (gameState.phase === 'finished' && previousGameState.phase !== 'finished' && playerId) {
       const myScore = isPlayer1() ? gameState.player1Score : gameState.player2Score
       const isWinner = gameState.winner === playerId
-      const isTie = gameState.winner === 'tie'
+      const isTie = gameState.winner === null || gameState.winner === 0
 
       updateStatistics({
         gamesPlayed: statistics.gamesPlayed + 1,
