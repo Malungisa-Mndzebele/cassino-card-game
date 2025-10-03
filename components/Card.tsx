@@ -4,31 +4,46 @@ import { Badge } from './ui/badge'
 import { Crown, Star, Sparkles } from 'lucide-react'
 
 interface CardProps {
-  card: {
+  card?: {
     id: string
     suit: string
     rank: string
   }
+  // Support individual props for backward compatibility
+  id?: string
+  suit?: string
+  rank?: string
   onClick?: (card: any) => void
   disabled?: boolean
   selected?: boolean
   highlighted?: boolean
-  size?: 'small' | 'normal' | 'large'
+  size?: 'small' | 'medium' | 'normal' | 'large'
   showPoints?: boolean
+  // Additional props used by other components
+  isPlayable?: boolean
+  isHidden?: boolean
 }
 
 export function Card({ 
   card, 
+  id: cardId,
+  suit: cardSuit,
+  rank: cardRank,
   onClick, 
   disabled = false, 
   selected = false, 
   highlighted = false, 
   size = 'normal',
-  showPoints = true
+  showPoints = true,
+  isPlayable = true,
+  isHidden = false
 }: CardProps) {
+  // Create card object from individual props if card prop is not provided
+  const cardData = card || { id: cardId || '', suit: cardSuit || '', rank: cardRank || '' };
+  
   // Handle missing or invalid card data - add more robust validation
-  if (!card || typeof card !== 'object' || !card.suit || !card.rank || 
-      typeof card.suit !== 'string' || typeof card.rank !== 'string') {
+  if (!cardData || typeof cardData !== 'object' || !cardData.suit || !cardData.rank || 
+      typeof cardData.suit !== 'string' || typeof cardData.rank !== 'string') {
     return (
       <div className={`
         ${size === 'small' ? 'w-12 h-16' : size === 'large' ? 'w-20 h-28' : 'w-16 h-24'}
@@ -39,6 +54,21 @@ export function Card({
         shadow-inner
       `}>
         <div className="text-gray-400 text-xs font-medium">Empty</div>
+      </div>
+    )
+  }
+
+  // Handle hidden cards (for opponent's hand)
+  if (isHidden) {
+    return (
+      <div className={`
+        ${size === 'small' ? 'w-12 h-16' : size === 'large' ? 'w-20 h-28' : 'w-16 h-24'}
+        bg-gradient-to-br from-blue-600 to-blue-800
+        border-2 border-blue-400
+        rounded-xl flex items-center justify-center
+        shadow-lg
+      `}>
+        <div className="text-white text-xs font-bold">?</div>
       </div>
     )
   }
@@ -99,10 +129,10 @@ export function Card({
     return 0
   }
 
-  const { suit, rank } = card
+  const { suit: cardSuitValue, rank: cardRankValue } = cardData
   // Ensure suit and rank are strings
-  const safeSuit = String(suit || '')
-  const safeRank = String(rank || '')
+  const safeSuit = String(cardSuitValue || '')
+  const safeRank = String(cardRankValue || '')
   const suitSymbol = getSuitSymbol(safeSuit)
   const suitColor = getSuitColor(safeSuit)
   const suitGradient = getSuitGradient(safeSuit)
@@ -111,6 +141,7 @@ export function Card({
 
   const sizeClasses = {
     small: 'w-12 h-16 text-xs',
+    medium: 'w-14 h-20 text-sm',
     normal: 'w-16 h-24 text-sm',
     large: 'w-20 h-28 text-base'
   }
@@ -130,8 +161,8 @@ export function Card({
         ? 'border-casino-purple/40 shadow-casino hover:border-casino-purple'
         : 'border-gray-200 hover:border-gray-300 hover:shadow-casino'
       }
-      ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-      ${onClick ? 'hover:scale-105 active:scale-95' : ''}
+      ${disabled || !isPlayable ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+      ${onClick && isPlayable ? 'hover:scale-105 active:scale-95' : ''}
       overflow-hidden
     `}>
       {/* Background pattern for special cards */}
@@ -218,13 +249,13 @@ export function Card({
     </div>
   )
 
-  if (onClick && !disabled) {
+  if (onClick && !disabled && isPlayable) {
     const ariaLabel = `${safeRank} of ${safeSuit}${points > 0 ? ` (${points} point${points > 1 ? 's' : ''})` : ''}`;
     return (
       <Button
         variant="ghost"
         className="p-0 h-auto w-auto bg-transparent hover:bg-transparent border-0 shadow-none"
-        onClick={() => onClick(card)}
+        onClick={() => onClick(cardData)}
         aria-label={ariaLabel}
         aria-pressed={selected}
         tabIndex={0}
