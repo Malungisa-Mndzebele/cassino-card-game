@@ -95,73 +95,28 @@ jobs:
         cp package.json dist/
         cp package-lock.json dist/ || echo "No package-lock.json"
         
-        # Copy backend files
+        # Copy backend files (includes backend/start.php already)
         mkdir -p dist/backend
         cp -r backend/* dist/backend/
-        
-        # Create PHP wrapper for Python backend
-        cat > dist/backend/start.php << 'EOF'
-        <?php
-        // Set headers for JSON response
-        header('Content-Type: application/json');
-        
-        // Get the request path
-        $request_uri = $_SERVER['REQUEST_URI'];
-        $path = parse_url($request_uri, PHP_URL_PATH);
-        
-        // Remove /backend from the start if present
-        $path = preg_replace('/^\/backend/', '', $path);
-        
-        // Forward the request to Python backend
-        $python_url = "http://localhost:8000" . $path;
-        $method = $_SERVER['REQUEST_METHOD'];
-        
-        // Get request body for POST/PUT requests
-        $body = file_get_contents('php://input');
-        
-        // Set up cURL request
-        $ch = curl_init($python_url);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        
-        if ($method === 'POST' || $method === 'PUT') {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Content-Type: application/json',
-                'Content-Length: ' . strlen($body)
-            ));
-        }
-        
-        // Execute request
-        $response = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        // Set response code
-        http_response_code($http_code);
-        
-        // Output response
-        echo $response;
-        EOF
         
         # Prefer repo .htaccess if present; otherwise, write a default
         if [ -f .htaccess ]; then
           cp .htaccess dist/.htaccess
         else
-          cat > dist/.htaccess << 'EOF'
-          RewriteEngine On
-          
-          # Handle backend requests (API)
-          RewriteRule ^api/(.*)$ backend/start.php [QSA,L]
-          RewriteRule ^health$ backend/start.php [QSA,L]
-          RewriteRule ^rooms/(.*)$ backend/start.php [QSA,L]
-          RewriteRule ^game/(.*)$ backend/start.php [QSA,L]
-          
-          # Handle frontend routes
-          RewriteCond %{REQUEST_FILENAME} !-f
-          RewriteCond %{REQUEST_FILENAME} !-d
-          RewriteRule ^ index.html [QSA,L]
-          EOF
+          printf '%s\n' \
+            'RewriteEngine On' \
+            '' \
+            '# Handle backend requests (API)' \
+            'RewriteRule ^api/(.*)$ backend/start.php [QSA,L]' \
+            'RewriteRule ^health$ backend/start.php [QSA,L]' \
+            'RewriteRule ^rooms/(.*)$ backend/start.php [QSA,L]' \
+            'RewriteRule ^game/(.*)$ backend/start.php [QSA,L]' \
+            '' \
+            '# Handle frontend routes' \
+            'RewriteCond %{REQUEST_FILENAME} !-f' \
+            'RewriteCond %{REQUEST_FILENAME} !-d' \
+            'RewriteRule ^ index.html [QSA,L]' \
+            > dist/.htaccess
         fi
         
         # Write deploy trigger file for cron-maintenance on server
