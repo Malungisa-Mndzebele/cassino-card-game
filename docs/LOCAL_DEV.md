@@ -12,7 +12,7 @@
    - `python backend/main.py` or `uvicorn backend.main:app --reload`
 3) Database:
    - Default: SQLite `./test_casino_game.db`
-   - Postgres: set `DATABASE_URL` (postgresql://...) in `.env`
+   - MySQL: set `DATABASE_URL` (mysql+pymysql://user:pass@host:3306/db) in `.env`
 4) Migrations:
    - `alembic upgrade head`
 

@@ -13,7 +13,7 @@ Deploy your Casino Card Game to **khasinogaming.com/cassino/** without Docker.
 ### Software Requirements
 - **Python 3.11+**
 - **Node.js 18+**
-- **PostgreSQL 13+**
+- **MySQL 8+**
 - **Nginx** (for reverse proxy and SSL)
 
 ## 🏗️ Deployment Steps
@@ -67,10 +67,10 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Setup PostgreSQL
-sudo -u postgres psql -c "CREATE DATABASE casino_game;"
-sudo -u postgres psql -c "CREATE USER casino_user WITH PASSWORD 'casino_password';"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE casino_game TO casino_user;"
+# Setup MySQL
+mysql -u root -p -e "CREATE DATABASE casino_game CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p -e "CREATE USER 'casino_user'@'localhost' IDENTIFIED BY 'casino_password';"
+mysql -u root -p -e "GRANT ALL PRIVILEGES ON casino_game.* TO 'casino_user'@'localhost'; FLUSH PRIVILEGES;"
 
 # Run migrations
 python -m alembic upgrade head
@@ -242,7 +242,7 @@ sudo systemctl start cassino-backend cassino-frontend
 ### Backend (`.env` in backend directory):
 ```env
 ENVIRONMENT=production
-DATABASE_URL=postgresql://casino_user:casino_password@localhost:5432/casino_game
+DATABASE_URL=mysql+pymysql://casino_user:casino_password@localhost:3306/casino_game
 HOST=0.0.0.0
 PORT=8000
 WORKERS=1

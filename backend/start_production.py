@@ -18,7 +18,8 @@ def main():
     
     # Set production environment variables
     os.environ.setdefault("ENVIRONMENT", "production")
-    os.environ.setdefault("DATABASE_URL", "postgresql://casino_user:casino_password@localhost:5432/casino_game")
+    # Default to SQLite for safety; override via env in staging/prod (use MySQL)
+    os.environ.setdefault("DATABASE_URL", "sqlite:///./test_casino_game.db")
     
     # Production configuration
     host = os.getenv("HOST", "0.0.0.0")

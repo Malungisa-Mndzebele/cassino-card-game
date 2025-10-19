@@ -37,7 +37,6 @@
 ```
 /home/mawdqtvped/khasinogaming.com/cassino/
 ├── index.html
-├── App.js
 ├── manifest.json
 ├── favicon.svg
 ├── .htaccess

@@ -6,7 +6,7 @@ This guide will help you set up automatic deployment from GitHub Actions to your
 
 - **Server Access**: SSH access to your khasinogaming.com server
 - **GitHub Repository**: Your code is in the GitHub repository
-- **Server Requirements**: Node.js 18+, Python 3.11+, PostgreSQL
+- **Server Requirements**: Node.js 18+, Python 3.11+, MySQL
 
 ## 🔧 Step 1: Generate SSH Key (if needed)
 
@@ -50,7 +50,7 @@ ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 
 # Install required software
 sudo apt update
-sudo apt install -y nodejs npm python3 python3-pip postgresql git curl
+sudo apt install -y nodejs npm python3 python3-pip mysql-server git curl
 
 # Navigate to project directory
 cd /home/mawdqtvped/khasinogaming.com/cassino
@@ -61,10 +61,10 @@ git clone https://github.com/Malungisa-Mndzebele/cassino-card-game.git . || git 
 # Install dependencies
 npm run install:all
 
-# Set up PostgreSQL
-sudo -u postgres psql -c "CREATE DATABASE casino_game;"
-sudo -u postgres psql -c "CREATE USER casino_user WITH PASSWORD 'casino_password';"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE casino_game TO casino_user;"
+# Set up MySQL
+mysql -u root -p -e "CREATE DATABASE casino_game CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p -e "CREATE USER 'casino_user'@'localhost' IDENTIFIED BY 'casino_password';"
+mysql -u root -p -e "GRANT ALL PRIVILEGES ON casino_game.* TO 'casino_user'@'localhost'; FLUSH PRIVILEGES;"
 
 # Run database migrations
 cd backend
@@ -180,7 +180,7 @@ sudo certbot --nginx -d khasinogaming.com -d www.khasinogaming.com
    - Verify all dependencies are installed
 
 4. **Database Connection Issues**
-   - Check PostgreSQL is running: `sudo systemctl status postgresql`
+   - Check MySQL is running: `sudo systemctl status mysql`
    - Verify database credentials
 
 ### Manual Deployment (if auto-deployment fails):

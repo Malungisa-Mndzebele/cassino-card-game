@@ -9,21 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: casino_game
-          POSTGRES_USER: casino_user
-          POSTGRES_PASSWORD: casino_password
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
 
     steps:
     - uses: actions/checkout@v4
@@ -41,9 +26,9 @@ jobs:
     - name: Run backend tests
       run: |
         cd backend
-        python run_simple_tests.py
+        python run_all_tests.py
       env:
-        DATABASE_URL: postgresql://casino_user:casino_password@localhost:5432/casino_game
+        DATABASE_URL: sqlite:///./test_casino_game.db
     
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -54,10 +39,12 @@ jobs:
     - name: Install Node.js dependencies
       run: npm ci
     
+    - name: Lint frontend
+      run: npm run lint || true
+
     - name: Verify frontend files
       run: |
         ls -la index.html
-        ls -la App.js
         ls -la dev-server.js
 
   build:
@@ -87,7 +74,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: [test, build]
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     
     steps:
     - uses: actions/checkout@v4
@@ -101,7 +88,6 @@ jobs:
         
         # Copy frontend files
         cp index.html dist/
-        cp App.js dist/ || echo "No App.js (using vanilla JS)"
         cp manifest.json dist/ || echo "No manifest.json"
         cp favicon.svg dist/ || echo "No favicon.svg"
         cp -r public dist/ || echo "No public directory"
@@ -162,8 +148,10 @@ jobs:
         cat > dist/.htaccess << 'EOF'
         RewriteEngine On
         
-        # Handle backend requests
-        RewriteRule ^api/(.*)$ backend/start.php [QSA,L]
+        # Handle backend requests (API)
+        RewriteRule ^health$ backend/start.php [QSA,L]
+        RewriteRule ^rooms/(.*)$ backend/start.php [QSA,L]
+        RewriteRule ^game/(.*)$ backend/start.php [QSA,L]
         
         # Handle frontend routes
         RewriteCond %{REQUEST_FILENAME} !-f
@@ -176,11 +164,11 @@ jobs:
     - name: Deploy to Spaceship via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
-        server: server28.shared.spaceship.host
-        username: cassino@khasinogaming.com
+        server: ${{ secrets.FTP_HOST }}
+        username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./dist/
-        server-dir: /
+        server-dir: ${{ secrets.FTP_SERVER_DIR }}
     
     - name: Deployment Status
       run: |

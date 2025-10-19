@@ -10,7 +10,7 @@ load_dotenv()
 # Use environment variable for database URL, fallback to SQLite for local development
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test_casino_game.db")
 
-# Convert postgres:// to postgresql:// for compatibility
+# Legacy compatibility: normalize old postgres URLs if present
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 

@@ -52,16 +52,19 @@ Score the most points by capturing cards from the table. First player to 11 poin
 ### Requirements
 - Python 3.11+
 - Node.js 18+
-- SQLite (default) or PostgreSQL
+- SQLite (default) or MySQL
 
 ### Environment Setup
 ```bash
 # Backend (.env)
 # Default uses SQLite at ./test_casino_game.db
-# For Postgres, set DATABASE_URL like below
-DATABASE_URL=postgresql://user:pass@localhost:5432/casino_game
+# For MySQL in prod/staging, set DATABASE_URL like below
+DATABASE_URL=mysql+pymysql://user:pass@localhost:3306/casino_game
 PORT=8000
 HOST=0.0.0.0
+
+# Frontend (.env) - optional in dev
+VITE_API_URL=http://localhost:8000
 ```
 
 ### Testing
