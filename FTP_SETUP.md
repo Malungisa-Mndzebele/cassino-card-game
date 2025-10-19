@@ -1,11 +1,11 @@
 # 🚀 FTP Deployment Setup Guide
 
 ## Your Server Details:
-- **FTP Server**: `server28.shared.spaceship.host`
-- **FTP Username**: `cassino@khasinogaming.com`
-- **FTP Password**: `@QWERTYasd`
+- **FTP Server**: `[YOUR_FTP_HOST]`
+- **FTP Username**: `[YOUR_FTP_USERNAME]`
+- **FTP Password**: `[YOUR_FTP_PASSWORD]`
 - **FTP Port**: 21
-- **Path**: `/home/mawdqtvped/khasinogaming.com/cassino`
+- **Path**: `[YOUR_SERVER_PATH]/cassino`
 
 ## 🔐 Setting up GitHub Secret
 
@@ -15,7 +15,7 @@
 4. Click **New repository secret**
 5. Add this secret:
    - **Name**: `FTP_PASSWORD`
-   - **Value**: `@QWERTYasd`
+   - **Value**: `[YOUR_FTP_PASSWORD]`
 
 ## 🔄 How the Deployment Works
 

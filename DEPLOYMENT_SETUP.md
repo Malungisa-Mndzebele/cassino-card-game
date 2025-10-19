@@ -46,7 +46,7 @@ SSH into your server and prepare it:
 
 ```bash
 # Connect to your server
-ssh cassino@khasinogaming.com
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 
 # Install required software
 sudo apt update
@@ -187,7 +187,7 @@ sudo certbot --nginx -d khasinogaming.com -d www.khasinogaming.com
 
 ```bash
 # SSH into your server
-ssh cassino@khasinogaming.com
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 
 # Navigate to project
 cd /home/mawdqtvped/khasinogaming.com/cassino

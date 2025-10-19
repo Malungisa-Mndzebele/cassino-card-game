@@ -30,14 +30,15 @@ export function RoomManager({
 }: RoomManagerProps) {
   const [showJoinForm, setShowJoinForm] = useState(false)
   
-  // Debug logging
-  console.log('🏠 RoomManager render:', { 
-    showJoinForm, 
-    playerName, 
-    roomId, 
-    hasPlayerName: !!playerName.trim(),
-    hasRoomId: !!roomId.trim()
-  });
+  // Minimal debug in development only
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+    // Intentionally concise to avoid noisy logs
+    console.debug('RoomManager', {
+      showJoinForm,
+      hasPlayerName: !!playerName.trim(),
+      hasRoomId: !!roomId.trim(),
+    })
+  }
 
   const generateRoomId = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -147,6 +148,10 @@ export function RoomManager({
                     placeholder="Enter your player name"
                     className="w-full py-3 border-gray-300 focus:border-green-500 focus:ring-green-500"
                     maxLength={20}
+            autoFocus
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
                   />
                 </div>
 
@@ -207,6 +212,11 @@ export function RoomManager({
                           placeholder="Enter 6-character code"
                           className="flex-1 py-3 border-gray-300 focus:border-blue-500 focus:ring-blue-500 font-mono"
                           maxLength={6}
+                          inputMode="latin-prose"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          aria-label="Room code"
                         />
                         <Button
                           onClick={generateRoomId}

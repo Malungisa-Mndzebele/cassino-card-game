@@ -22,7 +22,7 @@ export function Dealer({ gameState, playerId, onPlayerReady, onPlayerNotReady }:
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <Card className="backdrop-casino border-0 shadow-casino-lg max-w-2xl w-full mx-4 overflow-hidden">
+      <Card className="backdrop-casino border-0 shadow-casino-lg max-w-2xl w-full mx-4 overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="dealer-title">
         <CardContent className="p-0">
           {/* Dealer Header */}
           <div className="bg-gradient-to-r from-casino-gold to-casino-gold-dark p-6 text-center relative overflow-hidden">
@@ -36,7 +36,7 @@ export function Dealer({ gameState, playerId, onPlayerReady, onPlayerNotReady }:
                   </div>
                 </div>
               </div>
-              <h1 className="text-3xl font-black text-white mb-2">The Dealer</h1>
+              <h1 id="dealer-title" className="text-3xl font-black text-white mb-2">The Dealer</h1>
               <p className="text-white/80 font-medium">Ready to deal the cards?</p>
             </div>
           </div>
@@ -141,6 +141,7 @@ export function Dealer({ gameState, playerId, onPlayerReady, onPlayerNotReady }:
                   <Button
                     onClick={onPlayerReady}
                     className="flex-1 h-12 bg-gradient-to-r from-casino-green to-casino-green-light hover:from-casino-green-light hover:to-casino-green text-white shadow-casino border-0 rounded-xl transition-all duration-300"
+                    aria-label="I'm ready"
                   >
                     <CheckCircle className="w-5 h-5 mr-2" />
                     I'm Ready!
@@ -149,6 +150,7 @@ export function Dealer({ gameState, playerId, onPlayerReady, onPlayerNotReady }:
                     onClick={onPlayerNotReady}
                     variant="outline"
                     className="flex-1 h-12 border-casino-red text-casino-red hover:bg-casino-red/10 hover:border-casino-red-light backdrop-casino-dark rounded-xl transition-all duration-300"
+                    aria-label="I'm not ready"
                   >
                     <XCircle className="w-5 h-5 mr-2" />
                     Not Ready

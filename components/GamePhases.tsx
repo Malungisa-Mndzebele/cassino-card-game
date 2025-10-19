@@ -3,7 +3,6 @@ import { Card } from './Card'
 import { GameActions } from './GameActions'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { Progress } from './ui/progress'
 import { GamePreferences } from './GameSettings'
 import { Dealer } from './Dealer'
 
@@ -16,7 +15,6 @@ interface GameCard {
 interface GamePhasesProps {
   gameState: any
   playerId: number
-  onStartShuffle: () => void
   onSelectFaceUpCards: (cardIds: string[]) => void
   onPlayCard: (cardId: string, action: string, targetCards?: string[], buildValue?: number) => void
   onResetGame: () => void
@@ -28,7 +26,6 @@ interface GamePhasesProps {
 export function GamePhases({ 
   gameState, 
   playerId, 
-  onStartShuffle, 
   onSelectFaceUpCards, 
   onPlayCard,
   onResetGame,
@@ -36,18 +33,11 @@ export function GamePhases({
   onPlayerNotReady,
   preferences
 }: GamePhasesProps) {
-  const [countdownTime, setCountdownTime] = useState(30)
   const [selectedCards, setSelectedCards] = useState<string[]>([])
   const [isShuffling, setIsShuffling] = useState(false)
 
-  // Add test-specific elements
-  if (!gameState) return null;
-
-  useEffect(() => {
-    if (gameState.phase === 'countdown' && gameState.countdownRemaining !== undefined) {
-      setCountdownTime(Math.ceil(gameState.countdownRemaining))
-    }
-  }, [gameState.countdownRemaining])
+  // Hooks must always run in consistent order
+  // no-op for legacy countdownRemaining
 
   // Auto-transition from dealer to countdown when both players are ready
   useEffect(() => {
@@ -57,28 +47,7 @@ export function GamePhases({
     }
   }, [gameState.phase, gameState.player1Ready, gameState.player2Ready])
 
-  // Countdown timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (gameState.phase === 'countdown' && gameState.countdownStartTime) {
-      interval = setInterval(() => {
-        const elapsed = (Date.now() - gameState.countdownStartTime) / 1000;
-        const remaining = Math.max(0, 30 - elapsed);
-        setCountdownTime(Math.ceil(remaining));
-        
-        if (remaining <= 0) {
-          clearInterval(interval);
-        }
-      }, 1000);
-    }
-    
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [gameState.phase, gameState.countdownStartTime]);
+  // Countdown UI not used by backend flow
 
   useEffect(() => {
     if (gameState.phase === 'shuffling') {
@@ -87,6 +56,9 @@ export function GamePhases({
       return () => clearTimeout(timer)
     }
   }, [gameState.phase])
+
+  // Early return after hooks are registered
+  if (!gameState) return null;
 
   const handleCardSelection = (cardId: string) => {
     if (selectedCards.includes(cardId)) {
@@ -130,41 +102,9 @@ export function GamePhases({
     )
   }
 
-  if (gameState.phase === 'countdown') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-96 bg-white rounded-lg p-8 shadow-lg">
-        <h2 className="text-2xl font-bold mb-6">Game Starting Soon!</h2>
-        <div className="text-center mb-6">
-          <div className="text-6xl font-bold text-blue-600 mb-2">{countdownTime}</div>
-          <p className="text-gray-600">seconds remaining</p>
-        </div>
-        <Progress value={(30 - countdownTime) / 30 * 100} className="w-64 mb-4" />
-        <p className="text-sm text-gray-500 text-center">
-          The game will begin automatically when the countdown reaches zero.
-          <br />
-          Player 1 will then instruct the dealer to shuffle the cards.
-        </p>
-      </div>
-    )
-  }
+  // No separate countdown phase in backend; omit dedicated view
 
-  if (gameState.phase === 'readyToShuffle') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-96 bg-white rounded-lg p-8 shadow-lg">
-        <h2 className="text-2xl font-bold mb-6">Ready to Begin</h2>
-        <p className="text-gray-600 mb-6 text-center">
-          {playerId === 1 
-            ? "You may now instruct the dealer to shuffle the cards." 
-            : "Waiting for Player 1 to instruct the dealer to shuffle the cards."}
-        </p>
-        {playerId === 1 && (
-          <Button onClick={onStartShuffle} size="lg" className="bg-blue-600 hover:bg-blue-700">
-            Instruct Dealer to Shuffle Cards
-          </Button>
-        )}
-      </div>
-    )
-  }
+  // No separate readyToShuffle phase in backend; handled via dealer/round1
 
   if (gameState.phase === 'shuffling' || isShuffling) {
     return (

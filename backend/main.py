@@ -161,6 +161,37 @@ def game_state_to_response(room: Room) -> GameStateResponse:
         countdown_remaining=None  # TODO: Implement countdown
     )
 
+# Helper functions to reduce duplication across endpoints
+def get_room_or_404(db: Session, room_id: str) -> Room:
+    """Fetch a room or raise 404 if not found."""
+    room = db.query(Room).filter(Room.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return room
+
+def get_sorted_players(room: Room) -> List[Player]:
+    """Return players sorted by joined time (player 1 first)."""
+    return sorted(room.players, key=lambda p: p.joined_at)
+
+def get_player_or_404(db: Session, room_id: str, player_id: int) -> Player:
+    """Fetch a player in a room or raise 404 if not found."""
+    player = db.query(Player).filter(
+        Player.id == player_id,
+        Player.room_id == room_id,
+    ).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return player
+
+def assert_players_turn(room: Room, player_id: int) -> None:
+    """Validate it's the given player's turn, else 400."""
+    players_in_room = get_sorted_players(room)
+    if len(players_in_room) < 2:
+        raise HTTPException(status_code=400, detail="Not enough players")
+    expected_player = players_in_room[room.current_turn - 1] if room.current_turn <= len(players_in_room) else None
+    if not expected_player or expected_player.id != player_id:
+        raise HTTPException(status_code=400, detail="Not your turn")
+
 # API Endpoints
 @app.post("/rooms/create", response_model=CreateRoomResponse)
 async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
@@ -195,10 +226,7 @@ async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db),
 @app.post("/rooms/join", response_model=JoinRoomResponse)
 async def join_room(request: JoinRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Join an existing game room"""
-    # Check if room exists
-    room = db.query(Room).filter(Room.id == request.room_id).first()
-    if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
+    room = get_room_or_404(db, request.room_id)
     
     # Check if room is full
     if len(room.players) >= 2:
@@ -230,31 +258,21 @@ async def join_room(request: JoinRoomRequest, db: Session = Depends(get_db), cli
 @app.get("/rooms/{room_id}/state", response_model=GameStateResponse)
 async def get_game_state(room_id: str, db: Session = Depends(get_db)):
     """Get current game state"""
-    room = db.query(Room).filter(Room.id == room_id).first()
-    if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
+    room = get_room_or_404(db, room_id)
     
     return game_state_to_response(room)
 
 @app.post("/rooms/player-ready", response_model=StandardResponse)
 async def set_player_ready(request: SetPlayerReadyRequest, db: Session = Depends(get_db)):
     """Set player ready status"""
-    room = db.query(Room).filter(Room.id == request.room_id).first()
-    if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
-    
-    player = db.query(Player).filter(
-        Player.id == request.player_id,
-        Player.room_id == request.room_id
-    ).first()
-    if not player:
-        raise HTTPException(status_code=404, detail="Player not found")
+    room = get_room_or_404(db, request.room_id)
+    player = get_player_or_404(db, request.room_id, request.player_id)
     
     player.ready = request.is_ready
     db.commit()
     
     # Update room ready status based on player position in room
-    players_in_room = sorted(room.players, key=lambda p: p.joined_at)
+    players_in_room = get_sorted_players(room)
     if len(players_in_room) >= 1 and player.id == players_in_room[0].id:
         room.player1_ready = request.is_ready
     elif len(players_in_room) >= 2 and player.id == players_in_room[1].id:
@@ -276,9 +294,7 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: Session = Depends
 @app.post("/game/start-shuffle", response_model=StandardResponse)
 async def start_shuffle(request: StartShuffleRequest, db: Session = Depends(get_db)):
     """Start the shuffle phase"""
-    room = db.query(Room).filter(Room.id == request.room_id).first()
-    if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
+    room = get_room_or_404(db, request.room_id)
     
     room.shuffle_complete = True
     room.game_phase = "dealer"
@@ -293,12 +309,10 @@ async def start_shuffle(request: StartShuffleRequest, db: Session = Depends(get_
 @app.post("/game/select-face-up-cards", response_model=StandardResponse)
 async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: Session = Depends(get_db)):
     """Select face-up cards for the game and deal initial cards"""
-    room = db.query(Room).filter(Room.id == request.room_id).first()
-    if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
+    room = get_room_or_404(db, request.room_id)
     
     # Check if it's the right player's turn (Player 1 should select face-up cards)
-    players_in_room = sorted(room.players, key=lambda p: p.joined_at)
+    players_in_room = get_sorted_players(room)
     if len(players_in_room) == 0 or request.player_id != players_in_room[0].id:
         raise HTTPException(status_code=400, detail="Only Player 1 can select face-up cards")
     
@@ -330,20 +344,14 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: Session = 
 @app.post("/game/play-card", response_model=StandardResponse)
 async def play_card(request: PlayCardRequest, db: Session = Depends(get_db)):
     """Play a card (capture, build, or trail) with complete game logic"""
-    room = db.query(Room).filter(Room.id == request.room_id).first()
-    if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
+    room = get_room_or_404(db, request.room_id)
     
     # Check if game is in progress
     if room.game_phase not in ["round1", "round2"]:
         raise HTTPException(status_code=400, detail="Game is not in progress")
     
     # Check if it's the player's turn
-    players_in_room = sorted(room.players, key=lambda p: p.joined_at)
-    expected_player_id = players_in_room[room.current_turn - 1].id if room.current_turn <= len(players_in_room) else None
-    
-    if expected_player_id != request.player_id:
-        raise HTTPException(status_code=400, detail="Not your turn")
+    assert_players_turn(room, request.player_id)
     
     # Convert database data to game objects
     player1_hand = convert_dict_to_game_cards(room.player1_hand or [])
@@ -354,9 +362,7 @@ async def play_card(request: PlayCardRequest, db: Session = Depends(get_db)):
     player2_captured = convert_dict_to_game_cards(room.player2_captured or [])
     
     # Determine which player is playing based on join order
-    if len(players_in_room) < 2:
-        raise HTTPException(status_code=400, detail="Not enough players")
-    
+    players_in_room = get_sorted_players(room)
     is_player1 = request.player_id == players_in_room[0].id
     player_hand = player1_hand if is_player1 else player2_hand
     player_captured = player1_captured if is_player1 else player2_captured
@@ -487,9 +493,7 @@ async def play_card(request: PlayCardRequest, db: Session = Depends(get_db)):
 @app.post("/game/reset", response_model=StandardResponse)
 async def reset_game(room_id: str, db: Session = Depends(get_db)):
     """Reset the game"""
-    room = db.query(Room).filter(Room.id == room_id).first()
-    if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
+    room = get_room_or_404(db, room_id)
     
     # Reset game state
     room.game_phase = "waiting"

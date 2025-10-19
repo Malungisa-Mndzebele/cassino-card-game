@@ -42,16 +42,10 @@ class CasinoGameLogic:
     
     def get_card_value(self, rank: str) -> int:
         """Get numeric value of a card rank"""
-        if rank == 'A':
-            return 14
-        elif rank == 'K':
-            return 13
-        elif rank == 'Q':
-            return 12
-        elif rank == 'J':
-            return 11
-        else:
-            return int(rank)
+        face_values = {'A': 14, 'K': 13, 'Q': 12, 'J': 11}
+        if rank in face_values:
+            return face_values[rank]
+        return int(rank)
     
     def deal_initial_cards(self, deck: List[GameCard]) -> Tuple[List[GameCard], List[GameCard], List[GameCard], List[GameCard]]:
         """Deal initial cards: 4 to table, 4 to each player, rest to deck"""

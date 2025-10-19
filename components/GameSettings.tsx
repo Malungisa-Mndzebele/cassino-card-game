@@ -247,7 +247,7 @@ function useGamePreferences(defaultPreferences?: GamePreferences): [GamePreferen
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        setPreferences({ ...preferences, ...parsed })
+        setPreferences((p) => ({ ...p, ...parsed }))
       } catch (e) {
         console.error('Failed to load preferences:', e)
       }
@@ -291,7 +291,7 @@ function useGameStatistics(): [GameStatistics, (update: Partial<GameStatistics>)
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        setStatistics({ ...statistics, ...parsed })
+        setStatistics((s) => ({ ...s, ...parsed }))
       } catch (e) {
         console.error('Failed to load statistics:', e)
       }

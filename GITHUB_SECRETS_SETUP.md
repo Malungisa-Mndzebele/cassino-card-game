@@ -54,7 +54,7 @@ cat ~/.ssh/id_ed25519
 ### **Option B: Generate a new SSH key**
 ```bash
 # Generate new SSH key
-ssh-keygen -t rsa -b 4096 -C "cassino@khasinogaming.com"
+ssh-keygen -t rsa -b 4096 -C "[YOUR_EMAIL]"
 
 # Save it as: ~/.ssh/khasinogaming_deploy
 
@@ -62,7 +62,7 @@ ssh-keygen -t rsa -b 4096 -C "cassino@khasinogaming.com"
 cat ~/.ssh/khasinogaming_deploy
 
 # Copy the public key to your server
-ssh-copy-id -i ~/.ssh/khasinogaming_deploy.pub cassino@khasinogaming.com
+ssh-copy-id -i ~/.ssh/khasinogaming_deploy.pub [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 ```
 
 ## 📝 **SSH Key Content Example**
@@ -81,10 +81,10 @@ NhAAAAAwEAAQAAAYEAv8... (many more lines)
 ### **1. Test SSH Connection Locally**
 ```bash
 # Test if you can connect to your server
-ssh cassino@khasinogaming.com
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 
 # If successful, you should see a prompt like:
-# cassino@khasinogaming.com:~$
+# [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]:~$
 ```
 
 ### **2. Check GitHub Secrets**
@@ -131,7 +131,7 @@ Once configured, every push to `master` will:
 If you're still having issues:
 1. Check the GitHub Actions logs for specific error messages
 2. Verify your server is accessible: `ping khasinogaming.com`
-3. Test SSH manually: `ssh cassino@khasinogaming.com`
+3. Test SSH manually: `ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]`
 
 ---
 

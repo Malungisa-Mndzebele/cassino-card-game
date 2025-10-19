@@ -4,7 +4,7 @@
 - **Host**: khasinogaming.com
 - **Username**: cassino
 - **Path**: /home/mawdqtvped/khasinogaming.com/cassino
-- **Password**: @QWERTYasd
+- **Password**: [YOUR_FTP_PASSWORD]
 
 ## 🔧 Step 1: Set Up GitHub Secrets
 
@@ -20,11 +20,11 @@ Add these secrets:
 
 ```bash
 # On your local machine
-ssh-keygen -t rsa -b 4096 -C "cassino@khasinogaming.com"
+ssh-keygen -t rsa -b 4096 -C "[YOUR_EMAIL]"
 # Save it as ~/.ssh/khasinogaming_deploy
 
 # Copy public key to your server
-ssh-copy-id -i ~/.ssh/khasinogaming_deploy.pub cassino@khasinogaming.com
+ssh-copy-id -i ~/.ssh/khasinogaming_deploy.pub [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 ```
 
 ## 🖥️ Step 3: Prepare Your Server
@@ -32,8 +32,8 @@ ssh-copy-id -i ~/.ssh/khasinogaming_deploy.pub cassino@khasinogaming.com
 SSH into your server:
 
 ```bash
-ssh cassino@khasinogaming.com
-# Password: @QWERTYasd
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
+# Password: [YOUR_FTP_PASSWORD]
 ```
 
 Once connected, run these commands:
@@ -78,16 +78,16 @@ npm start
 ### If SSH connection fails:
 ```bash
 # Test SSH connection
-ssh cassino@khasinogaming.com
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 
 # Check if SSH key is working
-ssh -i ~/.ssh/khasinogaming_deploy cassino@khasinogaming.com
+ssh -i ~/.ssh/khasinogaming_deploy [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 ```
 
 ### If deployment fails:
 ```bash
 # SSH into your server
-ssh cassino@khasinogaming.com
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 
 # Check the project directory
 cd /home/mawdqtvped/khasinogaming.com/cassino

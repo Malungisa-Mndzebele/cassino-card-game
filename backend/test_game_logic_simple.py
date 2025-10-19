@@ -339,3 +339,24 @@ class TestCasinoGameLogic:
         assert build_8 is not None
         assert len(build_8[0]) == 1  # Should use just the 3
         assert build_8[0][0].id == "3_spades"
+
+    def test_capture_with_build_and_table_mix(self):
+        """Capture using both a build and table cards to match hand value"""
+        # Hand card is 10
+        hand_card = GameCard(id="10_hearts", suit="hearts", rank="10", value=10)
+        # Table has a 4 and 6, plus a build of value 10 that should be capturable by value
+        table_cards = [
+            GameCard(id="4_spades", suit="spades", rank="4", value=4),
+            GameCard(id="6_clubs", suit="clubs", rank="6", value=6),
+        ]
+        build = Build(id="b1", cards=[GameCard(id="7_diamonds", suit="diamonds", rank="7", value=7),
+                                        GameCard(id="3_hearts", suit="hearts", rank="3", value=3)], value=10, owner=1)
+        # Validate capture is allowed if matching by value (either via build or sum)
+        assert self.game.validate_capture(hand_card, table_cards, [build]) is True
+
+    def test_build_requires_capturing_card(self):
+        """Ensure builds require possessing a capturing card of the build value"""
+        hand_card = GameCard(id="4_hearts", suit="hearts", rank="4", value=4)
+        table_cards = [GameCard(id="6_spades", suit="spades", rank="6", value=6)]
+        player_hand = [hand_card]  # No 10 to capture later
+        assert self.game.validate_build(hand_card, table_cards, 10, player_hand) is False

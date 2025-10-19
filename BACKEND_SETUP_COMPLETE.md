@@ -8,8 +8,8 @@ Your Casino Card Game backend is now configured and ready for deployment to your
 
 ### ✅ Database Configuration
 - **Type**: MySQL (PyMySQL driver)
-- **Database**: mawdqtvped_cassino
-- **User**: mawdqtvped_cassino_user
+- **Database**: [YOUR_DB_NAME]
+- **User**: [YOUR_DB_USER]
 - **Host**: localhost (on server)
 - **Connection**: Configured for production use
 
@@ -38,24 +38,24 @@ Your Casino Card Game backend is now configured and ready for deployment to your
 
 ### Step 1: Upload Files via FTP
 ```
-Server: server28.shared.spaceship.host
+Server: [YOUR_FTP_HOST]
 Port: 21
-Username: cassino@khasinogaming.com
-Password: @QWERTYasd
-Target: /home/mawdqtvped/khasinogaming.com/cassino/
+Username: [YOUR_FTP_USERNAME]
+Password: [YOUR_FTP_PASSWORD]
+Target: [YOUR_SERVER_PATH]/cassino/
 ```
 
 Upload entire `backend` folder. See `backend/FTP_UPLOAD_GUIDE.md` for details.
 
 ### Step 2: SSH into Server
 ```bash
-ssh cassino@khasinogaming.com
-# Password: @QWERTYasd
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
+# Password: [YOUR_FTP_PASSWORD]
 ```
 
 ### Step 3: Run Deployment
 ```bash
-cd /home/mawdqtvped/khasinogaming.com/cassino
+cd [YOUR_SERVER_PATH]/cassino
 chmod +x deploy_to_spaceship.sh start_server.sh
 ./deploy_to_spaceship.sh
 ```
@@ -119,7 +119,7 @@ backend/
 
 ### Database Connection String (Production)
 ```
-mysql+pymysql://mawdqtvped_cassino_user:%40QWERTYasd@localhost:3306/mawdqtvped_cassino
+mysql+pymysql://[YOUR_DB_USER]:[YOUR_DB_PASSWORD]@localhost:3306/[YOUR_DB_NAME]
 ```
 Note: The `@` in password is URL-encoded as `%40`
 
@@ -205,8 +205,8 @@ All documentation includes troubleshooting sections:
 ## 📞 Support Contacts
 
 - **Spaceship Hosting**: [Support Portal]
-- **FTP Server**: server28.shared.spaceship.host
-- **Email**: cassino@khasinogaming.com
+- **FTP Server**: [YOUR_FTP_HOST]
+- **Email**: [YOUR_EMAIL]
 
 ## ✨ Next Steps
 
@@ -282,6 +282,6 @@ Good luck with your deployment! 🚀🎮
 
 **Created:** October 2, 2025  
 **Backend Framework:** FastAPI 0.104.1  
-**Database:** MySQL (mawdqtvped_cassino)  
-**Server:** Spaceship Hosting (server28.shared.spaceship.host)
+**Database:** MySQL ([YOUR_DB_NAME])  
+**Server:** Spaceship Hosting ([YOUR_FTP_HOST])
 

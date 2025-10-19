@@ -32,10 +32,10 @@
 ### Command Line (Linux/Mac)
 ```bash
 # Using lftp
-lftp -u [FTP_USERNAME],[FTP_PASSWORD] [FTP_HOST]
+lftp -u [YOUR_FTP_USERNAME],[YOUR_FTP_PASSWORD] [YOUR_FTP_HOST]
 
 # Upload directory
-mirror -R backend/ [SERVER_PATH]/
+mirror -R backend/ [YOUR_SERVER_PATH]/
 ```
 
 ## Files to Upload
@@ -84,11 +84,11 @@ backend/
    ```
    File → Site Manager → New Site
    Protocol: FTP
-   Host: server28.shared.spaceship.host
+   Host: [YOUR_FTP_HOST]
    Port: 21
    Logon Type: Normal
-   User: cassino@khasinogaming.com
-   Password: @QWERTYasd
+   User: [YOUR_FTP_USERNAME]
+   Password: [YOUR_FTP_PASSWORD]
    ```
 
 2. **Navigate to Target Directory**
@@ -120,14 +120,14 @@ backend/
 1. **Connect**
    ```
    New Session → FTP
-   Host name: server28.shared.spaceship.host
+   Host name: [YOUR_FTP_HOST]
    Port number: 21
-   User name: cassino@khasinogaming.com
-   Password: @QWERTYasd
+   User name: [YOUR_FTP_USERNAME]
+   Password: [YOUR_FTP_PASSWORD]
    ```
 
 2. **Upload**
-   - Navigate to `/home/mawdqtvped/khasinogaming.com/cassino`
+   - Navigate to `[YOUR_SERVER_PATH]/cassino`
    - Drag backend folder from left to right
    - Click "OK" to start upload
 
@@ -153,7 +153,7 @@ mv .env.production .env
 SSH into the server and check:
 
 ```bash
-ssh cassino@khasinogaming.com
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 cd /home/mawdqtvped/khasinogaming.com/cassino
 ls -la
 
@@ -180,8 +180,8 @@ chmod +x start_server.sh
 - Check firewall settings
 
 ### Authentication Failed
-- Verify username: `cassino@khasinogaming.com`
-- Verify password: `@QWERTYasd`
+- Verify username: `[YOUR_FTP_USERNAME]`
+- Verify password: `[YOUR_FTP_PASSWORD]`
 - Check if account is active in Spaceship cPanel
 
 ### Permission Denied
@@ -209,7 +209,7 @@ After successful upload, see:
 
 Run deployment:
 ```bash
-ssh cassino@khasinogaming.com
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 cd /home/mawdqtvped/khasinogaming.com/cassino
 ./deploy_to_spaceship.sh
 ```
@@ -218,7 +218,7 @@ cd /home/mawdqtvped/khasinogaming.com/cassino
 
 ```bash
 # Connect via SSH after FTP upload
-ssh cassino@khasinogaming.com
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 
 # Navigate to directory
 cd /home/mawdqtvped/khasinogaming.com/cassino

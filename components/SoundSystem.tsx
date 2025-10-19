@@ -50,7 +50,7 @@ export class SoundManager {
     this.sounds.set('error', errorBuffer)
   }
 
-  private createTone(frequencies: number[], duration: number, waveType: OscillatorType = 'sine'): AudioBuffer {
+  private createTone(frequencies: number[], duration: number, _waveType: OscillatorType = 'sine'): AudioBuffer {
     if (!this.audioContext) throw new Error('Audio context not initialized')
 
     const sampleRate = this.audioContext.sampleRate

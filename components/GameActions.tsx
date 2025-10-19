@@ -266,6 +266,8 @@ export function GameActions({
               variant={action === 'trail' ? 'default' : 'outline'}
               onClick={() => setAction('trail')}
               size="sm"
+              title="Place selected card onto the table"
+              aria-label="Trail card to table"
             >
               Trail (Play to table)
             </Button>
@@ -274,6 +276,8 @@ export function GameActions({
               onClick={() => setAction('capture')}
               size="sm"
               disabled={!canCapture() && selectedTableCards.length === 0 && selectedBuilds.length === 0}
+              title="Capture cards that match the selected card's value"
+              aria-label="Capture cards"
             >
               Capture {canCapture() && '✓'}
             </Button>
@@ -281,6 +285,8 @@ export function GameActions({
               variant={action === 'build' ? 'default' : 'outline'}
               onClick={() => setAction('build')}
               size="sm"
+              title="Create a build to capture later"
+              aria-label="Create build"
             >
               Build
             </Button>
@@ -296,6 +302,7 @@ export function GameActions({
                 value={buildValue || ''}
                 onChange={(e) => setBuildValue(parseInt(e.target.value) || 0)}
                 className="w-20"
+                aria-label="Build target value"
               />
               <p className="text-xs text-gray-600 mt-1">
                 Current total: {selectedCardValue + calculateSelectedValue()}
@@ -367,6 +374,7 @@ export function GameActions({
                 action === 'build' && canBuild() ? 'bg-blue-600 hover:bg-blue-700' :
                 ''
               }
+              aria-label="Confirm play"
             >
               {action === 'trail' ? 'Trail Card' :
                action === 'capture' ? (canCapture() ? 'Capture Cards ✓' : 'Cannot Capture') :

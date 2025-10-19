@@ -2,9 +2,9 @@
 
 ## Your Server Details:
 - **Host**: khasinogaming.com (IP: 66.29.148.81)
-- **Username**: cassino@khasinogaming.com
-- **Path**: /home/mawdqtvped/khasinogaming.com/cassino
-- **Password**: @QWERTYasd
+- **Username**: [YOUR_FTP_USERNAME]
+- **Path**: [YOUR_SERVER_PATH]/cassino
+- **Password**: [YOUR_FTP_PASSWORD]
 
 ## 🚨 Current Issue:
 SSH connection is timing out, which means:
@@ -23,8 +23,8 @@ https://khasinogaming.com:2083
 ### 2. Try different SSH ports
 ```bash
 # Common alternate ports
-ssh -p 2222 cassino@khasinogaming.com
-ssh -p 22022 cassino@khasinogaming.com
+ssh -p 2222 [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
+ssh -p 22022 [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 ```
 
 ### 3. Try direct IP connection
@@ -36,8 +36,8 @@ ssh cassino@66.29.148.81
 ```bash
 # Using FileZilla or WinSCP:
 Host: khasinogaming.com
-Username: cassino@khasinogaming.com
-Password: @QWERTYasd
+Username: [YOUR_FTP_USERNAME]
+Password: [YOUR_FTP_PASSWORD]
 Port: 22 (or try 2222)
 ```
 
@@ -60,8 +60,8 @@ Ask them:
 ```bash
 # Using FileZilla:
 Host: khasinogaming.com
-Username: cassino@khasinogaming.com
-Password: @QWERTYasd
+Username: [YOUR_FTP_USERNAME]
+Password: [YOUR_FTP_PASSWORD]
 Port: 21
 ```
 

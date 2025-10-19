@@ -13,13 +13,15 @@ const isLiveEnvironment = window.location.hostname !== 'localhost' && window.loc
 const shouldUseMock = isLiveEnvironment && !import.meta.env.VITE_API_URL;
 
 // Log the current configuration for debugging
-console.log('🔧 API Client Configuration:', {
-  hostname: window.location.hostname,
-  API_BASE_URL,
-  isLiveEnvironment,
-  shouldUseMock,
-  VITE_API_URL: import.meta.env.VITE_API_URL
-});
+if (import.meta.env.DEV) {
+  console.debug('🔧 API Client Configuration:', {
+    hostname: window.location.hostname,
+    API_BASE_URL,
+    isLiveEnvironment,
+    shouldUseMock,
+    VITE_API_URL: import.meta.env.VITE_API_URL
+  });
+}
 
 // Convert snake_case to camelCase
 function toCamelCase(obj: any): any {
@@ -221,7 +223,7 @@ export function useQuery(queryFn: any, params: any) {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [queryFn, JSON.stringify(params)]);
+  }, [queryFn, params]);
 
   return { data, isLoading, error };
 }

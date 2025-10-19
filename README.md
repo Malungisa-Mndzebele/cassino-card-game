@@ -52,11 +52,13 @@ Score the most points by capturing cards from the table. First player to 11 poin
 ### Requirements
 - Python 3.11+
 - Node.js 18+
-- PostgreSQL
+- SQLite (default) or PostgreSQL
 
 ### Environment Setup
 ```bash
 # Backend (.env)
+# Default uses SQLite at ./test_casino_game.db
+# For Postgres, set DATABASE_URL like below
 DATABASE_URL=postgresql://user:pass@localhost:5432/casino_game
 PORT=8000
 HOST=0.0.0.0
@@ -64,7 +66,7 @@ HOST=0.0.0.0
 
 ### Testing
 ```bash
-npm test
+cd backend && python run_all_tests.py
 ```
 
 ## 📦 Deployment
@@ -75,14 +77,20 @@ npm test
 3. Start services:
 ```bash
 npm run start:backend  # Start backend
-npm start             # Start frontend
+npm start              # Start frontend
 ```
 
 ### API Endpoints
-- `/api/health` - Health check
-- `/api/rooms/*` - Room management
-- `/api/game/*` - Game actions
+- `/health` - Health check
+- `/rooms/*` - Room management
+- `/game/*` - Game actions
 - `/ws/{room_id}` - WebSocket updates
+
+## 📚 Documentation
+- Architecture: docs/ARCHITECTURE.md
+- API Reference: docs/API.md
+- Local Development: docs/LOCAL_DEV.md
+- Testing Guide: docs/TESTING.md
 
 ## 🤝 Contributing
 

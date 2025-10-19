@@ -229,3 +229,90 @@ class TestCasinoAPI:
         assert len(game_state["builds"]) == 0
         assert game_state["player1_ready"] == False
         assert game_state["player2_ready"] == False
+
+    def test_join_nonexistent_room(self):
+        response = self.client.post("/rooms/join", json={
+            "room_id": "ZZZZZZ",
+            "player_name": "ghost",
+            "ip_address": "127.0.0.9"
+        })
+        assert response.status_code == 404
+
+    def test_join_room_full(self):
+        # Create room and add two players
+        self.test_join_room()
+        # Try to add third player
+        response = self.client.post("/rooms/join", json={
+            "room_id": self.room_id,
+            "player_name": "third",
+            "ip_address": "127.0.0.3"
+        })
+        assert response.status_code == 400
+
+    def test_set_ready_invalid_player(self):
+        self.test_join_room()
+        response = self.client.post("/rooms/player-ready", json={
+            "room_id": self.room_id,
+            "player_id": 999999,
+            "is_ready": True
+        })
+        assert response.status_code == 404
+
+    def test_play_wrong_turn(self):
+        # start game to round1
+        self.test_select_face_up_cards()
+        # Get state
+        state = self.client.get(f"/rooms/{self.room_id}/state").json()
+        p1 = state["players"][0]["id"]
+        p2 = state["players"][1]["id"]
+        # Player 2 tries to play first
+        card = state["player2_hand"][0]
+        response = self.client.post("/game/play-card", json={
+            "room_id": self.room_id,
+            "player_id": p2,
+            "card_id": card["id"],
+            "action": "trail",
+            "target_cards": [],
+            "build_value": None
+        })
+        assert response.status_code == 400
+
+    def test_play_invalid_action(self):
+        self.test_select_face_up_cards()
+        state = self.client.get(f"/rooms/{self.room_id}/state").json()
+        p1 = state["players"][0]["id"]
+        card = state["player1_hand"][0]
+        response = self.client.post("/game/play-card", json={
+            "room_id": self.room_id,
+            "player_id": p1,
+            "card_id": card["id"],
+            "action": "invalid_action",
+            "target_cards": [],
+            "build_value": None
+        })
+        assert response.status_code == 400
+
+    def test_build_invalid_same_value(self):
+        self.test_select_face_up_cards()
+        state = self.client.get(f"/rooms/{self.room_id}/state").json()
+        p1 = state["players"][0]["id"]
+        card = state["player1_hand"][0]
+        # Attempt to build with build_value equal to hand card (logic rejects)
+        response = self.client.post("/game/play-card", json={
+            "room_id": self.room_id,
+            "player_id": p1,
+            "card_id": card["id"],
+            "action": "build",
+            "target_cards": [],
+            "build_value": 14 if card["rank"] == "A" else (13 if card["rank"] == "K" else (12 if card["rank"] == "Q" else (11 if card["rank"] == "J" else int(card["rank"])) ) )
+        })
+        assert response.status_code == 400
+
+    def test_websocket_broadcast(self):
+        # Create room → join second player to open ws on a room id
+        self.test_join_room()
+        with self.client.websocket_connect(f"/ws/{self.room_id}") as websocket:
+            test_msg = "state_update_test"
+            websocket.send_text(test_msg)
+            received = websocket.receive_text()
+            assert received == test_msg

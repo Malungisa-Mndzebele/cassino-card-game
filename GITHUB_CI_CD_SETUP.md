@@ -35,24 +35,24 @@ Your backend deployment configuration has been successfully committed and pushed
 
    #### Secret 1: FTP_USERNAME
    - **Name**: `FTP_USERNAME`
-   - **Secret**: `cassino@khasinogaming.com`
+   - **Secret**: `[YOUR_FTP_USERNAME]`
    - Click **Add secret**
 
    #### Secret 2: FTP_PASSWORD
    - **Name**: `FTP_PASSWORD`
-   - **Secret**: `@QWERTYasd`
+   - **Secret**: `[YOUR_FTP_PASSWORD]`
    - Click **Add secret**
 
    #### Optional (if SSH enabled):
    
    #### Secret 3: SSH_USERNAME
    - **Name**: `SSH_USERNAME`
-   - **Secret**: `cassino@khasinogaming.com`
+   - **Secret**: `[YOUR_FTP_USERNAME]`
    - Click **Add secret**
 
    #### Secret 4: SSH_PASSWORD
    - **Name**: `SSH_PASSWORD`
-   - **Secret**: `@QWERTYasd`
+   - **Secret**: `[YOUR_FTP_PASSWORD]`
    - Click **Add secret**
 
 ## 🚀 How the CI/CD Workflow Works
@@ -75,8 +75,8 @@ The workflow will automatically run when:
 After GitHub Actions uploads the files, SSH into your server:
 
 ```bash
-ssh cassino@khasinogaming.com
-cd /home/mawdqtvped/khasinogaming.com/cassino
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
+cd [YOUR_SERVER_PATH]/cassino
 ./deploy_to_spaceship.sh  # First time only
 ./start_server.sh          # Or restart the server
 ```
@@ -130,7 +130,7 @@ git push origin master
 **Cause**: FTP connection or path issues
 
 **Solution**:
-1. Check FTP server is accessible: `server28.shared.spaceship.host`
+1. Check FTP server is accessible: `[YOUR_FTP_HOST]`
 2. Verify server path: `/home/mawdqtvped/khasinogaming.com/cassino/`
 3. Check FTP credentials in Spaceship cPanel
 
@@ -140,7 +140,7 @@ git push origin master
 **Solution**:
 SSH into server and run:
 ```bash
-cd /home/mawdqtvped/khasinogaming.com/cassino
+cd [YOUR_SERVER_PATH]/cassino
 ./deploy_to_spaceship.sh  # If first time
 ./start_server.sh          # Start/restart server
 ```
@@ -157,13 +157,13 @@ https://github.com/Malungisa-Mndzebele/cassino-card-game/settings/secrets/action
 https://github.com/Malungisa-Mndzebele/cassino-card-game/actions
 
 ### Required Secrets
-- `FTP_USERNAME` = `cassino@khasinogaming.com`
-- `FTP_PASSWORD` = `@QWERTYasd`
+- `FTP_USERNAME` = `[YOUR_FTP_USERNAME]`
+- `FTP_PASSWORD` = `[YOUR_FTP_PASSWORD]`
 
 ### Server Details
-- **FTP**: server28.shared.spaceship.host:21
-- **SSH**: cassino@khasinogaming.com
-- **Path**: /home/mawdqtvped/khasinogaming.com/cassino/
+- **FTP**: [YOUR_FTP_HOST]:21
+- **SSH**: [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
+- **Path**: [YOUR_SERVER_PATH]/cassino/
 
 ## 📚 Documentation Files
 

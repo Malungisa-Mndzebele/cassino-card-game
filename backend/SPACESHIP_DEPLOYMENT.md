@@ -4,8 +4,8 @@ This guide will help you deploy the Casino Card Game backend to your Spaceship h
 
 ## 📋 Prerequisites
 
-- **FTP Access**: cassino@khasinogaming.com
-- **Server**: server28.shared.spaceship.host
+- **FTP Access**: [YOUR_FTP_USERNAME]
+- **Server**: [YOUR_SERVER_HOST]
 - **SSH Access**: Required (request from Spaceship if not enabled)
 - **Database**: Already created and configured
 
@@ -37,10 +37,10 @@ cd [your-server-path]/cassino
 **Option A: Using FTP (Recommended for first-time upload)**
 
 1. Use an FTP client like FileZilla or WinSCP
-2. Connect to: `server28.shared.spaceship.host` (Port 21)
-3. Username: `cassino@khasinogaming.com`
-4. Password: `@QWERTYasd`
-5. Upload the entire `backend` folder to: `/home/mawdqtvped/khasinogaming.com/cassino/`
+2. Connect to: `[YOUR_SERVER_HOST]` (Port 21)
+3. Username: `[YOUR_FTP_USERNAME]`
+4. Password: `[YOUR_FTP_PASSWORD]`
+5. Upload the entire `backend` folder to: `[YOUR_SERVER_PATH]/cassino/`
 
 **Option B: Using Git (if available on server)**
 
@@ -55,7 +55,7 @@ git pull origin master
 
 ```bash
 # From your local machine (in the project directory)
-scp -r backend/* cassino@khasinogaming.com:/home/mawdqtvped/khasinogaming.com/cassino/
+scp -r backend/* [YOUR_FTP_USERNAME]@[YOUR_SERVER_HOST]:[YOUR_SERVER_PATH]/cassino/
 ```
 
 ### Step 4: Run Deployment Script
@@ -63,7 +63,7 @@ scp -r backend/* cassino@khasinogaming.com:/home/mawdqtvped/khasinogaming.com/ca
 Once files are uploaded, SSH into the server and run:
 
 ```bash
-cd /home/mawdqtvped/khasinogaming.com/cassino
+cd [YOUR_SERVER_PATH]/cassino
 chmod +x deploy_to_spaceship.sh
 chmod +x start_server.sh
 ./deploy_to_spaceship.sh
@@ -125,7 +125,7 @@ Test the API endpoints:
 curl http://localhost:8000/health
 
 # Or from outside the server (if firewall allows)
-curl http://khasinogaming.com:8000/health
+curl http://[YOUR_DOMAIN]:8000/health
 ```
 
 ## 🔒 Firewall & Port Configuration
@@ -150,7 +150,7 @@ Or create a proper Apache config (requires access):
 
 ```apache
 <VirtualHost *:80>
-    ServerName khasinogaming.com
+    ServerName [YOUR_DOMAIN]
     
     ProxyPreserveHost On
     ProxyPass /api http://localhost:8000
@@ -169,7 +169,7 @@ Or create a proper Apache config (requires access):
 To run migrations manually:
 
 ```bash
-cd /home/mawdqtvped/khasinogaming.com/cassino
+cd [YOUR_SERVER_PATH]/cassino
 source venv/bin/activate
 alembic upgrade head
 ```
@@ -197,7 +197,7 @@ python3 --version
 # Fix permissions
 chmod +x deploy_to_spaceship.sh
 chmod +x start_server.sh
-chmod -R 755 /home/mawdqtvped/khasinogaming.com/cassino
+chmod -R 755 [YOUR_SERVER_PATH]/cassino
 ```
 
 ### Issue: Database connection failed
@@ -209,7 +209,7 @@ python test_db_connection.py
 cat .env
 
 # Test MySQL connection directly
-mysql -u mawdqtvped_cassino_user -p mawdqtvped_cassino
+mysql -u [YOUR_DB_USER] -p [YOUR_DB_NAME]
 ```
 
 ### Issue: Port 8000 not accessible
@@ -237,7 +237,7 @@ To update your backend after making changes:
 # Upload new files via FTP/SCP
 # Then SSH into the server:
 
-cd /home/mawdqtvped/khasinogaming.com/cassino
+cd [YOUR_SERVER_PATH]/cassino
 source venv/bin/activate
 
 # Update dependencies if requirements.txt changed
@@ -288,8 +288,8 @@ If you encounter issues:
 
 Update your frontend API URL to point to:
 ```javascript
-const API_URL = 'http://khasinogaming.com:8000';
+const API_URL = 'http://[YOUR_DOMAIN]:8000';
 // Or if using reverse proxy:
-const API_URL = 'http://khasinogaming.com/api';
+const API_URL = 'http://[YOUR_DOMAIN]/api';
 ```
 

@@ -8,33 +8,33 @@ to your Spaceship hosting server.
 DATABASE CREDENTIALS:
 --------------------
 Host: localhost (when on the server)
-Database: mawdqtvped_cassino
-User: mawdqtvped_cassino_user
-Password: @QWERTYasd
+Database: [YOUR_DB_NAME]
+User: [YOUR_DB_USER]
+Password: [YOUR_DB_PASSWORD]
 
 SERVER DETAILS:
 --------------
-FTP Server: server28.shared.spaceship.host
+FTP Server: [YOUR_FTP_HOST]
 FTP Port: 21
-FTP Username: cassino@khasinogaming.com
-FTP Password: @QWERTYasd
-Server Path: /home/mawdqtvped/khasinogaming.com/cassino
+FTP Username: [YOUR_FTP_USERNAME]
+FTP Password: [YOUR_FTP_PASSWORD]
+Server Path: [YOUR_SERVER_PATH]/cassino
 
 QUICK START DEPLOYMENT:
 ----------------------
 
 1. UPLOAD FILES:
    - Use FTP client (FileZilla, WinSCP, etc.)
-   - Connect to: server28.shared.spaceship.host:21
-   - Username: cassino@khasinogaming.com
-   - Upload entire 'backend' folder to: /home/mawdqtvped/khasinogaming.com/cassino/
+   - Connect to: [YOUR_FTP_HOST]:21
+   - Username: [YOUR_FTP_USERNAME]
+   - Upload entire 'backend' folder to: [YOUR_SERVER_PATH]/cassino/
 
 2. SSH INTO SERVER:
-   ssh cassino@khasinogaming.com
+   ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
    (If SSH not available, use cPanel Terminal)
 
 3. RUN DEPLOYMENT SCRIPT:
-   cd /home/mawdqtvped/khasinogaming.com/cassino
+   cd [YOUR_SERVER_PATH]/cassino
    chmod +x deploy_to_spaceship.sh
    ./deploy_to_spaceship.sh
 

@@ -4,22 +4,22 @@
 - **Host**: `khasinogaming.com`
 - **Username**: `cassino`
 - **Path**: `/home/mawdqtvped/khasinogaming.com/cassino`
-- **Password**: `@QWERTYasd`
+- **Password**: `[YOUR_FTP_PASSWORD]`
 
 ## 🚀 Quick Setup (3 Steps)
 
 ### Step 1: Generate SSH Key
 ```bash
-ssh-keygen -t rsa -b 4096 -C "cassino@khasinogaming.com"
+ssh-keygen -t rsa -b 4096 -C "[YOUR_EMAIL]"
 ```
 - Press Enter for default location
 - Enter a passphrase (or press Enter for none)
 
 ### Step 2: Copy Public Key to Server
 ```bash
-ssh-copy-id cassino@khasinogaming.com
+ssh-copy-id [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 ```
-- Enter password: `@QWERTYasd`
+- Enter password: `[YOUR_FTP_PASSWORD]`
 
 ### Step 3: Add GitHub Secrets
 Go to: https://github.com/Malungisa-Mndzebele/cassino-card-game/settings/secrets/actions
@@ -52,7 +52,7 @@ NhAAAAAwEAAQAAAYEAv8... (many more lines)
 
 ```bash
 # Test SSH connection
-ssh cassino@khasinogaming.com
+ssh [YOUR_FTP_USERNAME]@[YOUR_FTP_HOST]
 
 # Should connect without asking for password
 ```

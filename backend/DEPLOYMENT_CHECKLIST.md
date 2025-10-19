@@ -210,7 +210,7 @@ systemctl status mysql
 service mysql status
 
 # Test MySQL directly
-mysql -u mawdqtvped_cassino_user -p mawdqtvped_cassino
+mysql -u [YOUR_DB_USER] -p [YOUR_DB_NAME]
 ```
 
 ### Port Issues
@@ -255,8 +255,8 @@ nohup python start_production.py > server.log 2>&1 &
 ## Support Contacts
 
 - **Spaceship Support**: [Spaceship Help Center]
-- **Server**: server28.shared.spaceship.host
-- **Email**: cassino@khasinogaming.com
+- **Server**: [YOUR_SERVER_HOST]
+- **Email**: [YOUR_EMAIL]
 
 ## Notes
 

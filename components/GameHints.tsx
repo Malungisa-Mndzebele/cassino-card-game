@@ -53,7 +53,7 @@ function calculateAllPossibleMoves(
   playerHand: GameCard[],
   tableCards: GameCard[],
   builds: Build[],
-  playerId: number
+  _playerId: number
 ): PossibleMove[] {
   const moves: PossibleMove[] = []
 
@@ -234,10 +234,10 @@ function getSuitSymbol(suit: string): string {
   }
 }
 
-export function GameHints({ playerHand, tableCards, builds, enabled, playerId }: GameHintsProps) {
+export function GameHints({ playerHand, tableCards, builds, enabled }: GameHintsProps) {
   if (!enabled) return null
 
-  const possibleMoves = calculateAllPossibleMoves(playerHand, tableCards, builds, playerId)
+  const possibleMoves = calculateAllPossibleMoves(playerHand, tableCards, builds, 1)
   const bestMoves = possibleMoves.slice(0, 3) // Show top 3 moves
 
   if (bestMoves.length === 0) return null

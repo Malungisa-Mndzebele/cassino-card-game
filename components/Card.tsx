@@ -13,7 +13,7 @@ interface CardProps {
   id?: string
   suit?: string
   rank?: string
-  onClick?: (card: any) => void
+  onClick?: (card: { id: string; suit: string; rank: string }) => void
   disabled?: boolean
   selected?: boolean
   highlighted?: boolean
@@ -104,15 +104,7 @@ export function Card({
     }
   }
 
-  const getCardValue = (rank: string) => {
-    switch (rank) {
-      case 'A': return 1
-      case 'J': return 11
-      case 'Q': return 12
-      case 'K': return 13
-      default: return parseInt(rank) || 0
-    }
-  }
+  // getCardValue unused – remove to avoid lint warning
 
   const isSpecialCard = (cardSuit: string, cardRank: string) => {
     return (

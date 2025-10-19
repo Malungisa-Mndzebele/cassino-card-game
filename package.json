@@ -16,7 +16,8 @@
     "clean": "del /s /q /f node_modules 2>nul || rmdir /s /q node_modules 2>nul",
     "fresh-install": "npm run clean && npm install",
     "type-check": "tsc --noEmit",
-    "lint": "echo 'Linting would go here'",
+    "lint": "eslint --ext .ts,.tsx .",
+    "format": "prettier --write .",
     "deploy:guide": "echo '📖 See DEPLOYMENT_GUIDE.md for production deployment instructions'"
   },
   "dependencies": {
@@ -59,10 +60,17 @@
   "devDependencies": {
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.7.0",
+    "@typescript-eslint/parser": "^8.7.0",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.34.3",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "prettier": "^3.3.3"
   },
   "keywords": [
     "cassino",
