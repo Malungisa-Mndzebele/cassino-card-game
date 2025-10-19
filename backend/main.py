@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
@@ -36,7 +37,9 @@ def get_client_ip(request: Request) -> str:
     # Fallback to client host
     return request.client.host if request.client.host else "127.0.0.1"
 
-app = FastAPI(title="Casino Card Game API", version="1.0.0")
+# Support mounting behind a path prefix (e.g., /cassino-api on shared hosting)
+ROOT_PATH = os.getenv("ROOT_PATH", "")
+app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path=ROOT_PATH)
 
 # Add CORS middleware
 app.add_middleware(

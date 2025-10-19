@@ -8,10 +8,17 @@ cd "$(dirname "$0")"
 PY=$(command -v python3 || true)
 if [ -z "$PY" ]; then PY=$(command -v python || echo python); fi
 
-# Install dependencies to user site-packages when requirements.txt exists
+# Install dependencies (respect active venv)
 if [ -f requirements.txt ]; then
-  "$PY" -m pip install --user --upgrade pip wheel || true
-  "$PY" -m pip install --user -r requirements.txt || true
+  if [ -n "$VIRTUAL_ENV" ]; then
+    # Inside virtualenv created by cPanel Python App
+    "$PY" -m pip install --upgrade pip wheel || true
+    "$PY" -m pip install -r requirements.txt || true
+  else
+    # No virtualenv: use --user
+    "$PY" -m pip install --user --upgrade pip wheel || true
+    "$PY" -m pip install --user -r requirements.txt || true
+  fi
 fi
 
 # Run Alembic migrations if configured
