@@ -4,24 +4,24 @@ set -e
 # Navigate to backend directory if not already
 cd "$(dirname "$0")"
 
-# Create virtualenv if missing
-python3 -m venv venv || true
-source venv/bin/activate || true
+# Prefer python3/pip3; fallback to python/pip via -m
+PY=$(command -v python3 || true)
+if [ -z "$PY" ]; then PY=$(command -v python || echo python); fi
 
-# Install dependencies if requirements.txt exists
+# Install dependencies to user site-packages when requirements.txt exists
 if [ -f requirements.txt ]; then
-  pip install --upgrade pip wheel || true
-  pip install -r requirements.txt || true
+  "$PY" -m pip install --user --upgrade pip wheel || true
+  "$PY" -m pip install --user -r requirements.txt || true
 fi
 
 # Run Alembic migrations if configured
 if [ -f alembic.ini ] || [ -d alembic ]; then
-  python -m alembic upgrade head || true
+  "$PY" -m alembic upgrade head || true
 fi
 
-# Restart backend
-pkill -f "python start_production.py" || true
-nohup python start_production.py > server.log 2>&1 &
+# Restart backend using detected python
+pkill -f "start_production.py" || true
+nohup "$PY" start_production.py > server.log 2>&1 &
 
 echo "Backend started (or restarted)."
 
