@@ -310,6 +310,12 @@
     </div>
 
     <script>
+        // Centralized API base resolver to avoid const redeclarations
+        function getAPI_BASE() {
+            const host = window.location.hostname;
+            const isLocal = host === 'localhost' || host === '127.0.0.1';
+            return isLocal ? 'http://localhost:8000' : '/cassino/api';
+        }
         let gameState = {
             roomId: '',
             playerId: null,
@@ -414,9 +420,7 @@
             setLoading(true);
             try {
                 console.log('Creating room for player:', playerName);
-                const API_BASE = window.location.hostname === 'localhost' 
-                    ? 'http://localhost:8000' 
-                    : '/cassino/api';
+                const API_BASE = getAPI_BASE();
                 const response = await fetch(`${API_BASE}/rooms/create`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -476,9 +480,7 @@
                 const requestBody = { room_id: roomId, player_name: playerName };
                 console.log('Join room request body:', requestBody);
                 
-                const API_BASE = window.location.hostname === 'localhost' 
-                    ? 'http://localhost:8000' 
-                    : '/cassino/api';
+                const API_BASE = getAPI_BASE();
                 const response = await fetch(`${API_BASE}/rooms/join`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -540,9 +542,7 @@
             
             try {
                 console.log('🔍 Fetching room state for:', gameState.roomId);
-                const API_BASE = window.location.hostname === 'localhost' 
-                    ? 'http://localhost:8000' 
-                    : '/cassino/api';
+                const API_BASE = getAPI_BASE();
                 const response = await fetch(`${API_BASE}/rooms/${gameState.roomId}/state`);
                 
                 console.log('📡 Room state API response status:', response.status);
@@ -712,9 +712,7 @@
                 };
                 console.log('Player ready request body:', requestBody);
                 
-                const API_BASE = window.location.hostname === 'localhost' 
-                    ? 'http://localhost:8000' 
-                    : '/cassino/api';
+                const API_BASE = getAPI_BASE();
                 const response = await fetch(`${API_BASE}/rooms/player-ready`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -777,9 +775,7 @@
                 console.log('🎮 Starting game for Player', gameState.playerId, 'in room', gameState.roomId);
                 
                 // Start shuffle
-                const API_BASE = window.location.hostname === 'localhost' 
-                    ? 'http://localhost:8000' 
-                    : '/cassino/api';
+                const API_BASE = getAPI_BASE();
                 const shuffleResponse = await fetch(`${API_BASE}/game/start-shuffle`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -801,9 +797,7 @@
                 
                 // Select face-up cards (automatically for now)
                 console.log('🎯 Selecting face-up cards with Player', gameState.playerId);
-                const API_BASE = window.location.hostname === 'localhost' 
-                    ? 'http://localhost:8000' 
-                    : '/cassino/api';
+                const API_BASE = getAPI_BASE();
                 const faceUpResponse = await fetch(`${API_BASE}/game/select-face-up-cards`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -866,9 +860,7 @@
         // Test API connection on page load
         window.addEventListener('load', async () => {
             try {
-                const API_BASE = window.location.hostname === 'localhost' 
-                    ? 'http://localhost:8000' 
-                    : '/cassino/api';
+                const API_BASE = getAPI_BASE();
                 const response = await fetch(`${API_BASE}/health`);
                 if (response.ok) {
                     console.log('✅ API connection successful');
