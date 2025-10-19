@@ -1,3 +1,16 @@
+RewriteEngine On
+
+# API → PHP proxy (cover /api/* and direct endpoints)
+RewriteRule ^api/(.*)$ backend/start.php [QSA,L]
+RewriteRule ^health$ backend/start.php [QSA,L]
+RewriteRule ^rooms/(.*)$ backend/start.php [QSA,L]
+RewriteRule ^game/(.*)$ backend/start.php [QSA,L]
+
+# SPA fallback for frontend
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [QSA,L]
+
 # Enable rewrite engine
 RewriteEngine On
 

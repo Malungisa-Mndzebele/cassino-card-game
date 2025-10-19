@@ -144,20 +144,25 @@ jobs:
         echo $response;
         EOF
         
-        # Create .htaccess for frontend routing
-        cat > dist/.htaccess << 'EOF'
-        RewriteEngine On
-        
-        # Handle backend requests (API)
-        RewriteRule ^health$ backend/start.php [QSA,L]
-        RewriteRule ^rooms/(.*)$ backend/start.php [QSA,L]
-        RewriteRule ^game/(.*)$ backend/start.php [QSA,L]
-        
-        # Handle frontend routes
-        RewriteCond %{REQUEST_FILENAME} !-f
-        RewriteCond %{REQUEST_FILENAME} !-d
-        RewriteRule ^ index.html [QSA,L]
-        EOF
+        # Prefer repo .htaccess if present; otherwise, write a default
+        if [ -f .htaccess ]; then
+          cp .htaccess dist/.htaccess
+        else
+          cat > dist/.htaccess << 'EOF'
+          RewriteEngine On
+          
+          # Handle backend requests (API)
+          RewriteRule ^api/(.*)$ backend/start.php [QSA,L]
+          RewriteRule ^health$ backend/start.php [QSA,L]
+          RewriteRule ^rooms/(.*)$ backend/start.php [QSA,L]
+          RewriteRule ^game/(.*)$ backend/start.php [QSA,L]
+          
+          # Handle frontend routes
+          RewriteCond %{REQUEST_FILENAME} !-f
+          RewriteCond %{REQUEST_FILENAME} !-d
+          RewriteRule ^ index.html [QSA,L]
+          EOF
+        fi
         
         # Write deploy trigger file for cron-maintenance on server
         date -u +%Y-%m-%dT%H:%M:%SZ > dist/deploy.trigger
