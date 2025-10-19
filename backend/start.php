@@ -34,6 +34,13 @@ error_log(sprintf(
 $python_url = "http://localhost:8000" . $path;
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Treat HEAD like GET when proxying to FastAPI (which may not register HEAD explicitly)
+$curl_nobody = false;
+if ($method === 'HEAD') {
+    $curl_nobody = true;
+    $method = 'GET';
+}
+
 // Get request body for POST/PUT requests
 $body = file_get_contents('php://input');
 
@@ -60,6 +67,10 @@ curl_setopt_array($ch, [
     ],
     CURLOPT_VERBOSE => true
 ]);
+
+if ($curl_nobody) {
+    curl_setopt($ch, CURLOPT_NOBODY, true);
+}
 
 // Handle request body for POST/PUT
 if ($method === 'POST' || $method === 'PUT') {
