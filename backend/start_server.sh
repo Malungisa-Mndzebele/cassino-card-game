@@ -1,3 +1,30 @@
+#!/usr/bin/env bash
+set -e
+
+# Navigate to backend directory if not already
+cd "$(dirname "$0")"
+
+# Create virtualenv if missing
+python3 -m venv venv || true
+source venv/bin/activate || true
+
+# Install dependencies if requirements.txt exists
+if [ -f requirements.txt ]; then
+  pip install --upgrade pip wheel || true
+  pip install -r requirements.txt || true
+fi
+
+# Run Alembic migrations if configured
+if [ -f alembic.ini ] || [ -d alembic ]; then
+  python -m alembic upgrade head || true
+fi
+
+# Restart backend
+pkill -f "python start_production.py" || true
+nohup python start_production.py > server.log 2>&1 &
+
+echo "Backend started (or restarted)."
+
 #!/bin/bash
 # Start the Casino Card Game Backend Server
 

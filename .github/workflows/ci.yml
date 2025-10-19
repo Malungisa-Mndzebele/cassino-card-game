@@ -159,6 +159,9 @@ jobs:
         RewriteRule ^ index.html [QSA,L]
         EOF
         
+        # Write deploy trigger file for cron-maintenance on server
+        date -u +%Y-%m-%dT%H:%M:%SZ > dist/deploy.trigger
+        
         echo "✅ Deployment files prepared"
     
     - name: Deploy to Spaceship via FTP
@@ -170,6 +173,8 @@ jobs:
         local-dir: ./dist/
         server-dir: ${{ secrets.FTP_SERVER_DIR }}
     
+    # SSH step removed by request; deployment is FTP-only
+
     - name: Deployment Status
       run: |
         echo "🎉 Casino Card Game deployed successfully!"
