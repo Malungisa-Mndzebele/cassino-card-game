@@ -23,8 +23,12 @@ alwaysApply: true
 - Use functional state updates in effects to satisfy exhaustive-deps without extra re-renders.
 - Type props and function signatures; avoid `any` in exported APIs.
 - Gate debug logs behind dev checks; avoid noisy logs in production.
+- Build with Vite; set `base` to `/cassino/`; rely on `.htaccess` SPA fallback.
+- Prefer relative API paths via proxy; avoid hardcoding :8000.
 
 ## Backend (FastAPI)
 - Centralize common DB/entity lookups (e.g., get_room_or_404) to avoid duplication.
 - Keep request/response schemas in `schemas.py` and models in `models.py`.
 - Use Alembic for schema changes; never create tables ad-hoc in code.
+- Support shared hosting via PHP proxy (`backend/start.php`); map HEAD→GET in proxy for health checks.
+- Provide `ROOT_PATH` support for subpath hosting; default unset when using proxy.

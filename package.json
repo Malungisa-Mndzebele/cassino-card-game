@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node dev-server.js",
     "start": "node frontend/production-server.js",
-    "build": "echo '✅ Casino Card Game v2.0 - No build step required (vanilla HTML/CSS/JS)'",
+    "build": "vite build",
     "start:backend": "cd backend && py -3.11 start_production.py",
     "install:backend": "cd backend && py -3.11 -m pip install -r requirements.txt",
     "install:frontend": "npm install",
@@ -18,6 +18,9 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint --ext .ts,.tsx .",
     "format": "prettier --write .",
+    "test:frontend": "vitest run --reporter=verbose",
+    "preview": "vite preview --port 5173 --strictPort",
+    "test:e2e": "playwright test",
     "deploy:guide": "echo '📖 See DEPLOYMENT_GUIDE.md for production deployment instructions'"
   },
   "dependencies": {
@@ -58,19 +61,28 @@
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.2",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^14.3.1",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@typescript-eslint/eslint-plugin": "^8.7.0",
     "@typescript-eslint/parser": "^8.7.0",
+    "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.11",
-    "typescript": "^5.0.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.34.3",
     "eslint-plugin-react-hooks": "^4.6.2",
-    "prettier": "^3.3.3"
+    "jsdom": "^24.1.0",
+    "playwright": "^1.48.2",
+    "postcss": "^8.5.6",
+    "prettier": "^3.3.3",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.0.0",
+    "vite": "^5.4.21",
+    "vitest": "^1.6.0",
+    "wait-on": "^8.0.1"
   },
   "keywords": [
     "cassino",

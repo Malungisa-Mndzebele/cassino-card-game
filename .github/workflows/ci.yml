@@ -42,6 +42,18 @@ jobs:
     - name: Lint frontend
       run: npm run lint || true
 
+    - name: Frontend unit tests (Vitest)
+      run: npm run test:frontend
+
+    - name: Build frontend for E2E preview
+      run: npm run build
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    - name: E2E tests (Playwright)
+      run: npm run test:e2e
+
     - name: Verify frontend files
       run: |
         ls -la index.html
@@ -63,7 +75,7 @@ jobs:
     - name: Install Node.js dependencies
       run: npm ci
     
-    - name: Run build step
+    - name: Run Vite build
       run: npm run build
     
     - name: Verify build output
@@ -86,14 +98,8 @@ jobs:
         # Create deployment directory
         mkdir -p dist
         
-        # Copy frontend files
-        cp index.html dist/
-        cp manifest.json dist/ || echo "No manifest.json"
-        cp favicon.svg dist/ || echo "No favicon.svg"
-        cp -r public dist/ || echo "No public directory"
-        cp -r frontend dist/ || echo "No frontend directory"
-        cp package.json dist/
-        cp package-lock.json dist/ || echo "No package-lock.json"
+        # Vite build output already in dist/; ensure root .htaccess present
+        if [ -f .htaccess ]; then cp .htaccess dist/.htaccess; fi
         
         # Copy backend files (includes backend/start.php already)
         mkdir -p dist/backend

@@ -9,7 +9,7 @@ A real-time multiplayer implementation of the classic Casino card game. Play hea
 npm run install:all
 ```
 
-2. **Start the Game**
+2. **Start the Game (Dev)**
 ```bash
 # Start backend
 npm run start:backend
@@ -19,7 +19,7 @@ npm start
 ```
 
 3. **Play the Game**
-- Open http://localhost:3000
+- Open http://localhost:3000/cassino/
 - Create a room or join with a friend
 - Have fun!
 
@@ -69,19 +69,45 @@ VITE_API_URL=http://localhost:8000
 
 ### Testing
 ```bash
-cd backend && python run_all_tests.py
+# Backend
+python backend/run_all_tests.py
+
+# Frontend unit (Vitest)
+npm run test:frontend
+
+# Frontend E2E (Playwright)
+npm run build && npm run test:e2e
 ```
 
 ## 📦 Deployment
 
-### Production Setup
+### Production Setup (Shared Hosting)
 1. Clone repository
 2. Install dependencies: `npm run install:all`
-3. Start services:
+3. Configure backend `.env` on server (not committed):
+```
+DATABASE_URL=mysql+pymysql://<user>:<password>@localhost:3306/<db>   # URL-encode special chars
+CORS_ORIGINS=https://khasinogaming.com
+HOST=0.0.0.0
+PORT=8000
+```
+4. Start services:
 ```bash
 npm run start:backend  # Start backend
 npm start              # Start frontend
 ```
+
+### CI/CD (GitHub Actions)
+- On push to master/main:
+  - Runs backend tests (SQLite)
+  - Runs frontend unit (Vitest) and E2E (Playwright)
+  - Builds frontend with Vite (base=/cassino/)
+  - Deploys built `dist/` + `backend/` via FTP
+  - Uses repo `.htaccess` for SPA + API proxy
+
+### PHP Proxy
+- `backend/start.php` forwards `/cassino/{health|rooms|game|api/*}` to FastAPI at `http://localhost:8000`
+- `.htaccess` rewrites API routes to the proxy; SPA routes fall back to `index.html`
 
 ### API Endpoints
 - `/health` - Health check
