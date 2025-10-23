@@ -39,7 +39,7 @@ class PlayerResponse(BaseModel):
     id: int
     name: str
     ready: bool
-    joined_at: datetime
+    joined_at: Optional[datetime]
     ip_address: Optional[str] = None
 
 class GameStateResponse(BaseModel):
