@@ -206,6 +206,21 @@ async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db),
     
     # Create room
     room = Room(id=room_id)
+    # Ensure JSON fields are initialized for Python 3.6/Pydantic compatibility
+    room.deck = []
+    room.player1_hand = []
+    room.player2_hand = []
+    room.table_cards = []
+    room.builds = []
+    room.player1_captured = []
+    room.player2_captured = []
+    room.player1_score = 0
+    room.player2_score = 0
+    room.player1_ready = False
+    room.player2_ready = False
+    room.game_phase = "waiting"
+    room.round_number = 0
+    room.current_turn = 1
     db.add(room)
     db.commit()
     db.refresh(room)
