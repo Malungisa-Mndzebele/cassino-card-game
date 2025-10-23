@@ -150,6 +150,13 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./dist/
         server-dir: ${{ secrets.FTP_SERVER_DIR }}
+        exclude: |
+          backend/.env
+          backend/venv/**
+          backend/__pycache__/**
+          backend/**/*.pyc
+          **/*.db
+          **/*.log
     
     # SSH step removed by request; deployment is FTP-only
 
