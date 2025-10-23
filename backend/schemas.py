@@ -63,7 +63,7 @@ class GameStateResponse(BaseModel):
     game_started: bool
     last_play: Optional[Dict[str, Any]]
     last_action: Optional[str]
-    last_update: datetime
+    last_update: Optional[datetime]
     game_completed: bool
     winner: Optional[int]
     dealing_complete: bool
