@@ -1,7 +1,7 @@
 <?php
-// Enable error reporting for debugging
+// Enable error reporting but do not display errors in responses
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 
 // Set CORS headers
 header('Access-Control-Allow-Origin: *');
@@ -65,7 +65,8 @@ curl_setopt_array($ch, [
         'Content-Type: application/json',
         'Accept: application/json'
     ],
-    CURLOPT_VERBOSE => true
+    // Verbose output can corrupt JSON responses; keep it disabled in production
+    CURLOPT_VERBOSE => false
 ]);
 
 if ($curl_nobody) {
