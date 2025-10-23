@@ -83,6 +83,12 @@ jobs:
         echo "✅ Build completed successfully"
         echo "📁 Project files ready for deployment"
 
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist
+
   deploy:
     runs-on: ubuntu-latest
     needs: [test, build]
@@ -90,6 +96,12 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist
+        path: dist
     
     - name: Prepare deployment files
       run: |
