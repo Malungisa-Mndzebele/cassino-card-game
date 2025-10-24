@@ -7,8 +7,12 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Use environment variable for database URL, fallback to SQLite for local development
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test_casino_game.db")
+# Require DATABASE_URL to be set (no silent SQLite fallback)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL or not DATABASE_URL.strip():
+    raise RuntimeError(
+        "DATABASE_URL must be set in environment (e.g., backend/.env)."
+    )
 
 # Legacy compatibility: normalize old postgres URLs if present
 if DATABASE_URL.startswith("postgres://"):

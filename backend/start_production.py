@@ -8,6 +8,7 @@ import os
 import sys
 import uvicorn
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Add the backend directory to Python path
 backend_dir = Path(__file__).parent
@@ -16,10 +17,9 @@ sys.path.insert(0, str(backend_dir))
 def main():
     """Start the production server"""
     
-    # Set production environment variables
+    # Load environment from backend/.env (allow overrides)
+    load_dotenv(dotenv_path=backend_dir / ".env", override=True)
     os.environ.setdefault("ENVIRONMENT", "production")
-    # Default to SQLite for safety; override via env in staging/prod (use MySQL)
-    os.environ.setdefault("DATABASE_URL", "sqlite:///./test_casino_game.db")
     
     # Production configuration
     host = os.getenv("HOST", "0.0.0.0")
