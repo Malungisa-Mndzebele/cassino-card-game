@@ -11,17 +11,27 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL or not DATABASE_URL.strip():
     raise RuntimeError(
-        "DATABASE_URL must be set in environment (e.g., backend/.env)."
+        "DATABASE_URL must be set in environment. Check Fly.io secrets: flyctl secrets list"
     )
 
 # Legacy compatibility: normalize old postgres URLs if present
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Create SQLAlchemy engine
+# Create SQLAlchemy engine with connection pooling for PostgreSQL
+# Don't connect immediately - connect on first use
+if "sqlite" in DATABASE_URL:
+    connect_args = {"check_same_thread": False}
+elif "postgresql" in DATABASE_URL:
+    connect_args = {"connect_timeout": 10}
+else:
+    connect_args = {}
+
 engine = create_engine(
-    DATABASE_URL, 
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+    DATABASE_URL,
+    connect_args=connect_args,
+    pool_pre_ping=True,  # Verify connections before using them
+    pool_recycle=300,     # Recycle connections after 5 minutes
 )
 
 # Create SessionLocal class

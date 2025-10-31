@@ -1,9 +1,8 @@
-# Python 3.6+ Compatible Requirements (No compilation required)
+# Python 3.11+ Requirements for Fly.io
 fastapi==0.95.2
 uvicorn==0.22.0
 sqlalchemy==1.4.23
-pymysql==1.0.2
-cryptography==3.4.8
+psycopg2-binary==2.9.9
 alembic==1.11.1
 python-multipart==0.0.5
 python-jose[cryptography]==3.3.0
