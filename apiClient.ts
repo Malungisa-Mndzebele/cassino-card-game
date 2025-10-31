@@ -4,24 +4,24 @@
 import React from 'react';
 
 // Use the backend URL for API calls
+// Production: Fly.io backend at cassino-game-backend.fly.dev
+// Development: Local backend at localhost:8000
 const API_BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
   ? 'http://localhost:8000' 
-  : 'https://khasinogaming.com:8000');
+  : 'https://cassino-game-backend.fly.dev');
 
 // Check if we're in a live environment without backend
 const isLiveEnvironment = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 const shouldUseMock = isLiveEnvironment && !import.meta.env.VITE_API_URL;
 
-// Log the current configuration for debugging
-if (import.meta.env.DEV) {
-  console.debug('🔧 API Client Configuration:', {
-    hostname: window.location.hostname,
-    API_BASE_URL,
-    isLiveEnvironment,
-    shouldUseMock,
-    VITE_API_URL: import.meta.env.VITE_API_URL
-  });
-}
+// Log the current configuration for debugging (always log in production too)
+console.log('🔧 API Client Configuration:', {
+  hostname: window.location.hostname,
+  API_BASE_URL,
+  isLiveEnvironment,
+  shouldUseMock,
+  VITE_API_URL: import.meta.env.VITE_API_URL
+});
 
 // Convert snake_case to camelCase
 function toCamelCase(obj: any): any {
@@ -46,6 +46,9 @@ async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<
   const url = `${API_BASE_URL}${endpoint}`;
   
   console.log(`🌐 API Call: ${url}`);
+  console.log(`📍 API Base URL: ${API_BASE_URL}`);
+  console.log(`📍 Endpoint: ${endpoint}`);
+  console.log(`📍 Full URL: ${url}`);
   
   try {
     const response = await fetch(url, {
@@ -56,9 +59,30 @@ async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<
       ...options,
     });
 
+    // Check if response is actually JSON
+    const contentType = response.headers.get('content-type');
+    console.log(`📥 Response Status: ${response.status}`);
+    console.log(`📥 Content-Type: ${contentType}`);
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      // Try to get error message, but handle HTML responses
+      let errorData = {};
+      if (contentType && contentType.includes('application/json')) {
+        errorData = await response.json().catch(() => ({}));
+      } else {
+        const text = await response.text();
+        console.error(`❌ Non-JSON error response: ${text.substring(0, 200)}`);
+        throw new Error(`HTTP ${response.status}: Server returned HTML instead of JSON. Check if backend URL is correct: ${url}`);
+      }
       throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    // Verify response is JSON before parsing
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error(`❌ Expected JSON but got: ${contentType}`);
+      console.error(`❌ Response preview: ${text.substring(0, 500)}`);
+      throw new Error(`Server returned ${contentType} instead of JSON. Response: ${text.substring(0, 200)}`);
     }
 
     const data = await response.json();
