@@ -314,7 +314,8 @@
         function getAPI_BASE() {
             const host = window.location.hostname;
             const isLocal = host === 'localhost' || host === '127.0.0.1';
-            return isLocal ? 'http://localhost:8000' : '/cassino/api';
+            // Use Fly.io backend URL for production
+            return isLocal ? 'http://localhost:8000' : 'https://cassino-game-backend.fly.dev';
         }
         let gameState = {
             roomId: '',
