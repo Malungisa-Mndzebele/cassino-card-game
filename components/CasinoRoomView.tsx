@@ -14,8 +14,6 @@ interface CasinoRoomViewProps {
   onStartShuffle?: () => void
 }
 
-const AVATARS = ['👤', '🎩', '🎭', '🎪', '🃏', '🎰', '🎲', '🎴']
-
 export function CasinoRoomView({
   roomId,
   players,
@@ -33,68 +31,87 @@ export function CasinoRoomView({
   const currentReady = isPlayer1 ? player1Ready : player2Ready
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+    <div className="min-h-screen bg-gradient-to-b from-amber-950 via-amber-900 to-amber-950 relative overflow-hidden">
+      {/* Room Background - Classic Casino */}
+      <div className="absolute inset-0">
+        {/* Dark Wood Paneling */}
+        <div className="absolute inset-0 bg-gradient-to-b from-amber-950 via-amber-900 to-amber-950 opacity-90"></div>
+        
+        {/* Red Velvet Curtains - Left */}
+        <div className="absolute left-0 top-0 w-32 h-full bg-gradient-to-r from-red-900 via-red-800 to-transparent opacity-40"></div>
+        
+        {/* Red Velvet Curtains - Right */}
+        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-red-900 via-red-800 to-transparent opacity-40"></div>
+        
+        {/* Gold Wall Sconces - Left */}
+        <div className="absolute left-8 top-20 w-12 h-20">
+          <div className="w-full h-full bg-gradient-to-b from-yellow-600 via-yellow-500 to-yellow-400 rounded-lg opacity-30 blur-sm"></div>
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+          <div className="absolute top-12 left-1/2 -translate-x-1/2 w-2 h-2 bg-yellow-300 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+        </div>
+        
+        {/* Gold Wall Sconces - Right */}
+        <div className="absolute right-8 top-20 w-12 h-20">
+          <div className="w-full h-full bg-gradient-to-b from-yellow-600 via-yellow-500 to-yellow-400 rounded-lg opacity-30 blur-sm"></div>
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+          <div className="absolute top-12 left-1/2 -translate-x-1/2 w-2 h-2 bg-yellow-300 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+        </div>
       </div>
 
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
-        {/* Dealer Section */}
-        <div className="mb-8 text-center">
-          <div className="relative inline-block">
-            <div className="absolute -inset-4 bg-gradient-to-r from-yellow-400 via-purple-500 to-blue-500 rounded-full blur-2xl opacity-50 animate-pulse" />
-            <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 border-2 border-yellow-500/30 shadow-2xl">
-              <div className="flex flex-col items-center">
-                <div className="relative mb-4">
-                  <div className="absolute -inset-2 bg-yellow-400/20 rounded-full blur-lg" />
-                  <div className="relative bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full p-4">
-                    <Crown className="w-12 h-12 text-white" />
-                  </div>
+        {/* Classic Poker Table */}
+        <div className="relative w-full max-w-5xl mb-8">
+          {/* Table Surface - Green Felt */}
+          <div className="relative bg-gradient-to-br from-green-700 via-green-600 to-green-800 rounded-3xl p-12 border-8 border-amber-800 shadow-2xl min-h-[500px] flex items-center justify-center">
+            {/* Felt Texture Pattern */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute inset-0" style={{
+                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px)'
+              }} />
+            </div>
+
+            {/* DEALER Label - Top Center */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+              <div className="bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 px-6 py-2 rounded-lg shadow-lg border-2 border-yellow-300">
+                <div className="text-amber-900 font-black text-lg tracking-wider">DEALER</div>
+              </div>
+            </div>
+
+            {/* Dealer Position - Top */}
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20">
+              <div className="relative">
+                {/* Dealer Avatar */}
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-full p-6 border-4 border-yellow-400 shadow-2xl">
+                  <div className="text-6xl mb-2">🎰</div>
+                  <Crown className="w-8 h-8 text-yellow-400 mx-auto" />
                 </div>
-                <h2 className="text-3xl font-black text-white mb-2">The Dealer</h2>
-                <div className="mt-4 bg-slate-800/50 rounded-xl p-4 border border-blue-500/30 max-w-md">
+                
+                {/* Dealer Speech */}
+                <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-64 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border-2 border-yellow-400/50 shadow-xl">
                   {!bothReady ? (
-                    <p className="text-white/90 text-sm">
-                      {players.length < 2 
-                        ? "Waiting for another player to join..."
-                        : "Both players must confirm they're ready to begin."
-                      }
+                    <p className="text-white text-sm text-center">
+                      Both players must confirm they're ready to begin.
                     </p>
                   ) : (
                     <div className="flex items-center justify-center gap-2">
-                      <Sparkles className="w-5 h-5 text-green-400 animate-pulse" />
-                      <p className="text-green-400 font-bold">All players ready!</p>
+                      <Sparkles className="w-4 h-4 text-green-400 animate-pulse" />
+                      <p className="text-green-400 font-bold text-sm">All players ready!</p>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Casino Table */}
-        <div className="w-full max-w-5xl mb-8">
-          <div className="relative bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-900 rounded-3xl p-12 border-4 border-emerald-700/50 shadow-2xl min-h-[400px] flex items-center justify-center">
-            {/* Table Pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute inset-0" style={{
-                backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-                backgroundSize: '50px 50px'
-              }} />
-            </div>
-
-            {/* Room Code / Cards Display */}
+            {/* Room Code / Cards Display - Center of Table */}
             {!bothReady ? (
-              <div className="text-center z-10">
-                <p className="text-white/60 text-sm mb-3">Share this code:</p>
+              <div className="text-center z-10 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <p className="text-white/60 text-xs mb-2">Share this code:</p>
                 <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-xl px-8 py-4 shadow-lg border-2 border-yellow-300">
-                  <code className="text-4xl font-mono font-black text-slate-900 tracking-wider">{roomId}</code>
+                  <code className="text-4xl font-mono font-black text-amber-900 tracking-wider">{roomId}</code>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center gap-4 z-10">
+              <div className="flex items-center justify-center gap-4 z-10 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="relative">
                     <div className="absolute -inset-2 bg-yellow-400/20 rounded-lg blur-md animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
@@ -106,51 +123,77 @@ export function CasinoRoomView({
               </div>
             )}
 
-            {/* Players at Table Sides */}
-            <div className="absolute inset-0 flex items-center justify-between px-8 z-10 pointer-events-none">
-              {/* Player 1 - Left */}
-              <div className="flex flex-col items-center">
-                <div className={`relative transition-all duration-300 ${player1Ready ? 'scale-110' : 'scale-100'}`}>
-                  {player1Ready && (
-                    <div className="absolute -inset-4 bg-green-500/30 rounded-full blur-xl animate-pulse" />
-                  )}
-                  <div className={`relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border-4 shadow-xl transition-all ${
-                    player1Ready ? 'border-green-500 shadow-green-500/50' : 'border-yellow-500/30'
-                  }`}>
-                    <div className="text-6xl mb-2">{AVATARS[0]}</div>
-                    <p className="text-white font-bold text-lg mb-1">{player1?.name || 'Player 1'}</p>
+            {/* Player 1 - Left Side */}
+            <div className="absolute left-8 top-1/2 -translate-y-1/2 z-20">
+              <div className="relative">
+                {/* Holographic UI */}
+                <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-48 bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-md rounded-lg p-3 border-2 border-blue-400/50 shadow-xl">
+                  <div className="text-white font-bold text-sm text-center mb-2">{player1?.name || 'Player 1'}</div>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="text-2xl">♠️</div>
                     <Badge className={player1Ready ? 'bg-green-500' : 'bg-yellow-500/50'}>
                       {player1Ready ? '✓ Ready' : 'Waiting...'}
                     </Badge>
                   </div>
                 </div>
-              </div>
-
-              {/* Player 2 - Right */}
-              <div className="flex flex-col items-center">
-                <div className={`relative transition-all duration-300 ${player2Ready ? 'scale-110' : 'scale-100'}`}>
-                  {player2Ready && (
-                    <div className="absolute -inset-4 bg-blue-500/30 rounded-full blur-xl animate-pulse" style={{ animationDelay: '0.5s' }} />
+                
+                {/* Player Avatar */}
+                <div className={`relative transition-all duration-300 ${player1Ready ? 'scale-110' : 'scale-100'}`}>
+                  {player1Ready && (
+                    <div className="absolute -inset-4 bg-green-500/30 rounded-full blur-xl animate-pulse"></div>
                   )}
                   <div className={`relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border-4 shadow-xl transition-all ${
-                    player2Ready ? 'border-blue-500 shadow-blue-500/50' : 'border-yellow-500/30'
+                    player1Ready ? 'border-green-500 shadow-green-500/50' : 'border-yellow-500/30'
                   }`}>
-                    <div className="text-6xl mb-2">{AVATARS[1]}</div>
-                    <p className="text-white font-bold text-lg mb-1">{player2?.name || 'Player 2'}</p>
-                    <Badge className={player2Ready ? 'bg-blue-500' : 'bg-yellow-500/50'}>
+                    <div className="text-6xl mb-2">👤</div>
+                    <p className="text-white font-bold text-sm text-center">{player1?.name || 'Player 1'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Player 2 - Right Side */}
+            <div className="absolute right-8 top-1/2 -translate-y-1/2 z-20">
+              <div className="relative">
+                {/* Holographic UI */}
+                <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-48 bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-md rounded-lg p-3 border-2 border-blue-400/50 shadow-xl">
+                  <div className="text-white font-bold text-sm text-center mb-2">{player2?.name || 'Player 2'}</div>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="text-2xl">♣️</div>
+                    <Badge className={player2Ready ? 'bg-green-500' : 'bg-yellow-500/50'}>
                       {player2Ready ? '✓ Ready' : 'Waiting...'}
                     </Badge>
                   </div>
                 </div>
+                
+                {/* Player Avatar */}
+                <div className={`relative transition-all duration-300 ${player2Ready ? 'scale-110' : 'scale-100'}`}>
+                  {player2Ready && (
+                    <div className="absolute -inset-4 bg-blue-500/30 rounded-full blur-xl animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                  )}
+                  <div className={`relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border-4 shadow-xl transition-all ${
+                    player2Ready ? 'border-blue-500 shadow-blue-500/50' : 'border-yellow-500/30'
+                  }`}>
+                    <div className="text-6xl mb-2">👤</div>
+                    <p className="text-white font-bold text-sm text-center">{player2?.name || 'Player 2'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* COMMUNITY CARDS Label - Bottom Center */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
+              <div className="bg-gradient-to-br from-yellow-400/80 via-yellow-500/80 to-yellow-600/80 px-6 py-2 rounded-lg backdrop-blur-sm border border-yellow-300/50">
+                <div className="text-amber-900 font-black text-sm tracking-wider">COMMUNITY CARDS</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="w-full max-w-md">
+        {/* Action Buttons - Bottom */}
+        <div className="w-full max-w-md mt-8">
           {!bothReady ? (
-            <div className="bg-slate-800/50 rounded-xl p-6 border border-yellow-500/30">
+            <div className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 rounded-xl p-6 border-2 border-yellow-500/30 shadow-xl">
               <p className="text-white font-medium mb-4 text-center">Are you ready to play?</p>
               <div className="flex gap-4">
                 <Button
@@ -175,13 +218,13 @@ export function CasinoRoomView({
               {isPlayer1 && onStartShuffle ? (
                 <Button
                   onClick={onStartShuffle}
-                  className="w-full h-16 bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-slate-900 font-bold text-xl shadow-lg"
+                  className="w-full h-16 bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-amber-900 font-bold text-xl shadow-lg"
                 >
                   <Play className="w-6 h-6 mr-2" />
                   Shuffle the Deck
                 </Button>
               ) : (
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-yellow-500/30 text-center">
+                <div className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 rounded-xl p-6 border-2 border-yellow-500/30 shadow-xl text-center">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <Sparkles className="w-6 h-6 text-yellow-400 animate-spin" />
                     <p className="text-yellow-400 font-bold">Waiting for shuffle...</p>
@@ -193,7 +236,7 @@ export function CasinoRoomView({
           )}
         </div>
 
-        {/* Room Info */}
+        {/* Room Info - Bottom */}
         <div className="mt-6 flex items-center gap-2 text-white/60 text-sm">
           <Users className="w-4 h-4" />
           <span>Room: <code className="font-mono font-bold text-white">{roomId}</code></span>
