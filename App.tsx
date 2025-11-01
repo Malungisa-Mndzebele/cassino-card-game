@@ -30,10 +30,19 @@ export default function App() {
   // Helpers to normalize API responses and broadcast updates
   const extractGameState = useCallback((payload: any): GameState | null => {
     if (!payload) return null;
+    // Check if payload is wrapped in game_state/gameState
     if ((payload as any).gameState) return (payload as any).gameState as GameState;
     if ((payload as any).game_state) return (payload as any).game_state as GameState;
     if ((payload as any).data?.gameState) return (payload as any).data.gameState as GameState;
     if ((payload as any).data?.game_state) return (payload as any).data.game_state as GameState;
+    // Check if payload IS a game state (has roomId/room_id and phase)
+    if ((payload as any).roomId || (payload as any).room_id) {
+      // This is a direct game state response, convert it to GameState format
+      const state = payload as any;
+      if (state.phase !== undefined || state.players !== undefined) {
+        return state as GameState;
+      }
+    }
     return null;
   }, []);
 
@@ -310,15 +319,19 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
   // Update local game state when API data changes
   useEffect(() => {
     if (gameStateData && roomId) {
-      console.log('🔄 Game state updated from API:', {
-        phase: (gameStateData as any).data?.gameState?.phase,
-        players: (gameStateData as any).data?.gameState?.players?.length || 0,
-        roomId: (gameStateData as any).data?.gameState?.roomId
-      });
+      // getGameState returns GameState directly (not wrapped)
+      const state = extractGameState(gameStateData);
+      if (import.meta.env.DEV) {
+        console.log('🔄 Game state updated from API:', {
+          phase: state?.phase,
+          players: state?.players?.length || 0,
+          roomId: state?.roomId
+        });
+      }
       applyResponseState(gameStateData);
       setConnectionStatus('connected');
     }
-  }, [gameStateData, roomId, applyResponseState]);
+  }, [gameStateData, roomId, applyResponseState, extractGameState]);
 
   // useQuery handles polling automatically
 
@@ -443,18 +456,65 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
 
         {/* Show RoomManager if not connected */}
         {!isConnected ? (
-          <div className="relative z-10 p-4">
-            <div className="max-w-6xl mx-auto">
-          <RoomManager
-            roomId={roomId}
-            setRoomId={setRoomId}
-            playerName={playerName}
-            setPlayerName={setPlayerName}
-            onCreateRoom={createRoom}
-            onJoinRoom={joinRoom}
-            error={error}
-            isLoading={isLoading}
-          />
+          <div className="relative z-10 p-4 min-h-screen flex items-center justify-center">
+            <div className="max-w-6xl mx-auto w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                {/* Left Column - Room Manager */}
+                <div className="w-full">
+                  <RoomManager
+                    roomId={roomId}
+                    setRoomId={setRoomId}
+                    playerName={playerName}
+                    setPlayerName={setPlayerName}
+                    onCreateRoom={createRoom}
+                    onJoinRoom={joinRoom}
+                    error={error}
+                    isLoading={isLoading}
+                  />
+                </div>
+                
+                {/* Right Column - Game Info */}
+                <div className="hidden md:block w-full">
+                  <div className="backdrop-casino-dark rounded-2xl p-8 border-2 border-casino-gold/30 shadow-casino-lg">
+                    <h2 className="text-3xl font-black text-casino-gold mb-6 text-center">How to Play</h2>
+                    <div className="space-y-4 text-white/90">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-casino-gold/20 flex items-center justify-center text-casino-gold font-bold">1</div>
+                        <div>
+                          <h3 className="font-semibold text-white mb-1">Create or Join a Room</h3>
+                          <p className="text-sm">Enter your name and either create a new game or join an existing one with a room code.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-casino-gold/20 flex items-center justify-center text-casino-gold font-bold">2</div>
+                        <div>
+                          <h3 className="font-semibold text-white mb-1">Wait for Opponent</h3>
+                          <p className="text-sm">Once both players are ready, Player 1 will shuffle the deck to begin the game.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-casino-gold/20 flex items-center justify-center text-casino-gold font-bold">3</div>
+                        <div>
+                          <h3 className="font-semibold text-white mb-1">Play Your Cards</h3>
+                          <p className="text-sm">Capture cards from the table, build sets, or trail cards. The player with the highest score wins!</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-8 pt-6 border-t border-casino-gold/20">
+                      <div className="grid grid-cols-2 gap-4 text-center">
+                        <div className="bg-casino-green/20 rounded-lg p-4">
+                          <div className="text-2xl font-bold text-casino-gold">52</div>
+                          <div className="text-xs text-white/70 mt-1">Cards in Deck</div>
+                        </div>
+                        <div className="bg-casino-blue/20 rounded-lg p-4">
+                          <div className="text-2xl font-bold text-casino-gold">2</div>
+                          <div className="text-xs text-white/70 mt-1">Players</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         ) : (

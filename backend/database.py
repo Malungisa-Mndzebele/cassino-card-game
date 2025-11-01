@@ -12,16 +12,24 @@ except (UnicodeDecodeError, Exception):
     # Ignore .env file errors - Fly.io uses secrets instead
     pass
 
-# Require DATABASE_URL to be set (no silent SQLite fallback)
+# Get DATABASE_URL - use SQLite for local development if not set
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL or not DATABASE_URL.strip():
-    # Log error instead of crashing immediately (helps debugging)
+    # For local development, use SQLite as fallback
     import sys
-    print("❌ ERROR: DATABASE_URL must be set in environment", file=sys.stderr)
-    print("   Check Fly.io secrets: flyctl secrets list", file=sys.stderr)
-    raise RuntimeError(
-        "DATABASE_URL must be set in environment. Check Fly.io secrets: flyctl secrets list"
-    )
+    is_local = os.getenv("ENVIRONMENT") != "production" or os.getenv("FLY_APP_NAME") is None
+    if is_local:
+        # Use SQLite for local development
+        db_path = os.path.join(os.path.dirname(__file__), "test_casino_game.db")
+        DATABASE_URL = f"sqlite:///{db_path}"
+        print(f"ℹ️  Using SQLite for local development: {DATABASE_URL}", file=sys.stderr)
+    else:
+        # In production, DATABASE_URL must be set
+        print("❌ ERROR: DATABASE_URL must be set in environment", file=sys.stderr)
+        print("   Check Fly.io secrets: flyctl secrets list", file=sys.stderr)
+        raise RuntimeError(
+            "DATABASE_URL must be set in environment. Check Fly.io secrets: flyctl secrets list"
+        )
 
 # Legacy compatibility: normalize old postgres URLs if present
 if DATABASE_URL.startswith("postgres://"):

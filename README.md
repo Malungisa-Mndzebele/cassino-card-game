@@ -11,17 +11,19 @@ npm run install:all
 
 2. **Start the Game (Dev)**
 ```bash
-# Start backend
+# Terminal 1 - Start backend
 npm run start:backend
 
-# Start frontend (in a new terminal)
-npm start
+# Terminal 2 - Start frontend (in a new terminal)
+npm run dev
 ```
 
 3. **Play the Game**
-- Open http://localhost:3000/cassino/
+- Open **http://localhost:5173/cassino/** (note the `/cassino/` path!)
 - Create a room or join with a friend
 - Have fun!
+
+**Important:** Make sure to access `/cassino/` path to match production deployment.
 
 ## 🎯 Game Rules
 

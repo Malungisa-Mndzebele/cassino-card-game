@@ -4,7 +4,7 @@
   "description": "Real-time multiplayer Cassino card game for khasinogaming.com",
   "homepage": "https://khasinogaming.com/cassino",
   "scripts": {
-    "dev": "node dev-server.js",
+    "dev": "vite --host",
     "start": "node frontend/production-server.js",
     "build": "vite build",
     "start:backend": "cd backend && python3 start_production.py",

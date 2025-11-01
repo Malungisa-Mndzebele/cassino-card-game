@@ -43,7 +43,23 @@ app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path=ROOT_PATH
 
 # Add CORS middleware
 cors_origins_str = os.getenv("CORS_ORIGINS", "*")
-cors_origins = cors_origins_str.split(",") if cors_origins_str != "*" else ["*"]
+if cors_origins_str == "*":
+    # For local development, allow common localhost ports
+    if os.getenv("ENVIRONMENT") != "production" or os.getenv("FLY_APP_NAME") is None:
+        cors_origins = [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+            "http://localhost:5173/cassino",
+            "http://127.0.0.1:5173/cassino",
+        ]
+    else:
+        cors_origins = ["*"]
+else:
+    cors_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
@@ -217,11 +233,11 @@ def assert_players_turn(room: Room, player_id: int) -> None:
 async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Create a new game room"""
     try:
-    # Generate unique room ID
-    room_id = generate_room_id()
-        # Check if room exists (may fail if tables don't exist - migrations needed)
-    while db.query(Room).filter(Room.id == room_id).first():
+        # Generate unique room ID
         room_id = generate_room_id()
+        # Check if room exists (may fail if tables don't exist - migrations needed)
+        while db.query(Room).filter(Room.id == room_id).first():
+            room_id = generate_room_id()
     except Exception as e:
         raise HTTPException(
             status_code=500,

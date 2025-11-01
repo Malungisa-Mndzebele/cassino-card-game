@@ -5,9 +5,19 @@ module.exports = {
     "./main.tsx",
     "./App.tsx",
     "./components/**/*.{js,ts,jsx,tsx}",
-    "./styles/**/*.{css}"
+    "./styles/**/*.{css}",
+    "./utils/**/*.{js,ts}",
+    "./hooks/**/*.{js,ts,tsx}"
   ],
   theme: {
+    // Ensure responsive breakpoints are included
+    screens: {
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       colors: {
         'casino-green': 'var(--casino-green)',

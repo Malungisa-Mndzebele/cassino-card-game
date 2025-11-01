@@ -165,7 +165,9 @@ export const api = {
   },
   getGameState: {
     getGameState: async (data: { room_id: string }) => {
-      return apiCall<{ game_state: GameState }>(`/rooms/${data.room_id}/state`);
+      // Note: This endpoint returns GameStateResponse directly (not wrapped)
+      // The response is converted to camelCase by apiCall
+      return apiCall<GameState>(`/rooms/${data.room_id}/state`);
     }
   },
   playCard: {
