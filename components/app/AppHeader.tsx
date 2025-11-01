@@ -1,8 +1,7 @@
 import React from 'react'
-import { Card, CardContent } from '../ui/card'
 import { Button } from '../ui/button'
-import { Separator } from '../ui/separator'
-import { Trophy, Users, Clock, Wifi, WifiOff, Star, Crown } from 'lucide-react'
+import { Badge } from '../ui/badge'
+import { LogOut, Users, Trophy } from 'lucide-react'
 
 interface AppHeaderProps {
   roomId: string
@@ -25,99 +24,68 @@ export function AppHeader({
   opponentScore,
   phase,
   round,
-  onLeave,
+  onLeave
 }: AppHeaderProps) {
   return (
-    <Card className="backdrop-blur-sm bg-white/95 shadow-2xl border-0 mb-6">
-      <CardContent className="p-6">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div className="flex items-center space-x-6">
-            <div className="relative">
-              <div className="absolute -inset-2 bg-gradient-to-r from-casino-gold via-casino-purple to-casino-blue rounded-full blur-lg opacity-50 animate-pulse-slow"></div>
-              <div className="relative backdrop-casino-dark rounded-full p-4 shadow-gold">
-                <Crown className="w-10 h-10 text-casino-gold glow-gold" />
-              </div>
-            </div>
-            <div>
-              <h1 className="text-3xl lg:text-4xl font-black text-gradient-casino mb-2">Cassino</h1>
-              <div className="flex items-center space-x-4 text-sm">
-                <span className="flex items-center backdrop-casino-dark px-3 py-1.5 rounded-full shadow-casino">
-                  <Users className="w-4 h-4 mr-2 text-casino-blue" />
-                  <span className="font-medium text-white">{roomId}</span>
-                </span>
-                <Separator orientation="vertical" className="h-4 bg-casino-gold/30" />
-                <span className="flex items-center backdrop-casino-dark px-3 py-1.5 rounded-full shadow-casino">
-                  {connectionStatus === 'connected' ? (
-                    <Wifi className="w-4 h-4 mr-2 text-casino-green-light" />
-                  ) : connectionStatus === 'connecting' ? (
-                    <Clock className="w-4 h-4 mr-2 text-casino-gold animate-spin" />
-                  ) : (
-                    <WifiOff className="w-4 h-4 mr-2 text-casino-red-light" />
-                  )}
-                  <span className="font-medium text-white">
-                    {connectionStatus === 'connected'
-                      ? 'Connected'
-                      : connectionStatus === 'connecting'
-                      ? 'Connecting...'
-                      : 'Disconnected'}
-                  </span>
-                </span>
-              </div>
+    <div className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 rounded-xl p-4 mb-4 border border-purple-500/30 shadow-lg">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        {/* Left: Room Info */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-purple-400" />
+            <span className="text-white font-mono font-bold">{roomId}</span>
+          </div>
+          <Badge className={
+            connectionStatus === 'connected' ? 'bg-green-500' :
+            connectionStatus === 'connecting' ? 'bg-yellow-500' :
+            'bg-red-500'
+          }>
+            {connectionStatus === 'connected' ? 'Connected' :
+             connectionStatus === 'connecting' ? 'Connecting...' :
+             'Disconnected'}
+          </Badge>
+        </div>
+
+        {/* Center: Scores */}
+        <div className="flex items-center gap-6">
+          <div className="text-center">
+            <div className="text-xs text-white/60 mb-1">{myName}</div>
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-yellow-400" />
+              <span className="text-2xl font-bold text-white">{myScore}</span>
             </div>
           </div>
-
-          <div className="flex items-center space-x-8">
-            <div className="text-center backdrop-casino-dark rounded-xl px-6 py-4 shadow-casino border border-casino-gold/20">
-              <div className="text-sm font-medium text-casino-gold mb-2 uppercase tracking-wider">{myName}</div>
-              <div className="flex items-center justify-center space-x-2">
-                <Trophy className="w-5 h-5 text-casino-gold" />
-                <span className="text-2xl font-black text-gradient-gold">{myScore}</span>
-                <span className="text-lg font-medium text-white/60">/11</span>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-3xl font-black text-white/30 shimmer">VS</div>
-            </div>
-
-            <div className="text-center backdrop-casino-dark rounded-xl px-6 py-4 shadow-casino border border-casino-blue/20">
-              <div className="text-sm font-medium text-casino-blue mb-2 uppercase tracking-wider">{opponentName}</div>
-              <div className="flex items-center justify-center space-x-2">
-                <Trophy className="w-5 h-5 text-casino-blue" />
-                <span className="text-2xl font-black text-gradient-casino">{opponentScore}</span>
-                <span className="text-lg font-medium text-white/60">/11</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <div className="text-right backdrop-casino-dark rounded-xl px-4 py-3 shadow-casino border border-casino-purple/20" aria-live="polite">
-              <div className="flex items-center space-x-2 mb-1">
-                <Star className="w-4 h-4 text-casino-purple glow-casino" />
-                <span className="text-sm font-medium text-white">
-                  {phase ? phase.charAt(0).toUpperCase() + phase.slice(1) : 'Waiting'}
-                </span>
-              </div>
-              {(round || 0) > 0 && (
-                <div className="text-xs text-casino-purple-light font-medium">Round {round || 0}/2</div>
-              )}
-            </div>
-            <Separator orientation="vertical" className="h-8" />
-            <div className="flex items-center space-x-2">
-              <Button
-                onClick={onLeave}
-                variant="outline"
-                size="sm"
-                className="border-casino-red/50 text-casino-red hover:bg-casino-red/10 hover:border-casino-red backdrop-casino-dark shadow-casino transition-all duration-300"
-              >
-                Leave Game
-              </Button>
+          <div className="text-white/40">vs</div>
+          <div className="text-center">
+            <div className="text-xs text-white/60 mb-1">{opponentName}</div>
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-blue-400" />
+              <span className="text-2xl font-bold text-white">{opponentScore}</span>
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Right: Leave Button */}
+        <Button
+          onClick={onLeave}
+          variant="outline"
+          size="sm"
+          className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Leave
+        </Button>
+      </div>
+
+      {/* Phase/Round Info */}
+      {(phase || round) && (
+        <div className="mt-3 pt-3 border-t border-white/10 text-center">
+          <span className="text-white/60 text-sm">
+            {phase && <span className="capitalize">{phase}</span>}
+            {round && <span> • Round {round}</span>}
+          </span>
+        </div>
+      )}
+    </div>
   )
 }
-
-
