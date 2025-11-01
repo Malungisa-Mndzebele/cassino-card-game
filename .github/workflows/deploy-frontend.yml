@@ -18,6 +18,8 @@ on:
       - 'App.tsx'
       - 'main.tsx'
       - 'package-lock.json'
+      - 'utils/**'
+      - 'hooks/**'
   workflow_dispatch:
 
 jobs:
