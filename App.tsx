@@ -8,6 +8,7 @@ import { Decor } from './components/app/Decor'
 import { WaitingInfoCard } from './components/app/WaitingInfoCard'
 import { api, useMutation, useQuery } from './apiClient'
 import { WaitingReadyCard } from './components/app/WaitingReadyCard'
+import { CasinoRoomView } from './components/CasinoRoomView'
 import type { GameState } from './apiClient'
 
 export default function App() {
@@ -228,12 +229,11 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
   useEffect(() => {
     if (!roomId) return;
 
-    // Determine WS URL
+    // Determine WS URL - use Fly.io backend for production
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const wsUrl = isLocal
       ? `ws://localhost:8000/ws/${roomId}`
-      : `${protocol}://${window.location.host}/ws/${roomId}`;
+      : `wss://cassino-game-backend.fly.dev/ws/${roomId}`;
 
     try {
       const socket = new WebSocket(wsUrl);
@@ -508,45 +508,47 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
               onLeave={disconnectGame}
             />
 
-            {/* Enhanced Waiting for Players */}
-            {gameState?.phase === 'waiting' && gameState && (
-              <>
-                {/* Debug info */}
-                <div className="fixed top-4 left-4 bg-black/80 text-white p-2 rounded text-xs z-50">
-                  Debug: Phase={gameState.phase}, Players={gameState.players?.length || 0}
-                </div>
-              </>
-            )}
-            {gameState?.phase === 'waiting' && gameState && (
-              <WaitingInfoCard
+            {/* Casino Room View - Show for both waiting and dealer phases */}
+            {(gameState?.phase === 'waiting' || gameState?.phase === 'dealer') && gameState && playerId && (
+              <CasinoRoomView
                 roomId={gameState.roomId}
                 players={(gameState.players || []).map(p => ({ id: p.id, name: p.name }))}
-                statisticsEnabled={preferences.statisticsEnabled}
-                statistics={{
-                  gamesPlayed: statistics.gamesPlayed,
-                  gamesWon: statistics.gamesWon,
-                  bestScore: statistics.bestScore,
-                }}
-              />
-            )}
-
-            {gameState?.phase === 'waiting' && playerId && (
-              <WaitingReadyCard
-                roomId={roomId}
+                player1Ready={gameState.player1Ready || false}
+                player2Ready={gameState.player2Ready || false}
                 playerId={playerId}
-                player1Ready={gameState.player1Ready}
-                player2Ready={gameState.player2Ready}
-                isPlayer1={isPlayer1()}
-                onSetReady={async (isReady: boolean) => {
-                  if (!roomId || !playerId) return
+                onPlayerReady={async () => {
+                  if (!roomId || !playerId) return;
                   try {
-                    const response = await setPlayerReadyMutation({ room_id: roomId, player_id: playerId, is_ready: isReady })
-                    if (response) setGameState(response.gameState)
+                    const response = await setPlayerReadyMutation({ 
+                      room_id: roomId, 
+                      player_id: playerId, 
+                      is_ready: true 
+                    });
+                    if (response) {
+                      setGameState(response.gameState);
+                    }
                   } catch (error: any) {
-                    console.error('Error setting player ready:', error)
-                    setError(error?.message || 'Failed to set player ready status')
+                    console.error('Error setting player ready:', error);
+                    setError(error?.message || 'Failed to set player ready status');
                   }
                 }}
+                onPlayerNotReady={async () => {
+                  if (!roomId || !playerId) return;
+                  try {
+                    const response = await setPlayerReadyMutation({ 
+                      room_id: roomId, 
+                      player_id: playerId, 
+                      is_ready: false 
+                    });
+                    if (response) {
+                      setGameState(response.gameState);
+                    }
+                  } catch (error: any) {
+                    console.error('Error setting player not ready:', error);
+                    setError(error?.message || 'Failed to set player ready status');
+                  }
+                }}
+                onStartShuffle={gameState?.phase === 'dealer' && (gameState.player1Ready && gameState.player2Ready) ? startShuffle : undefined}
               />
             )}
 

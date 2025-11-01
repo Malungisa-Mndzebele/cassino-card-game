@@ -601,7 +601,11 @@
             
             // Try WebSocket first
             try {
-                const wsUrl = `wss://khasinogaming.com/cassino/ws/${gameState.roomId}`;
+                // Use Fly.io backend WebSocket URL
+                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const wsUrl = isLocal
+                  ? `ws://localhost:8000/ws/${gameState.roomId}`
+                  : `wss://cassino-game-backend.fly.dev/ws/${gameState.roomId}`;
                 console.log('🌐 Attempting WebSocket connection to:', wsUrl);
                 
                 gameState.ws = new WebSocket(wsUrl);
