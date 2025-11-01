@@ -45,8 +45,10 @@ jobs:
       - name: Build frontend
         env:
           VITE_API_URL: https://cassino-game-backend.fly.dev
+          VITE_WS_URL: wss://cassino-game-backend.fly.dev
         run: |
           echo "Building with API URL: $VITE_API_URL"
+          echo "Building with WebSocket URL: $VITE_WS_URL"
           npm run build
           echo "✅ Build complete"
           # Verify API URL is in the build
