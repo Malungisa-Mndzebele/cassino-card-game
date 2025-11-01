@@ -310,11 +310,11 @@
     </div>
 
     <script>
-        // Centralized API base resolver to avoid const redeclarations
+        // Centralized API base resolver - kept for backward compatibility
+        // The React app uses utils/config.ts for API URLs
         function getAPI_BASE() {
             const host = window.location.hostname;
             const isLocal = host === 'localhost' || host === '127.0.0.1';
-            // Use Fly.io backend URL for production
             return isLocal ? 'http://localhost:8000' : 'https://cassino-game-backend.fly.dev';
         }
         let gameState = {
@@ -601,10 +601,10 @@
             
             // Try WebSocket first
             try {
-                // Use Fly.io backend WebSocket URL
+                // Use centralized WebSocket URL configuration
                 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                const wsUrl = isLocal
-                  ? `ws://localhost:8000/ws/${gameState.roomId}`
+                const wsUrl = isLocal 
+                  ? `ws://localhost:8000/ws/${gameState.roomId}` 
                   : `wss://cassino-game-backend.fly.dev/ws/${gameState.roomId}`;
                 console.log('🌐 Attempting WebSocket connection to:', wsUrl);
                 

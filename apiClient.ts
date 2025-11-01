@@ -2,26 +2,27 @@
 // This replaces the Convex client with HTTP calls to our Python backend
 
 import React from 'react';
+import { getApiBaseUrl } from './utils/config';
 
-// Use the backend URL for API calls
-// Production: Fly.io backend at cassino-game-backend.fly.dev
-// Development: Local backend at localhost:8000
-const API_BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-  ? 'http://localhost:8000' 
-  : 'https://cassino-game-backend.fly.dev');
+// Use centralized config for API URL
+const API_BASE_URL = getApiBaseUrl();
 
 // Check if we're in a live environment without backend
-const isLiveEnvironment = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const isLiveEnvironment = typeof window !== 'undefined' && 
+  window.location.hostname !== 'localhost' && 
+  window.location.hostname !== '127.0.0.1';
 const shouldUseMock = isLiveEnvironment && !import.meta.env.VITE_API_URL;
 
-// Log the current configuration for debugging (always log in production too)
-console.log('🔧 API Client Configuration:', {
-  hostname: window.location.hostname,
-  API_BASE_URL,
-  isLiveEnvironment,
-  shouldUseMock,
-  VITE_API_URL: import.meta.env.VITE_API_URL
-});
+// Log configuration only in development
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
+  console.log('🔧 API Client Configuration:', {
+    hostname: window.location.hostname,
+    API_BASE_URL,
+    isLiveEnvironment,
+    shouldUseMock,
+    VITE_API_URL: import.meta.env.VITE_API_URL
+  });
+}
 
 // Convert snake_case to camelCase
 function toCamelCase(obj: any): any {
@@ -45,10 +46,10 @@ function toCamelCase(obj: any): any {
 async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   
-  console.log(`🌐 API Call: ${url}`);
-  console.log(`📍 API Base URL: ${API_BASE_URL}`);
-  console.log(`📍 Endpoint: ${endpoint}`);
-  console.log(`📍 Full URL: ${url}`);
+  // Log only in development
+  if (import.meta.env.DEV) {
+    console.log(`🌐 API Call: ${url}`);
+  }
   
   try {
     const response = await fetch(url, {
@@ -61,8 +62,12 @@ async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<
 
     // Check if response is actually JSON
     const contentType = response.headers.get('content-type');
-    console.log(`📥 Response Status: ${response.status}`);
-    console.log(`📥 Content-Type: ${contentType}`);
+    
+    // Log only in development
+    if (import.meta.env.DEV) {
+      console.log(`📥 Response Status: ${response.status}`);
+      console.log(`📥 Content-Type: ${contentType}`);
+    }
 
     if (!response.ok) {
       // Try to get error message, but handle HTML responses

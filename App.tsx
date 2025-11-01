@@ -10,6 +10,7 @@ import { api, useMutation, useQuery } from './apiClient'
 import { WaitingReadyCard } from './components/app/WaitingReadyCard'
 import { CasinoRoomView } from './components/CasinoRoomView'
 import type { GameState } from './apiClient'
+import { getWebSocketUrl } from './utils/config'
 
 export default function App() {
   // Game state management
@@ -71,41 +72,14 @@ export default function App() {
     return sortedPlayers[0]?.id === playerId;
   }, [gameState, playerId]);
   
-  // const isPlayer2 = () => {
-  //   if (!gameState || !playerId) return false;
-  //   const players = gameState.players || [];
-  //   if (players.length < 2) return false;
-  //   const sortedPlayers = [...players].sort((a, b) => 
-  //     new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()
-  //   );
-  //   return sortedPlayers[1]?.id === playerId;
-  // };
-  
-  // Debug logging (dev only)
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
-    try {
-      console.debug('🔍 Connection Debug:', {
-        connectionStatus,
-        hasGameState: gameState !== null,
-        roomId,
-        isConnected,
-        gameStatePhase: gameState?.phase
-      });
-    } catch {
-      /* noop */
-    }
-  }
-
-    // Game preferences and statistics
+  // Game preferences and statistics
   const defaultPreferences = {
     soundEnabled: true,
     soundVolume: 1,
     hintsEnabled: true,
     statisticsEnabled: true
   };
-  
-  // Game preferences and statistics
-const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
+  const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
   const [statistics, updateStatistics] = useGameStatistics();
 
   // Update sound manager volume when preferences change
@@ -153,7 +127,6 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
   const setPlayerReadyMutation = useMutation(api.setPlayerReady.setPlayerReady);
   
   const joinRoom = async (targetRoomId?: string, targetPlayerName?: string) => {
-    console.log('🎯 joinRoom function called!');
     const roomToJoin = targetRoomId || roomId;
     const nameToUse = targetPlayerName || playerName;
     
@@ -229,11 +202,8 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
   useEffect(() => {
     if (!roomId) return;
 
-    // Determine WS URL - use Fly.io backend for production
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const wsUrl = isLocal
-      ? `ws://localhost:8000/ws/${roomId}`
-      : `wss://cassino-game-backend.fly.dev/ws/${roomId}`;
+    // Use centralized config for WebSocket URL
+    const wsUrl = getWebSocketUrl(roomId);
 
     try {
       const socket = new WebSocket(wsUrl);
