@@ -52,19 +52,19 @@ Score the most points by capturing cards from the table. First player to 11 poin
 ### Requirements
 - Python 3.11+
 - Node.js 18+
-- SQLite (default) or MySQL
+- SQLite (local dev) or PostgreSQL (production on Fly.io)
 
 ### Environment Setup
 ```bash
 # Backend (.env)
-# Default uses SQLite at ./test_casino_game.db
-# For MySQL in prod/staging, set DATABASE_URL like below
-DATABASE_URL=mysql+pymysql://user:pass@localhost:3306/casino_game
+# Local development uses SQLite
+DATABASE_URL=sqlite:///./test_casino_game.db
 PORT=8000
 HOST=0.0.0.0
 
 # Frontend (.env) - optional in dev
 VITE_API_URL=http://localhost:8000
+# Production: https://cassino-game-backend.fly.dev
 ```
 
 ### Testing
@@ -81,33 +81,40 @@ npm run build && npm run test:e2e
 
 ## 📦 Deployment
 
-### Production Setup (Shared Hosting)
-1. Clone repository
-2. Install dependencies: `npm run install:all`
-3. Configure backend `.env` on server (not committed):
-```
-DATABASE_URL=mysql+pymysql://<user>:<password>@localhost:3306/<db>   # URL-encode special chars
-CORS_ORIGINS=https://khasinogaming.com
-HOST=0.0.0.0
-PORT=8000
-```
-4. Start services:
+### Automated CI/CD
+
+The project uses GitHub Actions for automated deployment:
+
+- **Backend**: Automatically deploys to Fly.io on push to `main`/`master`
+- **Frontend**: Automatically deploys to `https://khasinogaming.com/cassino/` on push to `main`/`master`
+
+See [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) for setup instructions.
+
+### Backend Deployment (Fly.io)
+
+The backend is deployed on Fly.io. See [FLYIO_SETUP.md](FLYIO_SETUP.md) for complete deployment instructions.
+
+**Backend URL:** `https://cassino-game-backend.fly.dev`
+
+**Manual Deploy:**
 ```bash
-npm run start:backend  # Start backend
-npm start              # Start frontend
+flyctl deploy
+flyctl ssh console -C "cd /app && python -m alembic upgrade head"
 ```
 
-### CI/CD (GitHub Actions)
-- On push to master/main:
-  - Runs backend tests (SQLite)
-  - Runs frontend unit (Vitest) and E2E (Playwright)
-  - Builds frontend with Vite (base=/cassino/)
-  - Deploys built `dist/` + `backend/` via FTP
-  - Uses repo `.htaccess` for SPA + API proxy
+### Frontend Deployment (khasinogaming.com)
 
-### PHP Proxy
-- `backend/start.php` forwards `/cassino/{health|rooms|game|api/*}` to FastAPI at `http://localhost:8000`
-- `.htaccess` rewrites API routes to the proxy; SPA routes fall back to `index.html`
+The frontend is automatically deployed to `https://khasinogaming.com/cassino/` via FTP when you push to `main`/`master`.
+
+**Manual Deploy:**
+```bash
+npm run build
+# Then upload dist/ to your FTP server at /cassino/
+```
+
+**Configuration:**
+- Base path: `/cassino/` (configured in `vite.config.ts`)
+- API URL: `https://cassino-game-backend.fly.dev` (set automatically in build)
 
 ### API Endpoints
 - `/health` - Health check

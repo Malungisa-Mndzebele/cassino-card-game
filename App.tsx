@@ -398,27 +398,31 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
     }
   };
 
-  // Align phases: when both players ready and countdown completes, have Player 1 advance to dealing
-  useEffect(() => {
-    if (!gameState || !roomId || !playerId) return;
-    const bothReady = gameState.player1Ready && gameState.player2Ready;
-    if (bothReady && countdown === null && gameState.phase === 'dealer' && isPlayer1()) {
-      // If no explicit selection phase is used, proceed to deal
-      (async () => {
-        try {
-          const response = await api.selectFaceUpCards.selectFaceUpCards({ room_id: roomId, player_id: playerId, card_ids: [] });
-          if (response) {
-            setGameState((response as any).gameState);
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'state_update', roomId }));
-            }
-          }
-        } catch {
-          /* noop */
-        }
-      })();
+  // Manual shuffle function - called when Player 1 clicks "Shuffle the Deck"
+  const startShuffle = async () => {
+    if (!roomId || !playerId || !isPlayer1()) return;
+    try {
+      // First start the shuffle
+      const shuffleResponse = await api.startShuffle.startShuffle({ room_id: roomId, player_id: playerId });
+      if (shuffleResponse) {
+        applyResponseState(shuffleResponse);
+        notifyRoomUpdate();
+      }
+      
+      // Then proceed to select face-up cards (or deal directly)
+      const response = await api.selectFaceUpCards.selectFaceUpCards({ room_id: roomId, player_id: playerId, card_ids: [] });
+      if (response) {
+        applyResponseState(response);
+        notifyRoomUpdate();
+      }
+      setError('');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to start shuffle');
     }
-  }, [gameState, countdown, roomId, playerId, isPlayer1, ws]);
+  };
+
+  // Don't auto-start shuffle - let Player 1 click the button manually
+  // Removed auto-trigger to allow manual shuffle button click
 
   const disconnectGame = () => {
     setConnectionStatus('disconnected')
@@ -586,6 +590,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                     setError(error?.message || 'Failed to set player ready status');
                   }
                 }}
+                onStartShuffle={startShuffle}
                 preferences={preferences}
               />
             )}

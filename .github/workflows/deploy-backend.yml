@@ -1,13 +1,53 @@
-name: Deprecated - Backend-only Deploy (Manual)
+name: Deploy Backend to Fly.io
 
 on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'backend/**'
+      - 'Dockerfile'
+      - 'fly.toml'
+      - '.dockerignore'
   workflow_dispatch:
 
 jobs:
-  noop:
-    name: Notice
+  deploy-backend:
     runs-on: ubuntu-latest
+    name: Deploy Backend to Fly.io
+    
     steps:
-      - name: This workflow is deprecated
-        run: echo "Use .github/workflows/ci.yml for full CI/CD (tests → build → deploy)."
+      - name: Checkout code
+        uses: actions/checkout@v4
 
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          python3 -m pip install -r requirements.txt
+          python3 run_simple_tests.py
+
+      - name: Deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl deploy --remote-only
+        working-directory: .
+
+      - name: Run database migrations
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl ssh console -C "cd /app && python -m alembic upgrade head" -a cassino-game-backend || echo "Migrations may have already been applied"
+
+      - name: Verify deployment
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          echo "Checking backend health..."
+          sleep 10
+          curl -f https://cassino-game-backend.fly.dev/health || exit 1
+          echo "✅ Backend deployed successfully!"

@@ -18,7 +18,15 @@ def main():
     """Start the production server"""
     
     # Load environment from backend/.env (allow overrides)
-    load_dotenv(dotenv_path=backend_dir / ".env", override=True)
+    # Skip if file doesn't exist or has encoding issues (Fly.io uses secrets)
+    env_file = backend_dir / ".env"
+    try:
+        if env_file.exists():
+            load_dotenv(dotenv_path=env_file, override=True)
+    except (UnicodeDecodeError, Exception) as e:
+        # Ignore .env file errors - Fly.io uses secrets instead
+        print(f"⚠️  Warning: Could not load .env file (using Fly.io secrets instead): {e}")
+    
     os.environ.setdefault("ENVIRONMENT", "production")
     
     # Production configuration

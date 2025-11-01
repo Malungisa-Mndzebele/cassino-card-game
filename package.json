@@ -21,7 +21,10 @@
     "test:frontend": "vitest run --reporter=verbose",
     "preview": "vite preview --port 5173 --strictPort",
     "test:e2e": "playwright test",
-    "deploy:guide": "echo '📖 See DEPLOYMENT_GUIDE.md for production deployment instructions'"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:full-game": "playwright test tests/e2e/comprehensive-game.spec.ts",
+    "deploy:guide": "echo '📖 See FLYIO_SETUP.md for Fly.io deployment instructions'"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.14",

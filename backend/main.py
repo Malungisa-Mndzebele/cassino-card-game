@@ -57,7 +57,21 @@ app.add_middleware(
 # Health check endpoint
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "message": "Casino Card Game Backend is running"}
+    """Health check that doesn't require database connection"""
+    # Try to check database connection without failing
+    db_healthy = True
+    try:
+        from database import engine
+        with engine.connect() as conn:
+            pass
+    except Exception as e:
+        db_healthy = False
+    
+    return {
+        "status": "healthy" if db_healthy else "degraded",
+        "message": "Casino Card Game Backend is running",
+        "database": "connected" if db_healthy else "disconnected"
+    }
 
 # Root endpoint for API
 @app.get("/")
@@ -202,10 +216,17 @@ def assert_players_turn(room: Room, player_id: int) -> None:
 @app.post("/rooms/create", response_model=CreateRoomResponse)
 async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Create a new game room"""
-    # Generate unique room ID
-    room_id = generate_room_id()
-    while db.query(Room).filter(Room.id == room_id).first():
+    try:
+        # Generate unique room ID
         room_id = generate_room_id()
+        # Check if room exists (may fail if tables don't exist - migrations needed)
+        while db.query(Room).filter(Room.id == room_id).first():
+            room_id = generate_room_id()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {str(e)}. Please run migrations: flyctl ssh console -C 'cd /app && python -m alembic upgrade head'"
+        )
     
     # Create room
     room = Room(id=room_id)

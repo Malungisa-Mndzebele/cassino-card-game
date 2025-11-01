@@ -20,6 +20,7 @@ interface GamePhasesProps {
   onResetGame: () => void
   onPlayerReady: () => void
   onPlayerNotReady: () => void
+  onStartShuffle?: () => void
   preferences: GamePreferences
 }
 
@@ -31,6 +32,7 @@ export function GamePhases({
   onResetGame,
   onPlayerReady,
   onPlayerNotReady,
+  onStartShuffle,
   preferences
 }: GamePhasesProps) {
   const [selectedCards, setSelectedCards] = useState<string[]>([])
@@ -98,6 +100,7 @@ export function GamePhases({
         playerId={playerId}
         onPlayerReady={onPlayerReady}
         onPlayerNotReady={onPlayerNotReady}
+        onStartShuffle={onStartShuffle}
       />
     )
   }
