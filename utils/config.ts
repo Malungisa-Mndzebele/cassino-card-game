@@ -14,14 +14,19 @@ export function getApiBaseUrl(): string {
 }
 
 export function getWebSocketUrl(roomId: string): string {
+  // Check for explicit WebSocket URL in environment
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_URL) {
+    return `${import.meta.env.VITE_WS_URL}/ws/${roomId}`;
+  }
+  
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
   const isLocal = host === 'localhost' || host === '127.0.0.1';
-  const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws';
   
   if (isLocal) {
     return `ws://localhost:8000/ws/${roomId}`;
   }
   
+  // Always use Fly.io backend for production
   return `wss://cassino-game-backend.fly.dev/ws/${roomId}`;
 }
 
