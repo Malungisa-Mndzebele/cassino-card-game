@@ -1,7 +1,7 @@
 import React from 'react'
 import { Card, CardContent } from './ui/card'
 import { Badge } from './ui/badge'
-import { Crown, Users, Sparkles, Card as CardIcon } from 'lucide-react'
+import { Crown, Users, Sparkles } from 'lucide-react'
 
 interface CasinoRoomViewProps {
   roomId: string
@@ -138,19 +138,19 @@ export function CasinoRoomView({
                   <div className="relative">
                     <div className="absolute -inset-2 bg-casino-gold/20 rounded-lg blur-md animate-pulse"></div>
                     <div className="relative bg-gradient-to-br from-red-600 to-red-800 rounded-lg w-16 h-24 border-2 border-white/30 shadow-lg flex items-center justify-center">
-                      <CardIcon className="w-8 h-8 text-white" />
+                      <span className="text-3xl">🃏</span>
                     </div>
                   </div>
                   <div className="relative">
                     <div className="absolute -inset-2 bg-casino-blue/20 rounded-lg blur-md animate-pulse" style={{ animationDelay: '0.2s' }}></div>
                     <div className="relative bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg w-16 h-24 border-2 border-white/30 shadow-lg flex items-center justify-center">
-                      <CardIcon className="w-8 h-8 text-white" />
+                      <span className="text-3xl">🃏</span>
                     </div>
                   </div>
                   <div className="relative">
                     <div className="absolute -inset-2 bg-casino-purple/20 rounded-lg blur-md animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                     <div className="relative bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg w-16 h-24 border-2 border-white/30 shadow-lg flex items-center justify-center">
-                      <CardIcon className="w-8 h-8 text-white" />
+                      <span className="text-3xl">🃏</span>
                     </div>
                   </div>
                 </div>
