@@ -212,7 +212,7 @@ export function RoomManager({
                           placeholder="Enter 6-character code"
                           className="flex-1 py-3 border-gray-300 focus:border-blue-500 focus:ring-blue-500 font-mono"
                           maxLength={6}
-                          inputMode="latin-prose"
+                          inputMode="text"
                           autoComplete="off"
                           autoCorrect="off"
                           spellCheck={false}

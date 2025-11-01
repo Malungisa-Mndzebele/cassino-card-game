@@ -66,7 +66,7 @@ async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<
 
     if (!response.ok) {
       // Try to get error message, but handle HTML responses
-      let errorData = {};
+      let errorData: any = {};
       if (contentType && contentType.includes('application/json')) {
         errorData = await response.json().catch(() => ({}));
       } else {
@@ -74,7 +74,7 @@ async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<
         console.error(`❌ Non-JSON error response: ${text.substring(0, 200)}`);
         throw new Error(`HTTP ${response.status}: Server returned HTML instead of JSON. Check if backend URL is correct: ${url}`);
       }
-      throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData?.detail || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     // Verify response is JSON before parsing
