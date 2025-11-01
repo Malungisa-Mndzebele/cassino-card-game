@@ -217,11 +217,11 @@ def assert_players_turn(room: Room, player_id: int) -> None:
 async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Create a new game room"""
     try:
-        # Generate unique room ID
-        room_id = generate_room_id()
+    # Generate unique room ID
+    room_id = generate_room_id()
         # Check if room exists (may fail if tables don't exist - migrations needed)
-        while db.query(Room).filter(Room.id == room_id).first():
-            room_id = generate_room_id()
+    while db.query(Room).filter(Room.id == room_id).first():
+        room_id = generate_room_id()
     except Exception as e:
         raise HTTPException(
             status_code=500,

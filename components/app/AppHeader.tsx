@@ -34,7 +34,7 @@ export function AppHeader({
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-purple-400" />
             <span className="text-white font-mono font-bold">{roomId}</span>
-          </div>
+              </div>
           <Badge className={
             connectionStatus === 'connected' ? 'bg-green-500' :
             connectionStatus === 'connecting' ? 'bg-yellow-500' :
@@ -44,7 +44,7 @@ export function AppHeader({
              connectionStatus === 'connecting' ? 'Connecting...' :
              'Disconnected'}
           </Badge>
-        </div>
+          </div>
 
         {/* Center: Scores */}
         <div className="flex items-center gap-6">
@@ -53,29 +53,29 @@ export function AppHeader({
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-yellow-400" />
               <span className="text-2xl font-bold text-white">{myScore}</span>
+              </div>
             </div>
-          </div>
           <div className="text-white/40">vs</div>
-          <div className="text-center">
+            <div className="text-center">
             <div className="text-xs text-white/60 mb-1">{opponentName}</div>
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-blue-400" />
               <span className="text-2xl font-bold text-white">{opponentScore}</span>
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Right: Leave Button */}
-        <Button
-          onClick={onLeave}
-          variant="outline"
-          size="sm"
+              <Button
+                onClick={onLeave}
+                variant="outline"
+                size="sm"
           className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-        >
+              >
           <LogOut className="w-4 h-4 mr-2" />
           Leave
-        </Button>
-      </div>
+              </Button>
+            </div>
 
       {/* Phase/Round Info */}
       {(phase || round) && (
@@ -84,8 +84,8 @@ export function AppHeader({
             {phase && <span className="capitalize">{phase}</span>}
             {round && <span> • Round {round}</span>}
           </span>
-        </div>
+          </div>
       )}
-    </div>
+        </div>
   )
 }

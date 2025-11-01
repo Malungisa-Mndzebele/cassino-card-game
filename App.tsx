@@ -69,15 +69,15 @@ export default function App() {
     // First player (by join time) is player 1
     return sortedPlayers[0]?.id === playerId;
   }, [gameState, playerId]);
-  
-  // Game preferences and statistics
+
+    // Game preferences and statistics
   const defaultPreferences = {
     soundEnabled: true,
     soundVolume: 1,
     hintsEnabled: true,
     statisticsEnabled: true
   };
-  const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
+const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
   const [statistics, updateStatistics] = useGameStatistics();
 
   // Update sound manager volume when preferences change
@@ -378,15 +378,15 @@ export default function App() {
       }
       
       // Then proceed to select face-up cards (or deal directly)
-      const response = await api.selectFaceUpCards.selectFaceUpCards({ room_id: roomId, player_id: playerId, card_ids: [] });
-      if (response) {
+          const response = await api.selectFaceUpCards.selectFaceUpCards({ room_id: roomId, player_id: playerId, card_ids: [] });
+          if (response) {
         applyResponseState(response);
         notifyRoomUpdate();
       }
       setError('');
     } catch (e: any) {
       setError(e?.message || 'Failed to start shuffle');
-    }
+            }
   };
 
   // Don't auto-start shuffle - let Player 1 click the button manually
