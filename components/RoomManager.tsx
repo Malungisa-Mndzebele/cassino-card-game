@@ -35,7 +35,7 @@ export function RoomManager({
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-purple-500/30 shadow-2xl">
+    <Card className="w-full max-w-md mx-auto bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-purple-500/30 shadow-2xl" data-testid="room-manager">
       <CardHeader className="text-center pb-4">
         <div className="flex justify-center items-center mb-4">
           <div className="relative">
@@ -61,6 +61,7 @@ export function RoomManager({
             placeholder="Enter your name"
             className="bg-slate-700/50 border-slate-600 text-white placeholder:text-white/50"
             disabled={isLoading}
+            data-testid="player-name-input-create-test"
             onKeyDown={(e) => e.key === 'Enter' && playerName.trim() && !showJoinForm && onCreateRoom()}
           />
         </div>
@@ -71,6 +72,7 @@ export function RoomManager({
               onClick={onCreateRoom}
               disabled={!playerName.trim() || isLoading}
               className="w-full h-12 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold text-lg"
+              data-testid="create-room-test"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -99,6 +101,7 @@ export function RoomManager({
               disabled={!playerName.trim() || isLoading}
               variant="outline"
               className="w-full h-12 border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+              data-testid="show-join-form-test"
             >
               <Users className="w-5 h-5 mr-2" />
               Join Existing Game
@@ -117,6 +120,7 @@ export function RoomManager({
                 className="bg-slate-700/50 border-slate-600 text-white placeholder:text-white/50 font-mono"
                 maxLength={6}
                 disabled={isLoading}
+                data-testid="room-id-input-test"
                 onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
               />
             </div>
@@ -133,6 +137,7 @@ export function RoomManager({
                 onClick={handleJoin}
                 disabled={!playerName.trim() || !roomId.trim() || isLoading}
                 className="flex-1 h-12 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold"
+                data-testid="join-room-submit-test"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">

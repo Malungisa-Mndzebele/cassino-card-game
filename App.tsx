@@ -417,7 +417,7 @@ export default function App() {
         <Decor visible={!isConnected} />
 
         {/* Global Settings - Always Available */}
-        <div className="absolute top-4 right-4 z-50" data-testid="game-settings">
+        <div className="absolute top-4 right-4 z-50">
           <GameSettings
             preferences={preferences}
             onPreferencesChange={setPreferences}

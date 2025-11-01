@@ -70,12 +70,12 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" aria-label="Open settings">
+        <Button variant="outline" size="sm" aria-label="Open settings" data-testid="game-settings">
           <Settings className="h-4 w-4 mr-1" />
           Settings
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" data-testid="game-settings-dialog">
         <DialogHeader>
           <DialogTitle>Game Settings</DialogTitle>
           <Button 
