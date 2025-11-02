@@ -239,9 +239,27 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
         throw new Error("Failed to join random room");
       }
       
-      const joinedRoomId = (response as any).gameState?.roomId || (response as any).gameState?.room_id;
-      setRoomId(joinedRoomId || '');
-      setPlayerId((response as any).playerId);
+      // Extract room ID from response - response structure is { player_id, game_state }
+      // apiCall converts snake_case to camelCase, so it's { playerId, gameState }
+      const joinedRoomId = (response as any).gameState?.roomId || 
+                          (response as any).gameState?.room_id ||
+                          (response as any).game_state?.roomId ||
+                          (response as any).game_state?.room_id;
+      
+      console.log('🔍 Extracted room ID:', {
+        joinedRoomId,
+        responseStructure: Object.keys(response || {}),
+        gameStateStructure: Object.keys((response as any)?.gameState || {}),
+        gameStateRoomId: (response as any)?.gameState?.roomId,
+        gameStateRoom_id: (response as any)?.gameState?.room_id
+      });
+      
+      if (!joinedRoomId) {
+        throw new Error("Failed to extract room ID from join random response");
+      }
+      
+      setRoomId(joinedRoomId);
+      setPlayerId((response as any).playerId || (response as any).player_id);
       applyResponseState(response);
       setConnectionStatus('connected');
        
@@ -392,13 +410,32 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
         console.log('🔄 Game state updated from API:', {
           phase: state?.phase,
           players: state?.players?.length || 0,
-          roomId: state?.roomId
+          roomId: state?.roomId,
+          player1Hand: state?.player1Hand?.length || 0,
+          player2Hand: state?.player2Hand?.length || 0,
+          tableCards: state?.tableCards?.length || 0
         });
       }
       applyResponseState(gameStateData);
       setConnectionStatus('connected');
     }
   }, [gameStateData, roomId, applyResponseState, extractGameState]);
+
+  // Debug log for poker table view rendering
+  useEffect(() => {
+    if (gameState && (gameState.phase === 'round1' || gameState.phase === 'round2')) {
+      if (import.meta.env.DEV) {
+        console.log('🎮 Poker Table View should be rendering', {
+          phase: gameState.phase,
+          playerId,
+          players: gameState.players?.length || 0,
+          player1Hand: gameState.player1Hand?.length || 0,
+          player2Hand: gameState.player2Hand?.length || 0,
+          tableCards: gameState.tableCards?.length || 0
+        });
+      }
+    }
+  }, [gameState, playerId]);
 
   // useQuery handles polling automatically
 

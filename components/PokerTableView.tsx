@@ -24,10 +24,30 @@ export function PokerTableView({
   onPlayCard,
   onLeave
 }: PokerTableViewProps) {
+  // Validate we have required data
+  if (!gameState || !playerId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-950 via-amber-900 to-amber-950">
+        <div className="text-white">Loading game state...</div>
+      </div>
+    )
+  }
+
+  // Ensure we have players
+  if (!gameState.players || gameState.players.length < 2) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-950 via-amber-900 to-amber-950">
+        <div className="text-white">Waiting for players...</div>
+      </div>
+    )
+  }
+
   // Determine which player we are - sort players by joined_at to get consistent player1/player2
-  const sortedPlayers = [...(gameState.players || [])].sort((a, b) => 
-    new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()
-  )
+  const sortedPlayers = [...(gameState.players || [])].sort((a, b) => {
+    const aTime = a.joined_at ? new Date(a.joined_at).getTime() : 0
+    const bTime = b.joined_at ? new Date(b.joined_at).getTime() : 0
+    return aTime - bTime
+  })
   const player1Model = sortedPlayers[0]
   const player2Model = sortedPlayers[1]
   
@@ -65,7 +85,7 @@ export function PokerTableView({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-950 via-amber-900 to-amber-950 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-amber-950 via-amber-900 to-amber-950 relative overflow-hidden" data-testid="poker-table-view">
       {/* Leave Button - Top Right */}
       {onLeave && (
         <div className="absolute top-4 right-4 z-50">
@@ -124,7 +144,7 @@ export function PokerTableView({
             </div>
 
             {/* DEALER Label - Top Center */}
-            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30">
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30" data-testid="dealer-label">
               <div className="bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-3 rounded-lg shadow-lg border-2 border-yellow-300">
                 <div className="text-amber-900 font-black text-xl tracking-wider">DEALER</div>
               </div>
@@ -147,9 +167,9 @@ export function PokerTableView({
             </div>
 
             {/* COMMUNITY CARDS Label and Area - Center */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20" data-testid="community-cards-area">
               <div className="text-center mb-4">
-                <div className="inline-block bg-gradient-to-br from-yellow-400/90 via-yellow-500/90 to-yellow-600/90 px-6 py-2 rounded-lg backdrop-blur-sm border border-yellow-300/50 shadow-lg">
+                <div className="inline-block bg-gradient-to-br from-yellow-400/90 via-yellow-500/90 to-yellow-600/90 px-6 py-2 rounded-lg backdrop-blur-sm border border-yellow-300/50 shadow-lg" data-testid="community-cards-label">
                   <div className="text-amber-900 font-black text-base tracking-wider">COMMUNITY CARDS</div>
                 </div>
               </div>

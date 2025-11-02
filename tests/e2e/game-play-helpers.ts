@@ -34,6 +34,25 @@ export async function waitForPhase(page: Page, phase: string, timeout = 10000): 
     
     const indicators = phaseIndicators[phase] || [phase]
     
+    // Special handling for round1/round2 - check for poker table view
+    if (phase === 'round1' || phase === 'round2') {
+      const pokerTableElements = [
+        page.getByText(/COMMUNITY CARDS/i),
+        page.getByText(/DEALER/i),
+        page.getByText(/BURN PILE/i),
+        page.getByText(/Round \d+/i),
+        page.getByText(/Your Turn|Your turn/i)
+      ]
+      
+      for (const element of pokerTableElements) {
+        const found = await element.first().isVisible({ timeout: 1000 }).catch(() => false)
+        if (found) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          return true
+        }
+      }
+    }
+    
     for (const indicator of indicators) {
       try {
         const element = page.getByText(new RegExp(indicator, 'i')).first()
@@ -408,6 +427,32 @@ export async function playCardAction(
   // Wait for game actions to be visible
   await new Promise(resolve => setTimeout(resolve, 1000))
   
+  // Check if we're in poker table view (round1/round2) or game actions view
+  const pokerTableView = await page.getByText(/COMMUNITY CARDS|DEALER|BURN PILE/i).first().isVisible().catch(() => false)
+  
+  if (pokerTableView) {
+    // In poker table view - cards are clickable directly
+    // Find player hand cards (face-up cards with glow effect)
+    const handCards = page.locator('.card, [role="button"]').filter({ hasText: /[A-Z0-9]/ }).first()
+    const cardVisible = await handCards.isVisible().catch(() => false)
+    
+    if (!cardVisible) {
+      // Try to find cards by their structure in poker view
+      const pokerCards = page.locator('div').filter({ hasText: /A|K|Q|J|10|[2-9]/ }).first()
+      await pokerCards.click().catch(() => {
+        console.warn('No clickable cards found in poker table view')
+      })
+      await new Promise(resolve => setTimeout(resolve, 500))
+      return // Cards in poker view auto-play on click (trail action)
+    }
+    
+    // Click on a card (automatically plays as trail)
+    await handCards.click()
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    return
+  }
+  
+  // Legacy game actions view
   // Find player hand cards
   const handCards = page.locator('[data-testid*="hand"] .card, .card').first()
   const cardVisible = await handCards.isVisible().catch(() => false)

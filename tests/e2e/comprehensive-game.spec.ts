@@ -92,8 +92,11 @@ test.describe('Comprehensive Game Flow E2E Test', () => {
       }
       
       // Verify we're now in a game phase (not waiting)
-      const player1InGame = player1InRound || await player1Page.getByText(/round|card|score/i).first().isVisible({ timeout: 5000 }).catch(() => false)
-      const player2InGame = player2InRound || await player2Page.getByText(/round|card|score/i).first().isVisible({ timeout: 5000 }).catch(() => false)
+      // Check for poker table view or traditional game view
+      const player1InPokerView = await player1Page.getByText(/COMMUNITY CARDS|DEALER|BURN PILE/i).first().isVisible({ timeout: 3000 }).catch(() => false)
+      const player2InPokerView = await player2Page.getByText(/COMMUNITY CARDS|DEALER|BURN PILE/i).first().isVisible({ timeout: 3000 }).catch(() => false)
+      const player1InGame = player1InRound || player1InPokerView || await player1Page.getByText(/round|card|score/i).first().isVisible({ timeout: 5000 }).catch(() => false)
+      const player2InGame = player2InRound || player2InPokerView || await player2Page.getByText(/round|card|score/i).first().isVisible({ timeout: 5000 }).catch(() => false)
       
       expect(player1InGame || player2InGame).toBeTruthy()
       console.log('✅ Moved to gameplay phase')

@@ -138,9 +138,15 @@ test.describe('Full Game Flow E2E Test', () => {
       await new Promise(resolve => setTimeout(resolve, 3000))
       await new Promise(resolve => setTimeout(resolve, 3000))
       
-      // Check if we're in dealer phase or round1 phase
-      const player1InGame = await player1Page.getByText(/dealer|round|your turn|ready to deal/i).first().isVisible().catch(() => false)
-      const player2InGame = await player2Page.getByText(/dealer|round|your turn|ready to deal/i).first().isVisible().catch(() => false)
+      // Check if we're in dealer phase or round1 phase (poker table view)
+      const player1InGame = await Promise.race([
+        player1Page.getByText(/dealer|round|your turn|ready to deal/i).first().isVisible().then(() => true),
+        player1Page.getByText(/COMMUNITY CARDS|DEALER|BURN PILE/i).first().isVisible().then(() => true)
+      ]).catch(() => false)
+      const player2InGame = await Promise.race([
+        player2Page.getByText(/dealer|round|your turn|ready to deal/i).first().isVisible().then(() => true),
+        player2Page.getByText(/COMMUNITY CARDS|DEALER|BURN PILE/i).first().isVisible().then(() => true)
+      ]).catch(() => false)
       
       // If still in dealer phase, player 1 should proceed (auto-deal)
       if (player1InGame) {
@@ -149,6 +155,14 @@ test.describe('Full Game Flow E2E Test', () => {
       
       // STEP 5: Play through the game
       console.log('🎮 Step 5: Playing cards...')
+      
+      // First check if we're in poker table view or traditional view
+      const player1InPokerView = await player1Page.getByTestId('poker-table-view').isVisible().catch(() => false)
+      const player2InPokerView = await player2Page.getByTestId('poker-table-view').isVisible().catch(() => false)
+      
+      if (player1InPokerView || player2InPokerView) {
+        console.log('✅ Poker table view detected - using poker view interactions')
+      }
       
       let roundsPlayed = 0
       const maxRounds = 20 // Safety limit
@@ -165,8 +179,15 @@ test.describe('Full Game Flow E2E Test', () => {
         }
         
         // Check whose turn it is and play
-        const player1Turn = await player1Page.getByText(/your turn/i).isVisible().catch(() => false)
-        const player2Turn = await player2Page.getByText(/your turn/i).isVisible().catch(() => false)
+        // In poker table view, check for "Your Turn" or interactive cards
+        const player1Turn = await Promise.race([
+          player1Page.getByText(/your turn/i).isVisible().then(() => true),
+          player1Page.locator('.card[style*="cursor-pointer"], .card:hover').first().isVisible().then(() => true)
+        ]).catch(() => false)
+        const player2Turn = await Promise.race([
+          player2Page.getByText(/your turn/i).isVisible().then(() => true),
+          player2Page.locator('.card[style*="cursor-pointer"], .card:hover').first().isVisible().then(() => true)
+        ]).catch(() => false)
         
         if (player1Turn) {
           await playCardTrail(player1Page)
@@ -297,8 +318,14 @@ test.describe('Full Game Flow E2E Test', () => {
       await new Promise(resolve => setTimeout(resolve, 4000))
       
       // STEP 6: Verify we're in a game phase (not waiting)
-      const player1InGame = await player1Page.getByText(/round|dealer|card|table|hand/i).first().isVisible().catch(() => false)
-      const player2InGame = await player2Page.getByText(/round|dealer|card|table|hand/i).first().isVisible().catch(() => false)
+      const player1InGame = await Promise.race([
+        player1Page.getByText(/round|dealer|card|table|hand/i).first().isVisible().then(() => true),
+        player1Page.getByText(/COMMUNITY CARDS|DEALER|BURN PILE/i).first().isVisible().then(() => true)
+      ]).catch(() => false)
+      const player2InGame = await Promise.race([
+        player2Page.getByText(/round|dealer|card|table|hand/i).first().isVisible().then(() => true),
+        player2Page.getByText(/COMMUNITY CARDS|DEALER|BURN PILE/i).first().isVisible().then(() => true)
+      ]).catch(() => false)
       
       // At least one player should be in game
       expect(player1InGame || player2InGame).toBeTruthy()

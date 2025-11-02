@@ -22,8 +22,24 @@ test.describe('Smoke Tests', () => {
     expect(bodyText).toBeTruthy()
     expect(bodyText!.length).toBeGreaterThan(0)
     
-    // Check if we see game-related content
-    const hasGameContent = await page.getByText(/casino|cassino|game|create|join/i).first().isVisible({ timeout: 5000 }).catch(() => false)
+    // Check if we see game-related content - try multiple selectors
+    const gameContentSelectors = [
+      page.getByText(/casino|cassino/i),
+      page.getByText(/game/i),
+      page.getByText(/create/i),
+      page.getByText(/join/i)
+    ]
+    
+    let hasGameContent = false
+    for (const selector of gameContentSelectors) {
+      try {
+        hasGameContent = await selector.first().isVisible({ timeout: 3000 })
+        if (hasGameContent) break
+      } catch {
+        // Continue to next selector
+      }
+    }
+    
     expect(hasGameContent).toBeTruthy()
     
     // Take a screenshot for debugging
