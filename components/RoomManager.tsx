@@ -3,7 +3,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-import { Crown, Users, PlayCircle } from 'lucide-react'
+import { Crown, Users, PlayCircle, Shuffle } from 'lucide-react'
 
 interface RoomManagerProps {
   roomId: string
@@ -12,6 +12,7 @@ interface RoomManagerProps {
   setPlayerName: (name: string) => void
   onCreateRoom: () => void
   onJoinRoom: (roomId: string, playerName: string) => void
+  onJoinRandomRoom?: () => void
   error: string
   isLoading: boolean
 }
@@ -23,6 +24,7 @@ export function RoomManager({
   setPlayerName,
   onCreateRoom,
   onJoinRoom,
+  onJoinRandomRoom,
   error,
   isLoading
 }: RoomManagerProps) {
@@ -96,6 +98,29 @@ export function RoomManager({
               </div>
             </div>
 
+            {/* Join Random Game Button */}
+            {onJoinRandomRoom && (
+              <Button
+                onClick={onJoinRandomRoom}
+                disabled={!playerName.trim() || isLoading}
+                variant="outline"
+                className="w-full h-12 border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                data-testid="join-random-game-test"
+              >
+                <Shuffle className="w-5 h-5 mr-2" />
+                Join Random Game
+              </Button>
+            )}
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/20" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-slate-800 px-2 text-white/60">or</span>
+              </div>
+            </div>
+
             <Button
               onClick={() => setShowJoinForm(true)}
               disabled={!playerName.trim() || isLoading}
@@ -104,7 +129,7 @@ export function RoomManager({
               data-testid="show-join-form-test"
             >
               <Users className="w-5 h-5 mr-2" />
-              Join Existing Game
+              Join with Code
             </Button>
           </div>
         ) : (

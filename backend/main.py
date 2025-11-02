@@ -11,7 +11,7 @@ from datetime import datetime
 from database import get_db, engine
 from models import Base, Room, Player, GameSession
 from schemas import (
-    CreateRoomRequest, JoinRoomRequest, SetPlayerReadyRequest,
+    CreateRoomRequest, JoinRoomRequest, JoinRandomRoomRequest, SetPlayerReadyRequest,
     PlayCardRequest, StartShuffleRequest, SelectFaceUpCardsRequest,
     CreateRoomResponse, JoinRoomResponse, StandardResponse, GameStateResponse, PlayerResponse
 )
@@ -301,6 +301,70 @@ async def join_room(request: JoinRoomRequest, db: Session = Depends(get_db), cli
     # Create player with IP address
     player = Player(
         room_id=request.room_id, 
+        name=request.player_name,
+        ip_address=request.ip_address or client_ip
+    )
+    db.add(player)
+    db.commit()
+    db.refresh(player)
+    
+    return JoinRoomResponse(
+        player_id=player.id,
+        game_state=game_state_to_response(room)
+    )
+
+@app.post("/rooms/join-random", response_model=JoinRoomResponse)
+async def join_random_room(request: JoinRandomRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
+    """Join a random available game room"""
+    # Find rooms that are in waiting phase and have space (less than 2 players)
+    available_rooms = db.query(Room).filter(
+        Room.game_phase == "waiting"
+    ).all()
+    
+    # Filter rooms that have space (less than 2 players)
+    rooms_with_space = [room for room in available_rooms if len(room.players) < 2]
+    
+    # If no rooms available, create a new one
+    if not rooms_with_space:
+        # Generate unique room ID
+        room_id = generate_room_id()
+        while db.query(Room).filter(Room.id == room_id).first():
+            room_id = generate_room_id()
+        
+        # Create new room
+        room = Room(id=room_id)
+        room.deck = []
+        room.player1_hand = []
+        room.player2_hand = []
+        room.table_cards = []
+        room.builds = []
+        room.player1_captured = []
+        room.player2_captured = []
+        room.player1_score = 0
+        room.player2_score = 0
+        room.player1_ready = False
+        room.player2_ready = False
+        room.game_phase = "waiting"
+        room.round_number = 0
+        room.current_turn = 1
+        db.add(room)
+        db.commit()
+        db.refresh(room)
+    else:
+        # Pick a random room from available rooms
+        room = random.choice(rooms_with_space)
+    
+    # Check if player name already exists in room
+    existing_player = db.query(Player).filter(
+        Player.room_id == room.id,
+        Player.name == request.player_name
+    ).first()
+    if existing_player:
+        raise HTTPException(status_code=400, detail="Player name already taken in this room")
+    
+    # Create player with IP address
+    player = Player(
+        room_id=room.id, 
         name=request.player_name,
         ip_address=request.ip_address or client_ip
     )

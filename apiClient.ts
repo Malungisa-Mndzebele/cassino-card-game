@@ -155,6 +155,14 @@ export const api = {
       });
     }
   },
+  joinRandomRoom: {
+    joinRandomRoom: async (data: { player_name: string }) => {
+      return apiCall<{ player_id: number; game_state: GameState }>('/rooms/join-random', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    }
+  },
   setPlayerReady: {
     setPlayerReady: async (data: { room_id: string; player_id: number; is_ready: boolean }) => {
       return apiCall<{ success: boolean; message: string; game_state: GameState }>('/rooms/player-ready', {

@@ -12,6 +12,10 @@ class JoinRoomRequest(BaseModel):
     player_name: str
     ip_address: Optional[str] = None
 
+class JoinRandomRoomRequest(BaseModel):
+    player_name: str
+    ip_address: Optional[str] = None
+
 class SetPlayerReadyRequest(BaseModel):
     room_id: str
     player_id: int

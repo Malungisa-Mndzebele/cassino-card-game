@@ -7,6 +7,7 @@ import { AppHeader } from './components/app/AppHeader'
 import { Decor } from './components/app/Decor'
 import { api, useMutation, useQuery } from './apiClient'
 import { CasinoRoomView } from './components/CasinoRoomView'
+import { PokerTableView } from './components/PokerTableView'
 import type { GameState } from './apiClient'
 import { getWebSocketUrl } from './utils/config'
 
@@ -131,6 +132,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
   };
 
   const joinRoomMutation = useMutation(api.joinRoom.joinRoom);
+  const joinRandomRoomMutation = useMutation(api.joinRandomRoom.joinRandomRoom);
   const setPlayerReadyMutation = useMutation(api.setPlayerReady.setPlayerReady);
   
   const joinRoom = async (targetRoomId?: string, targetPlayerName?: string) => {
@@ -195,6 +197,71 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
         message: error.message,
         stack: error.stack,
         roomId: roomToJoin,
+        playerName: nameToUse
+      });
+      const errorMsg = error?.message || String(error);
+      setError(errorMsg);
+      setConnectionStatus('disconnected');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const joinRandomRoom = async (targetPlayerName?: string) => {
+    const nameToUse = targetPlayerName || playerName;
+    
+    console.log('🎲 Joining random room:', { nameToUse });
+    
+    // Add defensive checks
+    if (!nameToUse || typeof nameToUse !== 'string') {
+      setError('Please enter a valid player name');
+      return;
+    }
+    
+    if (!nameToUse.trim()) {
+      setError('Please enter your player name');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError('');
+    try {
+      setConnectionStatus('connecting');
+      
+      // Use the random room join API mutation
+      const response = await joinRandomRoomMutation({ 
+        player_name: nameToUse.trim() 
+      });
+      
+      console.log('✅ Join random room response:', response);
+      
+      if (!response) {
+        throw new Error("Failed to join random room");
+      }
+      
+      const joinedRoomId = (response as any).gameState?.roomId || (response as any).gameState?.room_id;
+      setRoomId(joinedRoomId || '');
+      setPlayerId((response as any).playerId);
+      applyResponseState(response);
+      setConnectionStatus('connected');
+       
+      console.log('🎯 State after random join:', {
+        roomId: joinedRoomId,
+        playerId: (response as any).playerId,
+        gameState: (response as any).gameState,
+        connectionStatus: 'connected'
+      });
+      
+      console.log('🎯 Updated game state:', {
+        phase: (response as any).gameState?.phase,
+        players: (response as any).gameState?.players?.length || 0,
+        shouldShowDealer: (response as any).gameState?.phase === 'dealer'
+      });
+    } catch (error: any) {
+      console.error("❌ Error joining random room:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
         playerName: nameToUse
       });
       const errorMsg = error?.message || String(error);
@@ -468,6 +535,7 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                     setPlayerName={setPlayerName}
                     onCreateRoom={createRoom}
                     onJoinRoom={joinRoom}
+                    onJoinRandomRoom={() => joinRandomRoom(playerName)}
                     error={error}
                     isLoading={isLoading}
                   />
@@ -521,111 +589,136 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
           <>
             <Decor visible={true} />
 
-            <div className="relative z-10 p-4">
-              <div className="max-w-6xl mx-auto">
-            {/* Header */}
-            <AppHeader
-              roomId={gameState?.roomId || ''}
-              connectionStatus={connectionStatus}
-              myName={myName}
-              opponentName={opponentName}
-              myScore={myScore}
-              opponentScore={opponentScore}
-              phase={gameState?.phase}
-              round={gameState?.round}
-              onLeave={disconnectGame}
-            />
+            {/* Header - Hide during gameplay (round1/round2) for immersive experience */}
+            {gameState?.phase !== 'round1' && gameState?.phase !== 'round2' && (
+              <div className="relative z-10 p-4">
+                <div className="max-w-6xl mx-auto">
+                  <AppHeader
+                    roomId={gameState?.roomId || ''}
+                    connectionStatus={connectionStatus}
+                    myName={myName}
+                    opponentName={opponentName}
+                    myScore={myScore}
+                    opponentScore={opponentScore}
+                    phase={gameState?.phase}
+                    round={gameState?.round}
+                    onLeave={disconnectGame}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Casino Room View - Show for both waiting and dealer phases */}
             {(gameState?.phase === 'waiting' || gameState?.phase === 'dealer') && gameState && playerId && (
-              <CasinoRoomView
-                roomId={gameState.roomId}
-                players={(gameState.players || []).map(p => ({ id: p.id, name: p.name }))}
-                player1Ready={gameState.player1Ready || false}
-                player2Ready={gameState.player2Ready || false}
+              <div className="relative z-10 p-4">
+                <div className="max-w-6xl mx-auto">
+                  <CasinoRoomView
+                    roomId={gameState.roomId}
+                    players={(gameState.players || []).map(p => ({ id: p.id, name: p.name }))}
+                    player1Ready={gameState.player1Ready || false}
+                    player2Ready={gameState.player2Ready || false}
+                    playerId={playerId}
+                    onPlayerReady={async () => {
+                      if (!roomId || !playerId) return;
+                      try {
+                        const response = await setPlayerReadyMutation({ 
+                          room_id: roomId, 
+                          player_id: playerId, 
+                          is_ready: true 
+                        });
+                        if (response) {
+                          setGameState(response.gameState);
+                        }
+                      } catch (error: any) {
+                        console.error('Error setting player ready:', error);
+                        setError(error?.message || 'Failed to set player ready status');
+                      }
+                    }}
+                    onPlayerNotReady={async () => {
+                      if (!roomId || !playerId) return;
+                      try {
+                        const response = await setPlayerReadyMutation({ 
+                          room_id: roomId, 
+                          player_id: playerId, 
+                          is_ready: false 
+                        });
+                        if (response) {
+                          setGameState(response.gameState);
+                        }
+                      } catch (error: any) {
+                        console.error('Error setting player not ready:', error);
+                        setError(error?.message || 'Failed to set player ready status');
+                      }
+                    }}
+                    onStartShuffle={gameState?.phase === 'dealer' && (gameState.player1Ready && gameState.player2Ready) ? startShuffle : undefined}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Poker Table View - For round1 and round2 phases - Full screen immersive experience */}
+            {(gameState?.phase === 'round1' || gameState?.phase === 'round2') && gameState && playerId && (
+              <PokerTableView
+                gameState={gameState}
                 playerId={playerId}
-                onPlayerReady={async () => {
-                  if (!roomId || !playerId) return;
-                  try {
-                    const response = await setPlayerReadyMutation({ 
-                      room_id: roomId, 
-                      player_id: playerId, 
-                      is_ready: true 
-                    });
-                    if (response) {
-                      setGameState(response.gameState);
-                    }
-                  } catch (error: any) {
-                    console.error('Error setting player ready:', error);
-                    setError(error?.message || 'Failed to set player ready status');
-                  }
-                }}
-                onPlayerNotReady={async () => {
-                  if (!roomId || !playerId) return;
-                  try {
-                    const response = await setPlayerReadyMutation({ 
-                      room_id: roomId, 
-                      player_id: playerId, 
-                      is_ready: false 
-                    });
-                    if (response) {
-                      setGameState(response.gameState);
-                    }
-                  } catch (error: any) {
-                    console.error('Error setting player not ready:', error);
-                    setError(error?.message || 'Failed to set player ready status');
-                  }
-                }}
-                onStartShuffle={gameState?.phase === 'dealer' && (gameState.player1Ready && gameState.player2Ready) ? startShuffle : undefined}
+                onPlayCard={playCard}
+                onLeave={disconnectGame}
               />
             )}
 
-            {/* Game Phases */}
-            {gameState?.phase && gameState.phase !== 'waiting' && playerId && (
-              <GamePhases
-                gameState={gameState}
-                playerId={playerId}
-                onSelectFaceUpCards={selectFaceUpCards}
-                onPlayCard={playCard}
-                onResetGame={resetGame}
-                onPlayerReady={async () => {
-                  if (!roomId || !playerId) return;
-                  try {
-                    const response = await setPlayerReadyMutation({ 
-                       room_id: roomId, 
-                       player_id: playerId, 
-                       is_ready: true 
-                    });
-                    if (response) {
-                      setGameState(response.gameState);
-                    }
-                  } catch (error: any) {
-                    console.error('Error setting player ready:', error);
-                    setError(error?.message || 'Failed to set player ready status');
-                  }
-                }}
-                onPlayerNotReady={async () => {
-                  if (!roomId || !playerId) return;
-                  try {
-                    const response = await setPlayerReadyMutation({ 
-                       room_id: roomId, 
-                       player_id: playerId, 
-                       is_ready: false 
-                    });
-                    if (response) {
-                      setGameState(response.gameState);
-                    }
-                  } catch (error: any) {
-                    console.error('Error setting player not ready:', error);
-                    setError(error?.message || 'Failed to set player ready status');
-                  }
-                }}
-                onStartShuffle={startShuffle}
-                preferences={preferences}
-              />
-            )}
+            {/* Game Phases - For other phases like cardSelection, dealing, finished */}
+            {gameState?.phase && 
+             gameState.phase !== 'waiting' && 
+             gameState.phase !== 'dealer' &&
+             gameState.phase !== 'round1' && 
+             gameState.phase !== 'round2' && 
+             playerId && (
+              <div className="relative z-10 p-4">
+                <div className="max-w-6xl mx-auto">
+                  <GamePhases
+                    gameState={gameState}
+                    playerId={playerId}
+                    onSelectFaceUpCards={selectFaceUpCards}
+                    onPlayCard={playCard}
+                    onResetGame={resetGame}
+                    onPlayerReady={async () => {
+                      if (!roomId || !playerId) return;
+                      try {
+                        const response = await setPlayerReadyMutation({ 
+                           room_id: roomId, 
+                           player_id: playerId, 
+                           is_ready: true 
+                        });
+                        if (response) {
+                          setGameState(response.gameState);
+                        }
+                      } catch (error: any) {
+                        console.error('Error setting player ready:', error);
+                        setError(error?.message || 'Failed to set player ready status');
+                      }
+                    }}
+                    onPlayerNotReady={async () => {
+                      if (!roomId || !playerId) return;
+                      try {
+                        const response = await setPlayerReadyMutation({ 
+                           room_id: roomId, 
+                           player_id: playerId, 
+                           is_ready: false 
+                        });
+                        if (response) {
+                          setGameState(response.gameState);
+                        }
+                      } catch (error: any) {
+                        console.error('Error setting player not ready:', error);
+                        setError(error?.message || 'Failed to set player ready status');
+                      }
+                    }}
+                    onStartShuffle={startShuffle}
+                    preferences={preferences}
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
       </div>
