@@ -407,6 +407,9 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: Session = Depends
         room.game_phase = "dealer"
         db.commit()
     
+    # Broadcast game state update to all connected clients
+    await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
+    
     return StandardResponse(
         success=True,
         message="Player ready status updated",
@@ -421,6 +424,9 @@ async def start_shuffle(request: StartShuffleRequest, db: Session = Depends(get_
     room.shuffle_complete = True
     room.game_phase = "dealer"
     db.commit()
+    
+    # Broadcast game state update to all connected clients
+    await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
     
     return StandardResponse(
         success=True,
@@ -456,6 +462,9 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: Session = 
     room.dealing_complete = True
     
     db.commit()
+    
+    # Broadcast game state update to all connected clients
+    await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
     
     return StandardResponse(
         success=True,
@@ -605,6 +614,9 @@ async def play_card(request: PlayCardRequest, db: Session = Depends(get_db)):
         room.current_turn = 2 if room.current_turn == 1 else 1
     
     db.commit()
+    
+    # Broadcast game state update to all connected clients
+    await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
     
     return StandardResponse(
         success=True,
