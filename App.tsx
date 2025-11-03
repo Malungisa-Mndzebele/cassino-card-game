@@ -31,20 +31,54 @@ export default function App() {
   // Helpers to normalize API responses and broadcast updates
   const extractGameState = useCallback((payload: any): GameState | null => {
     if (!payload) return null;
-    // Check if payload is wrapped in game_state/gameState
-    if ((payload as any).gameState) return (payload as any).gameState as GameState;
-    if ((payload as any).game_state) return (payload as any).game_state as GameState;
-    if ((payload as any).data?.gameState) return (payload as any).data.gameState as GameState;
-    if ((payload as any).data?.game_state) return (payload as any).data.game_state as GameState;
-    // Check if payload IS a game state (has roomId/room_id and phase)
-    if ((payload as any).roomId || (payload as any).room_id) {
-      // This is a direct game state response, convert it to GameState format
-      const state = payload as any;
-      if (state.phase !== undefined || state.players !== undefined) {
-        return state as GameState;
-      }
+    
+    // Helper to extract nested game state
+    let state: any = null;
+    if ((payload as any).gameState) state = (payload as any).gameState;
+    else if ((payload as any).game_state) state = (payload as any).game_state;
+    else if ((payload as any).data?.gameState) state = (payload as any).data.gameState;
+    else if ((payload as any).data?.game_state) state = (payload as any).data.game_state;
+    else if ((payload as any).roomId || (payload as any).room_id) {
+      // This is a direct game state response
+      state = payload;
     }
-    return null;
+    
+    if (!state || (!state.phase && !state.players)) return null;
+    
+    // Ensure all fields are properly mapped, especially player1Ready/player2Ready
+    // The API returns player1_ready/player2_ready which should be converted to player1Ready/player2Ready by toCamelCase
+    // But we need to handle both cases (snake_case and camelCase) for robustness
+    const gameState: GameState = {
+      roomId: state.roomId || state.room_id || '',
+      players: state.players || [],
+      phase: state.phase || 'waiting',
+      round: state.round || 0,
+      deck: state.deck || [],
+      player1Hand: state.player1Hand || state.player1_hand || [],
+      player2Hand: state.player2Hand || state.player2_hand || [],
+      tableCards: state.tableCards || state.table_cards || [],
+      builds: state.builds || [],
+      player1Captured: state.player1Captured || state.player1_captured || [],
+      player2Captured: state.player2Captured || state.player2_captured || [],
+      player1Score: state.player1Score ?? state.player1_score ?? 0,
+      player2Score: state.player2Score ?? state.player2_score ?? 0,
+      currentTurn: state.currentTurn ?? state.current_turn ?? 1,
+      cardSelectionComplete: state.cardSelectionComplete ?? state.card_selection_complete ?? false,
+      shuffleComplete: state.shuffleComplete ?? state.shuffle_complete ?? false,
+      countdownStartTime: state.countdownStartTime || state.countdown_start_time || null,
+      gameStarted: state.gameStarted ?? state.game_started ?? false,
+      lastPlay: state.lastPlay || state.last_play || null,
+      lastAction: state.lastAction || state.last_action || null,
+      lastUpdate: state.lastUpdate || state.last_update || new Date().toISOString(),
+      gameCompleted: state.gameCompleted ?? state.game_completed ?? false,
+      winner: state.winner ?? null,
+      dealingComplete: state.dealingComplete ?? state.dealing_complete ?? false,
+      player1Ready: state.player1Ready ?? state.player1_ready ?? false,
+      player2Ready: state.player2Ready ?? state.player2_ready ?? false,
+      countdownRemaining: state.countdownRemaining ?? state.countdown_remaining ?? null,
+    };
+    
+    return gameState;
   }, []);
 
   const applyResponseState = useCallback((payload: any) => {
