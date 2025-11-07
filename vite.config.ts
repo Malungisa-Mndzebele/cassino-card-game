@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/cassino/',
+  base: '/',  // FTP deploys to /cassino/ directory, so base should be /
   server: {
     port: 5173,
     strictPort: true,
