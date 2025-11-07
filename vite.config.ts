@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/',  // FTP deploys to /cassino/ directory, so base should be /
+  base: '/cassino/',  // Deploy to root, vite adds /cassino/ to paths
   server: {
     port: 5173,
     strictPort: true,
