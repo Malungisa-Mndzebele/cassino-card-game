@@ -1,3 +1,8 @@
+/**
+ * Casino Card Game - Main Application
+ * Version: 1.0.0
+ * Production deployment with comprehensive test coverage
+ */
 import { useState, useEffect } from 'react'
 import { GamePhases } from './components/GamePhases'
 import { RoomManager } from './components/RoomManager'
