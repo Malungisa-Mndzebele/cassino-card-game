@@ -196,3 +196,14 @@ backup_*
 # Kubernetes secrets
 k8s-secrets/
 *.yaml.secret
+# Test ou
+tput files
+test-results/
+test-results.json
+test-results.txt
+test-output.txt
+test-final.txt
+final-test-run.txt
+complete-final-results.txt
+*.png
+playwright-report/
