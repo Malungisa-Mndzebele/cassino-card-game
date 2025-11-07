@@ -31,7 +31,7 @@ test('landing renders and shows actions', async ({ page }) => {
     page.getByText(/Join with Code/i),
     page.getByText(/Join Random Game/i),
     page.getByText(/Join.*Game|Join Existing Game/i),
-    page.getByTestId('join-random-game-test'),
+    page.getByTestId('join-random-room-test'),
     page.getByTestId('show-join-form-test')
   ]
   

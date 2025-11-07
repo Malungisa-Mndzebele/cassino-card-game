@@ -1,449 +1,125 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { GamePhases } from './components/GamePhases'
 import { RoomManager } from './components/RoomManager'
 import { GameSettings, useGamePreferences, useGameStatistics } from './components/GameSettings'
 import { SoundSystem, soundManager } from './components/SoundSystem'
 import { AppHeader } from './components/app/AppHeader'
 import { Decor } from './components/app/Decor'
-import { api, useMutation, useQuery } from './apiClient'
+import { api, useQuery } from './apiClient'
 import { CasinoRoomView } from './components/CasinoRoomView'
 import { PokerTableView } from './components/PokerTableView'
-import type { GameState } from './apiClient'
-import { getWebSocketUrl } from './utils/config'
+
+// Custom hooks
+import { useGameState } from './hooks/useGameState'
+import { useConnectionState } from './hooks/useConnectionState'
+import { useWebSocket } from './hooks/useWebSocket'
+import { useGameActions } from './hooks/useGameActions'
+import { useRoomActions } from './hooks/useRoomActions'
 
 export default function App() {
-  // Game state management
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
-  const [previousGameState, setPreviousGameState] = useState<GameState | null>(null);
-  const [playerId, setPlayerId] = useState<number | null>(null);
-  const [roomId, setRoomId] = useState<string>('');
-  const [playerName, setPlayerName] = useState<string>('');
+  // Custom hooks for state management
+  const gameStateHook = useGameState()
+  const connectionHook = useConnectionState()
   
-  // UI state
-  const [error, setError] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [soundReady, setSoundReady] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected');
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  // Countdown state (kept local as it's UI-specific)
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null)
 
-  // Helpers to normalize API responses and broadcast updates
-  const extractGameState = useCallback((payload: any): GameState | null => {
-    if (!payload) return null;
-    
-    // Helper to extract nested game state
-    let state: any = null;
-    if ((payload as any).gameState) state = (payload as any).gameState;
-    else if ((payload as any).game_state) state = (payload as any).game_state;
-    else if ((payload as any).data?.gameState) state = (payload as any).data.gameState;
-    else if ((payload as any).data?.game_state) state = (payload as any).data.game_state;
-    else if ((payload as any).roomId || (payload as any).room_id) {
-      // This is a direct game state response
-      state = payload;
-    }
-    
-    if (!state || (!state.phase && !state.players)) return null;
-    
-    // Ensure all fields are properly mapped, especially player1Ready/player2Ready
-    // The API returns player1_ready/player2_ready which should be converted to player1Ready/player2Ready by toCamelCase
-    // But we need to handle both cases (snake_case and camelCase) for robustness
-    const gameState: GameState = {
-      roomId: state.roomId || state.room_id || '',
-      players: state.players || [],
-      phase: state.phase || 'waiting',
-      round: state.round || 0,
-      deck: state.deck || [],
-      player1Hand: state.player1Hand || state.player1_hand || [],
-      player2Hand: state.player2Hand || state.player2_hand || [],
-      tableCards: state.tableCards || state.table_cards || [],
-      builds: state.builds || [],
-      player1Captured: state.player1Captured || state.player1_captured || [],
-      player2Captured: state.player2Captured || state.player2_captured || [],
-      player1Score: state.player1Score ?? state.player1_score ?? 0,
-      player2Score: state.player2Score ?? state.player2_score ?? 0,
-      currentTurn: state.currentTurn ?? state.current_turn ?? 1,
-      cardSelectionComplete: state.cardSelectionComplete ?? state.card_selection_complete ?? false,
-      shuffleComplete: state.shuffleComplete ?? state.shuffle_complete ?? false,
-      countdownStartTime: state.countdownStartTime || state.countdown_start_time || null,
-      gameStarted: state.gameStarted ?? state.game_started ?? false,
-      lastPlay: state.lastPlay || state.last_play || null,
-      lastAction: state.lastAction || state.last_action || null,
-      lastUpdate: state.lastUpdate || state.last_update || new Date().toISOString(),
-      gameCompleted: state.gameCompleted ?? state.game_completed ?? false,
-      winner: state.winner ?? null,
-      dealingComplete: state.dealingComplete ?? state.dealing_complete ?? false,
-      player1Ready: state.player1Ready ?? state.player1_ready ?? false,
-      player2Ready: state.player2Ready ?? state.player2_ready ?? false,
-      countdownRemaining: state.countdownRemaining ?? state.countdown_remaining ?? null,
-    };
-    
-    return gameState;
-  }, []);
+  // WebSocket hook
+  const { notifyRoomUpdate } = useWebSocket({
+    roomId: gameStateHook.roomId,
+    ws: connectionHook.ws,
+    setWs: connectionHook.setWs,
+    setConnectionStatus: connectionHook.setConnectionStatus,
+    applyResponseState: gameStateHook.applyResponseState
+  })
 
-  const applyResponseState = useCallback((payload: any) => {
-    const next = extractGameState(payload);
-    if (next) setGameState(next);
-  }, [extractGameState]);
+  // Game actions hook
+  const gameActions = useGameActions({
+    roomId: gameStateHook.roomId,
+    playerId: gameStateHook.playerId,
+    applyResponseState: gameStateHook.applyResponseState,
+    notifyRoomUpdate,
+    setError: connectionHook.setError,
+    extractGameState: gameStateHook.extractGameState,
+    setGameState: gameStateHook.setGameState,
+    setPreviousGameState: gameStateHook.setPreviousGameState
+  })
 
-  const notifyRoomUpdate = useCallback(() => {
-    try {
-      if (ws && ws.readyState === WebSocket.OPEN && roomId) {
-        ws.send(JSON.stringify({ type: 'state_update', roomId }));
-      }
-    } catch {
-      /* noop */
-    }
-  }, [ws, roomId]);
+  // Room actions hook
+  const roomActions = useRoomActions({
+    playerName: gameStateHook.playerName,
+    setRoomId: gameStateHook.setRoomId,
+    setPlayerId: gameStateHook.setPlayerId,
+    applyResponseState: gameStateHook.applyResponseState,
+    setConnectionStatus: connectionHook.setConnectionStatus,
+    setError: connectionHook.setError,
+    setIsLoading: connectionHook.setIsLoading
+  })
 
-  // Derive connection state from connection status and game state
-  const isConnected = connectionStatus === 'connected' && gameState !== null && roomId !== '';
-  
-  // Helper function to determine if current player is player 1 or 2
-  const isPlayer1 = useCallback(() => {
-    if (!gameState || !playerId) return false;
-    const players = gameState.players || [];
-    if (players.length === 0) return false;
-    
-    // Sort players by joined_at to determine order
-    const sortedPlayers = [...players].sort((a, b) => 
-      new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()
-    );
-    
-    // First player (by join time) is player 1
-    return sortedPlayers[0]?.id === playerId;
-  }, [gameState, playerId]);
+  // Derive connection state
+  const isConnected = connectionHook.connectionStatus === 'connected' && 
+                     gameStateHook.gameState !== null && 
+                     gameStateHook.roomId !== ''
 
-    // Game preferences and statistics
+  // Game preferences and statistics
   const defaultPreferences = {
     soundEnabled: true,
     soundVolume: 1,
     hintsEnabled: true,
     statisticsEnabled: true
-  };
-const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
-  const [statistics, updateStatistics] = useGameStatistics();
+  }
+  const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
+  const [statistics, updateStatistics] = useGameStatistics()
 
   // Update sound manager volume when preferences change
   useEffect(() => {
-    if (soundReady) {
+    if (connectionHook.soundReady) {
       soundManager.setMasterVolume(preferences.soundEnabled ? preferences.soundVolume : 0)
     }
-  }, [preferences.soundEnabled, preferences.soundVolume, soundReady])
+  }, [preferences.soundEnabled, preferences.soundVolume, connectionHook.soundReady])
 
-  // Room creation and joining
-  const createRoomMutation = useMutation(api.createRoom.createRoom);
-  const createRoom = async () => {
-    if (!playerName) {
-      setError("Please enter your name");
-      return;
-    }
-    
-    setIsLoading(true);
-    setError("");
-    try {
-      setConnectionStatus('connecting');
-      
-             // Use the API mutation
-      const response = await createRoomMutation({ player_name: playerName });
-      
-      if (!response) {
-        throw new Error("Failed to create room");
-      }
-      
-      setRoomId((response as any).roomId);
-      setPlayerId((response as any).playerId);
-      applyResponseState(response);
-      setConnectionStatus('connected');
-    } catch (error: any) {
-      console.error("Error creating room:", error);
-      const errorMsg = error?.message || String(error);
-      setError(errorMsg);
-      setConnectionStatus('disconnected');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Real-time game state subscription
+  const gameStateData = useQuery(
+    api.getGameState.getGameState, 
+    gameStateHook.roomId && gameStateHook.roomId.trim() && gameStateHook.roomId.length > 0 && 
+    gameStateHook.roomId !== '' && gameStateHook.playerId ? 
+    { room_id: gameStateHook.roomId } : "skip"
+  )
 
-  const joinRoomMutation = useMutation(api.joinRoom.joinRoom);
-  const joinRandomRoomMutation = useMutation(api.joinRandomRoom.joinRandomRoom);
-  const setPlayerReadyMutation = useMutation(api.setPlayerReady.setPlayerReady);
-  
-  const joinRoom = async (targetRoomId?: string, targetPlayerName?: string) => {
-    const roomToJoin = targetRoomId || roomId;
-    const nameToUse = targetPlayerName || playerName;
-    
-    console.log('🚀 Joining room:', { roomToJoin, nameToUse });
-    
-    // Add defensive checks
-    if (!roomToJoin || typeof roomToJoin !== 'string') {
-      setError('Please enter a valid room ID');
-      return;
-    }
-    
-    if (!nameToUse || typeof nameToUse !== 'string') {
-      setError('Please enter a valid player name');
-      return;
-    }
-    
-    if (!roomToJoin.trim() || !nameToUse.trim()) {
-      setError('Please enter room ID and player name');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError('');
-    try {
-      setConnectionStatus('connecting');
-      
-             // Use the actual API mutation
-      const response = await joinRoomMutation({ 
-        room_id: roomToJoin.trim(), 
-        player_name: nameToUse.trim() 
-      });
-      
-      console.log('✅ Join room response:', response);
-      
-      if (!response) {
-        throw new Error("Failed to join room");
-      }
-      
-      setRoomId(roomToJoin.trim());
-      setPlayerId((response as any).playerId);
-      applyResponseState(response);
-      setConnectionStatus('connected');
-       
-       console.log('🎯 State after join:', {
-         roomId: roomToJoin.trim(),
-         playerId: (response as any).playerId,
-         gameState: (response as any).gameState,
-         connectionStatus: 'connected'
-       });
-      
-      console.log('🎯 Updated game state:', {
-        phase: (response as any).gameState.phase,
-        players: (response as any).gameState.players?.length || 0,
-        shouldShowDealer: (response as any).gameState.phase === 'dealer'
-      });
-    } catch (error: any) {
-      console.error("❌ Error joining room:", error);
-      console.error("Error details:", {
-        message: error.message,
-        stack: error.stack,
-        roomId: roomToJoin,
-        playerName: nameToUse
-      });
-      const errorMsg = error?.message || String(error);
-      setError(errorMsg);
-      setConnectionStatus('disconnected');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const joinRandomRoom = async (targetPlayerName?: string) => {
-    const nameToUse = targetPlayerName || playerName;
-    
-    console.log('🎲 Joining random room:', { nameToUse });
-    
-    // Add defensive checks
-    if (!nameToUse || typeof nameToUse !== 'string') {
-      setError('Please enter a valid player name');
-      return;
-    }
-    
-    if (!nameToUse.trim()) {
-      setError('Please enter your player name');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError('');
-    try {
-      setConnectionStatus('connecting');
-      
-      // Use the random room join API mutation
-      const response = await joinRandomRoomMutation({ 
-        player_name: nameToUse.trim() 
-      });
-      
-      console.log('✅ Join random room response:', response);
-      
-      if (!response) {
-        throw new Error("Failed to join random room");
-      }
-      
-      // Extract room ID from response - response structure is { player_id, game_state }
-      // apiCall converts snake_case to camelCase, so it's { playerId, gameState }
-      const joinedRoomId = (response as any).gameState?.roomId || 
-                          (response as any).gameState?.room_id ||
-                          (response as any).game_state?.roomId ||
-                          (response as any).game_state?.room_id;
-      
-      console.log('🔍 Extracted room ID:', {
-        joinedRoomId,
-        responseStructure: Object.keys(response || {}),
-        gameStateStructure: Object.keys((response as any)?.gameState || {}),
-        gameStateRoomId: (response as any)?.gameState?.roomId,
-        gameStateRoom_id: (response as any)?.gameState?.room_id
-      });
-      
-      if (!joinedRoomId) {
-        throw new Error("Failed to extract room ID from join random response");
-      }
-      
-      setRoomId(joinedRoomId);
-      setPlayerId((response as any).playerId || (response as any).player_id);
-      applyResponseState(response);
-      setConnectionStatus('connected');
-       
-      console.log('🎯 State after random join:', {
-        roomId: joinedRoomId,
-        playerId: (response as any).playerId,
-        gameState: (response as any).gameState,
-        connectionStatus: 'connected'
-      });
-      
-      console.log('🎯 Updated game state:', {
-        phase: (response as any).gameState?.phase,
-        players: (response as any).gameState?.players?.length || 0,
-        shouldShowDealer: (response as any).gameState?.phase === 'dealer'
-      });
-    } catch (error: any) {
-      console.error("❌ Error joining random room:", error);
-      console.error("Error details:", {
-        message: error.message,
-        stack: error.stack,
-        playerName: nameToUse
-      });
-      const errorMsg = error?.message || String(error);
-      setError(errorMsg);
-      setConnectionStatus('disconnected');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // WebSocket: connect when we have a roomId; receive notifications and refresh state
+  // Update local game state when API data changes
   useEffect(() => {
-    if (!roomId) return;
-
-    // Use centralized config for WebSocket URL
-    const wsUrl = getWebSocketUrl(roomId);
-    
-    if (import.meta.env.DEV) {
-      console.log('🔌 Attempting WebSocket connection to:', wsUrl);
+    if (gameStateData && gameStateHook.roomId) {
+      const state = gameStateHook.extractGameState(gameStateData)
+      if (import.meta.env.DEV) {
+        console.log('🔄 Game state updated from API:', {
+          phase: state?.phase,
+          players: state?.players?.length || 0,
+          roomId: state?.roomId,
+          player1Hand: state?.player1Hand?.length || 0,
+          player2Hand: state?.player2Hand?.length || 0,
+          tableCards: state?.tableCards?.length || 0
+        })
+      }
+      gameStateHook.applyResponseState(gameStateData)
+      connectionHook.setConnectionStatus('connected')
     }
-
-    let socket: WebSocket | null = null;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
-    let isConnecting = false;
-    
-    const connectWebSocket = () => {
-      if (isConnecting || !roomId) return;
-      isConnecting = true;
-      
-      try {
-        socket = new WebSocket(wsUrl);
-        setWs(socket);
-
-        socket.onopen = () => {
-          if (import.meta.env.DEV) {
-            console.log('✅ WebSocket connected successfully');
-          }
-          isConnecting = false;
-          setConnectionStatus('connected');
-          // Clear any reconnect timeout
-          if (reconnectTimeout) {
-            clearTimeout(reconnectTimeout);
-            reconnectTimeout = null;
-          }
-        };
-
-        socket.onmessage = async (event) => {
-          try {
-            if (!roomId) return;
-            if (import.meta.env.DEV) {
-              console.log('📨 WebSocket message received');
-            }
-            const res = await api.getGameState.getGameState({ room_id: roomId });
-            applyResponseState(res);
-          } catch (error) {
-            if (import.meta.env.DEV) {
-              console.error('❌ Error processing WebSocket message:', error);
-            }
-          }
-        };
-
-        socket.onerror = (error) => {
-          if (import.meta.env.DEV) {
-            console.error('⚠️ WebSocket error, falling back to polling:', error);
-          }
-          isConnecting = false;
-          setConnectionStatus('connected'); // Still connected via polling
-        };
-
-        socket.onclose = (event) => {
-          if (import.meta.env.DEV) {
-            console.log('🔌 WebSocket closed, falling back to polling', {
-              code: event.code,
-              reason: event.reason,
-              wasClean: event.wasClean
-            });
-          }
-          setWs(null);
-          isConnecting = false;
-          
-          // Only attempt to reconnect if close was unexpected (not a clean close)
-          // Don't reconnect if the user disconnected or roomId changed
-          if (event.code !== 1000 && roomId) {
-            // Wait 3 seconds before attempting reconnect
-            reconnectTimeout = setTimeout(() => {
-              if (roomId) {
-                connectWebSocket();
-              }
-            }, 3000);
-          }
-        };
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error('❌ Error creating WebSocket:', error);
-        }
-        isConnecting = false;
-        setConnectionStatus('connected'); // Still connected via polling
-      }
-    };
-    
-    connectWebSocket();
-
-    return () => {
-      isConnecting = false;
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-      }
-      if (socket) {
-        try {
-          socket.close(1000, 'Component unmounting');
-        } catch {
-          /* noop */
-        }
-      }
-      setWs(null);
-    };
-  }, [roomId, applyResponseState]);
+  }, [gameStateData, gameStateHook.roomId, gameStateHook.applyResponseState, gameStateHook.extractGameState, connectionHook.setConnectionStatus])
 
   // Track game state changes for statistics and sound effects
   useEffect(() => {
-    if (!gameState || !previousGameState || !preferences.statisticsEnabled) {
-      setPreviousGameState(gameState)
+    if (!gameStateHook.gameState || !gameStateHook.previousGameState || !preferences.statisticsEnabled) {
+      gameStateHook.setPreviousGameState(gameStateHook.gameState)
       return
     }
 
     // Game finished - update statistics
-    if (gameState.phase === 'finished' && previousGameState.phase !== 'finished' && playerId) {
-      const myScore = isPlayer1() ? gameState.player1Score : gameState.player2Score
-      const isWinner = gameState.winner === playerId
-      const isTie = gameState.winner === null || gameState.winner === 0
+    if (gameStateHook.gameState.phase === 'finished' && 
+        gameStateHook.previousGameState.phase !== 'finished' && 
+        gameStateHook.playerId) {
+      const myScore = gameStateHook.isPlayer1() ? gameStateHook.gameState.player1Score : gameStateHook.gameState.player2Score
+      const isWinner = gameStateHook.gameState.winner === gameStateHook.playerId
+      const isTie = gameStateHook.gameState.winner === null || gameStateHook.gameState.winner === 0
 
       updateStatistics({
         gamesPlayed: statistics.gamesPlayed + 1,
@@ -456,185 +132,73 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
       })
 
       // Play game end sound
-      if (preferences.soundEnabled && soundReady) {
+      if (preferences.soundEnabled && connectionHook.soundReady) {
         soundManager.playSound('gameEnd')
       }
     }
 
     // Game started - play start sound
-    if (gameState.phase === 'round1' && previousGameState.phase !== 'round1') {
-      if (preferences.soundEnabled && soundReady) {
+    if (gameStateHook.gameState.phase === 'round1' && gameStateHook.previousGameState.phase !== 'round1') {
+      if (preferences.soundEnabled && connectionHook.soundReady) {
         soundManager.playSound('gameStart')
       }
     }
 
-    setPreviousGameState(gameState)
-  }, [gameState, previousGameState, playerId, preferences.statisticsEnabled, preferences.soundEnabled, soundReady, statistics, updateStatistics, isPlayer1])
+    gameStateHook.setPreviousGameState(gameStateHook.gameState)
+  }, [gameStateHook.gameState, gameStateHook.previousGameState, gameStateHook.playerId, gameStateHook.isPlayer1, gameStateHook.setPreviousGameState, preferences.statisticsEnabled, preferences.soundEnabled, connectionHook.soundReady, statistics, updateStatistics])
 
   // Countdown effect when both players are ready
   useEffect(() => {
-    if (gameState && gameState.player1Ready && gameState.player2Ready && countdown === null) {
-      console.log('🎯 Both players ready, starting countdown!');
-      setCountdown(10);
+    if (gameStateHook.gameState && 
+        gameStateHook.gameState.player1Ready && 
+        gameStateHook.gameState.player2Ready && 
+        countdown === null) {
+      console.log('🎯 Both players ready, starting countdown!')
+      setCountdown(10)
       
       const interval = setInterval(() => {
         setCountdown((prev) => {
           if (prev === null || prev <= 1) {
-            clearInterval(interval);
-            setCountdownInterval(null);
-            return null;
+            clearInterval(interval)
+            setCountdownInterval(null)
+            return null
           }
-          return prev - 1;
-        });
-      }, 1000);
+          return prev - 1
+        })
+      }, 1000)
       
-      setCountdownInterval(interval);
+      setCountdownInterval(interval)
     }
     
     // Cleanup interval on unmount or when game state changes
     return () => {
       if (countdownInterval) {
-        clearInterval(countdownInterval);
-        setCountdownInterval(null);
+        clearInterval(countdownInterval)
+        setCountdownInterval(null)
       }
-    };
-  }, [gameState, countdown, countdownInterval]);
-
-     // No polling needed - using real-time API subscription instead
-
-  // Real-time game state subscription - only when we have a valid roomId AND we're actually in the game
-  const gameStateData = useQuery(
-    api.getGameState.getGameState, 
-    roomId && roomId.trim() && roomId.length > 0 && roomId !== '' && playerId ? { room_id: roomId } : "skip"
-  );
-  
-  // Update local game state when API data changes
-  useEffect(() => {
-    if (gameStateData && roomId) {
-      // getGameState returns GameState directly (not wrapped)
-      const state = extractGameState(gameStateData);
-      if (import.meta.env.DEV) {
-        console.log('🔄 Game state updated from API:', {
-          phase: state?.phase,
-          players: state?.players?.length || 0,
-          roomId: state?.roomId,
-          player1Hand: state?.player1Hand?.length || 0,
-          player2Hand: state?.player2Hand?.length || 0,
-          tableCards: state?.tableCards?.length || 0
-        });
-      }
-      applyResponseState(gameStateData);
-      setConnectionStatus('connected');
     }
-  }, [gameStateData, roomId, applyResponseState, extractGameState]);
+  }, [gameStateHook.gameState, countdown, countdownInterval])
 
   // Debug log for poker table view rendering
   useEffect(() => {
-    if (gameState && (gameState.phase === 'round1' || gameState.phase === 'round2')) {
+    if (gameStateHook.gameState && 
+        (gameStateHook.gameState.phase === 'round1' || gameStateHook.gameState.phase === 'round2')) {
       if (import.meta.env.DEV) {
         console.log('🎮 Poker Table View should be rendering', {
-          phase: gameState.phase,
-          playerId,
-          players: gameState.players?.length || 0,
-          player1Hand: gameState.player1Hand?.length || 0,
-          player2Hand: gameState.player2Hand?.length || 0,
-          tableCards: gameState.tableCards?.length || 0
-        });
+          phase: gameStateHook.gameState.phase,
+          playerId: gameStateHook.playerId,
+          players: gameStateHook.gameState.players?.length || 0,
+          player1Hand: gameStateHook.gameState.player1Hand?.length || 0,
+          player2Hand: gameStateHook.gameState.player2Hand?.length || 0,
+          tableCards: gameStateHook.gameState.tableCards?.length || 0
+        })
       }
     }
-  }, [gameState, playerId]);
-
-  // useQuery handles polling automatically
-
-  // startShuffle is not used in current flow; leave implementation commented to avoid unused warnings
-
-  const selectFaceUpCards = async (cardIds: string[]) => {
-    if (!roomId || !playerId) return;
-    try {
-      const response = await api.selectFaceUpCards.selectFaceUpCards({ room_id: roomId, player_id: playerId, card_ids: cardIds || [] });
-      if (response) {
-        applyResponseState(response);
-        notifyRoomUpdate();
-      }
-      setError('');
-    } catch (e: any) {
-      setError(e?.message || 'Failed to select face-up cards');
-    }
-  };
-
-  const playCard = async (cardId: string, action: string, targetCards?: string[], buildValue?: number) => {
-    if (!roomId || !playerId) return;
-    try {
-      const response = await api.playCard.playCard({ room_id: roomId, player_id: playerId, card_id: cardId, action, target_cards: targetCards, build_value: buildValue });
-      if (response) {
-        applyResponseState(response);
-        notifyRoomUpdate();
-      }
-      setError('');
-    } catch (e: any) {
-      setError(e?.message || 'Failed to play card');
-    }
-  };
-
-  const resetGame = async () => {
-    if (!roomId) return;
-    try {
-      const response = await api.resetGame.resetGame({ room_id: roomId });
-      const next = extractGameState(response);
-      setGameState(next || null);
-      setPreviousGameState(null);
-      notifyRoomUpdate();
-      setError('');
-    } catch (e: any) {
-      setError(e?.message || 'Failed to reset game');
-    }
-  };
-
-  // Manual shuffle function - called when Player 1 clicks "Shuffle the Deck"
-  const startShuffle = async () => {
-    if (!roomId || !playerId || !isPlayer1()) return;
-    try {
-      // First start the shuffle
-      const shuffleResponse = await api.startShuffle.startShuffle({ room_id: roomId, player_id: playerId });
-      if (shuffleResponse) {
-        applyResponseState(shuffleResponse);
-        notifyRoomUpdate();
-      }
-      
-      // Then proceed to select face-up cards (or deal directly)
-          const response = await api.selectFaceUpCards.selectFaceUpCards({ room_id: roomId, player_id: playerId, card_ids: [] });
-          if (response) {
-        applyResponseState(response);
-        notifyRoomUpdate();
-      }
-      setError('');
-    } catch (e: any) {
-      setError(e?.message || 'Failed to start shuffle');
-            }
-  };
-
-  // Don't auto-start shuffle - let Player 1 click the button manually
-  // Removed auto-trigger to allow manual shuffle button click
-
-  const disconnectGame = () => {
-    setConnectionStatus('disconnected')
-    setGameState(null)
-    setPlayerId(null)
-    setRoomId('')
-    setError('')
-  }
-
-  // Get current scores for header display
-        const myScore = isPlayer1() ? gameState?.player1Score ?? 0 : gameState?.player2Score ?? 0;
-      const opponentScore = isPlayer1() ? gameState?.player2Score ?? 0 : gameState?.player1Score ?? 0;
-  const myName = gameState?.players?.find(p => p.id === playerId)?.name || 'You';
-  const opponentName = gameState?.players?.find(p => p.id !== playerId)?.name || 'Opponent';
+  }, [gameStateHook.gameState, gameStateHook.playerId])
 
   return (
     <>
-      <SoundSystem onSoundReady={() => setSoundReady(true)} />
-      
-
+      <SoundSystem onSoundReady={() => connectionHook.setSoundReady(true)} />
       
       <div className="min-h-screen casino-bg relative overflow-hidden">
         {/* Enhanced Decorative Background for Landing Page */}
@@ -657,10 +221,10 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
         )}
 
         {/* Global Error Display */}
-        {error && (
+        {connectionHook.error && (
           <div data-testid="error-message" className="absolute top-16 left-1/2 transform -translate-x-1/2 z-40 max-w-md w-full mx-4">
             <div className="backdrop-casino border border-casino-red/30 rounded-lg p-3 shadow-casino">
-              <p className="text-casino-red-light font-medium text-center">{error}</p>
+              <p className="text-casino-red-light font-medium text-center">{connectionHook.error}</p>
             </div>
           </div>
         )}
@@ -673,15 +237,15 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
                 {/* Left Column - Room Manager */}
                 <div className="w-full">
                   <RoomManager
-                    roomId={roomId}
-                    setRoomId={setRoomId}
-                    playerName={playerName}
-                    setPlayerName={setPlayerName}
-                    onCreateRoom={createRoom}
-                    onJoinRoom={joinRoom}
-                    onJoinRandomRoom={() => joinRandomRoom(playerName)}
-                    error={error}
-                    isLoading={isLoading}
+                    roomId={gameStateHook.roomId}
+                    setRoomId={gameStateHook.setRoomId}
+                    playerName={gameStateHook.playerName}
+                    setPlayerName={gameStateHook.setPlayerName}
+                    onCreateRoom={roomActions.createRoom}
+                    onJoinRoom={roomActions.joinRoom}
+                    onJoinRandomRoom={() => roomActions.joinRandomRoom(gameStateHook.playerName)}
+                    error={connectionHook.error}
+                    isLoading={connectionHook.isLoading}
                   />
                 </div>
                 
@@ -734,130 +298,74 @@ const [preferences, setPreferences] = useGamePreferences(defaultPreferences)
             <Decor visible={true} />
 
             {/* Header - Hide during gameplay (round1/round2) for immersive experience */}
-            {gameState?.phase !== 'round1' && gameState?.phase !== 'round2' && (
+            {gameStateHook.gameState?.phase !== 'round1' && gameStateHook.gameState?.phase !== 'round2' && (
               <div className="relative z-10 p-4">
                 <div className="max-w-6xl mx-auto">
                   <AppHeader
-                    roomId={gameState?.roomId || ''}
-                    connectionStatus={connectionStatus}
-                    myName={myName}
-                    opponentName={opponentName}
-                    myScore={myScore}
-                    opponentScore={opponentScore}
-                    phase={gameState?.phase}
-                    round={gameState?.round}
-                    onLeave={disconnectGame}
+                    roomId={gameStateHook.gameState?.roomId || ''}
+                    connectionStatus={connectionHook.connectionStatus}
+                    myName={gameStateHook.myName}
+                    opponentName={gameStateHook.opponentName}
+                    myScore={gameStateHook.myScore}
+                    opponentScore={gameStateHook.opponentScore}
+                    phase={gameStateHook.gameState?.phase}
+                    round={gameStateHook.gameState?.round}
+                    onLeave={roomActions.disconnectGame}
                   />
                 </div>
               </div>
             )}
 
             {/* Casino Room View - Show for both waiting and dealer phases */}
-            {(gameState?.phase === 'waiting' || gameState?.phase === 'dealer') && gameState && playerId && (
+            {(gameStateHook.gameState?.phase === 'waiting' || gameStateHook.gameState?.phase === 'dealer') && 
+             gameStateHook.gameState && gameStateHook.playerId && (
               <div className="relative z-10 p-4">
                 <div className="max-w-6xl mx-auto">
                   <CasinoRoomView
-                    roomId={gameState.roomId}
-                    players={(gameState.players || []).map(p => ({ id: p.id, name: p.name }))}
-                    player1Ready={gameState.player1Ready || false}
-                    player2Ready={gameState.player2Ready || false}
-                    playerId={playerId}
-                    onPlayerReady={async () => {
-                      if (!roomId || !playerId) return;
-                      try {
-                        const response = await setPlayerReadyMutation({ 
-                          room_id: roomId, 
-                          player_id: playerId, 
-                          is_ready: true 
-                        });
-                        if (response) {
-                          setGameState(response.gameState);
-                        }
-                      } catch (error: any) {
-                        console.error('Error setting player ready:', error);
-                        setError(error?.message || 'Failed to set player ready status');
-                      }
-                    }}
-                    onPlayerNotReady={async () => {
-                      if (!roomId || !playerId) return;
-                      try {
-                        const response = await setPlayerReadyMutation({ 
-                          room_id: roomId, 
-                          player_id: playerId, 
-                          is_ready: false 
-                        });
-                        if (response) {
-                          setGameState(response.gameState);
-                        }
-                      } catch (error: any) {
-                        console.error('Error setting player not ready:', error);
-                        setError(error?.message || 'Failed to set player ready status');
-                      }
-                    }}
-                    onStartShuffle={gameState?.phase === 'dealer' && (gameState.player1Ready && gameState.player2Ready) ? startShuffle : undefined}
+                    roomId={gameStateHook.gameState.roomId}
+                    players={(gameStateHook.gameState.players || []).map(p => ({ id: p.id, name: p.name }))}
+                    player1Ready={gameStateHook.gameState.player1Ready || false}
+                    player2Ready={gameStateHook.gameState.player2Ready || false}
+                    playerId={gameStateHook.playerId}
+                    onPlayerReady={() => gameActions.setPlayerReady(true)}
+                    onPlayerNotReady={() => gameActions.setPlayerReady(false)}
+                    onStartShuffle={gameStateHook.gameState?.phase === 'dealer' && 
+                                   (gameStateHook.gameState.player1Ready && gameStateHook.gameState.player2Ready) ? 
+                                   gameActions.startShuffle : undefined}
                   />
                 </div>
               </div>
             )}
 
             {/* Poker Table View - For round1 and round2 phases - Full screen immersive experience */}
-            {(gameState?.phase === 'round1' || gameState?.phase === 'round2') && gameState && playerId && (
+            {(gameStateHook.gameState?.phase === 'round1' || gameStateHook.gameState?.phase === 'round2') && 
+             gameStateHook.gameState && gameStateHook.playerId && (
               <PokerTableView
-                gameState={gameState}
-                playerId={playerId}
-                onPlayCard={playCard}
-                onLeave={disconnectGame}
+                gameState={gameStateHook.gameState}
+                playerId={gameStateHook.playerId}
+                onPlayCard={gameActions.playCard}
+                onLeave={roomActions.disconnectGame}
               />
             )}
 
             {/* Game Phases - For other phases like cardSelection, dealing, finished */}
-            {gameState?.phase && 
-             gameState.phase !== 'waiting' && 
-             gameState.phase !== 'dealer' &&
-             gameState.phase !== 'round1' && 
-             gameState.phase !== 'round2' && 
-             playerId && (
+            {gameStateHook.gameState?.phase && 
+             gameStateHook.gameState.phase !== 'waiting' && 
+             gameStateHook.gameState.phase !== 'dealer' &&
+             gameStateHook.gameState.phase !== 'round1' && 
+             gameStateHook.gameState.phase !== 'round2' && 
+             gameStateHook.playerId && (
               <div className="relative z-10 p-4">
                 <div className="max-w-6xl mx-auto">
                   <GamePhases
-                    gameState={gameState}
-                    playerId={playerId}
-                    onSelectFaceUpCards={selectFaceUpCards}
-                    onPlayCard={playCard}
-                    onResetGame={resetGame}
-                    onPlayerReady={async () => {
-                      if (!roomId || !playerId) return;
-                      try {
-                        const response = await setPlayerReadyMutation({ 
-                           room_id: roomId, 
-                           player_id: playerId, 
-                           is_ready: true 
-                        });
-                        if (response) {
-                          setGameState(response.gameState);
-                        }
-                      } catch (error: any) {
-                        console.error('Error setting player ready:', error);
-                        setError(error?.message || 'Failed to set player ready status');
-                      }
-                    }}
-                    onPlayerNotReady={async () => {
-                      if (!roomId || !playerId) return;
-                      try {
-                        const response = await setPlayerReadyMutation({ 
-                           room_id: roomId, 
-                           player_id: playerId, 
-                           is_ready: false 
-                        });
-                        if (response) {
-                          setGameState(response.gameState);
-                        }
-                      } catch (error: any) {
-                        console.error('Error setting player not ready:', error);
-                        setError(error?.message || 'Failed to set player ready status');
-                      }
-                    }}
-                    onStartShuffle={startShuffle}
+                    gameState={gameStateHook.gameState}
+                    playerId={gameStateHook.playerId}
+                    onSelectFaceUpCards={gameActions.selectFaceUpCards}
+                    onPlayCard={gameActions.playCard}
+                    onResetGame={gameActions.resetGame}
+                    onPlayerReady={() => gameActions.setPlayerReady(true)}
+                    onPlayerNotReady={() => gameActions.setPlayerReady(false)}
+                    onStartShuffle={gameActions.startShuffle}
                     preferences={preferences}
                   />
                 </div>

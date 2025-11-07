@@ -137,6 +137,10 @@ startup_local.*
 *.sqlite3
 
 # Python virtual environments and packages
+Lib/
+lib/
+venv/
+.venv/
 backend/Lib/
 backend/lib/
 backend/venv/
