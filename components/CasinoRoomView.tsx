@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Crown, Users, Sparkles, Play } from 'lucide-react'
@@ -90,12 +90,15 @@ export function CasinoRoomView({
                 <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-64 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border-2 border-yellow-400/50 shadow-xl">
                   {!bothReady ? (
                     <p className="text-white text-sm text-center">
-                      Both players must confirm they're ready to begin.
+                      "Welcome to the table! Both players must confirm they're ready to begin."
                     </p>
                   ) : (
-                    <div className="flex items-center justify-center gap-2">
-                      <Sparkles className="w-4 h-4 text-green-400 animate-pulse" />
-                      <p className="text-green-400 font-bold text-sm">All players ready!</p>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Sparkles className="w-4 h-4 text-green-400 animate-pulse" />
+                        <p className="text-green-400 font-bold text-sm">All players ready!</p>
+                      </div>
+                      <p className="text-white/80 text-xs">"Let's shuffle and deal the cards!"</p>
                     </div>
                   )}
                 </div>
