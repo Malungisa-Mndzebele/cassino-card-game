@@ -373,14 +373,14 @@ export async function joinRoom(page: Page, roomId: string, playerName: string): 
   await new Promise(resolve => setTimeout(resolve, 2000))
   
   await expect(page.getByTestId('room-manager')).toBeVisible({ timeout: 15000 })
-  await page.getByTestId('player-name-input-create-test').fill(playerName)
-  await page.getByTestId('show-join-form-test').click()
+  // Fill in join form (right column) - both forms are visible in 2-column layout
+  await page.getByTestId('player-name-input-join').fill(playerName)
   await new Promise(resolve => setTimeout(resolve, 500))
   
-  await page.getByTestId('room-id-input-test').fill(roomId)
-  await expect(page.getByTestId('room-id-input-test')).toHaveValue(roomId)
+  await page.getByTestId('room-code-input').fill(roomId)
+  await expect(page.getByTestId('room-code-input')).toHaveValue(roomId)
   
-  await page.getByTestId('join-room-submit-test').click()
+  await page.getByTestId('join-room-test').click()
   await new Promise(resolve => setTimeout(resolve, 2000))
   
   // Verify we left the landing page

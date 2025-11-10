@@ -12,8 +12,8 @@ test.describe('Live Deployment Tests', () => {
     
     await page.goto('/');
     
-    // Check page loads
-    await expect(page).toHaveTitle(/Casino/i);
+    // Check page loads - title is "Cassino" (Italian spelling)
+    await expect(page).toHaveTitle(/Cassino/i);
     
     // Check main elements are visible
     await expect(page.getByText(/Create Room/i)).toBeVisible();

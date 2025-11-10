@@ -28,11 +28,13 @@ describe('RoomManager', () => {
   it('shows join room form when toggled', async () => {
     render(<RoomManager {...mockProps} playerName="TestPlayer" />)
     
-    // Just verify the component renders and has the toggle button
+    // Verify both create and join sections are visible (2-column layout)
     const roomManagers = screen.getAllByTestId('room-manager')
     expect(roomManagers[0]).toBeInTheDocument()
-    const joinButtons = screen.getAllByTestId('show-join-form-test')
-    expect(joinButtons[0]).toBeInTheDocument()
+    
+    // Check for join room button
+    const joinButtons = screen.queryAllByTestId('join-room-test')
+    expect(joinButtons.length).toBeGreaterThan(0)
   })
 
   it('calls onCreateRoom when create button clicked with valid name', async () => {

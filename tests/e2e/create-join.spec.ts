@@ -31,8 +31,8 @@ test('landing renders and shows actions', async ({ page }) => {
     page.getByText(/Join with Code/i),
     page.getByText(/Join Random Game/i),
     page.getByText(/Join.*Game|Join Existing Game/i),
-    page.getByTestId('join-random-room-test'),
-    page.getByTestId('show-join-form-test')
+    page.getByTestId('join-random-room-button'),
+    page.getByTestId('room-code-input') // Join form is always visible in 2-column layout
   ]
   
   let hasJoinOption = false

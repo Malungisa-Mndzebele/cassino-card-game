@@ -179,29 +179,19 @@ describe('Full Game Integration Tests', () => {
 
     render(<App />)
     
-    // First, set the player name so the button is enabled
-    const nameInputs = screen.getAllByTestId('player-name-input-create-test')
-    fireEvent.change(nameInputs[0], {
+    // In the new 2-column design, both create and join forms are visible
+    // Fill in player name in the join form (right column)
+    const joinNameInputs = screen.getAllByTestId('player-name-input-join')
+    fireEvent.change(joinNameInputs[0], {
       target: { value: 'Bob' }
     })
     
-    // Wait a bit for the state to update
+    // Fill in room code
     await waitFor(() => {
-      const showJoinButtons = screen.queryAllByTestId('show-join-form-test')
-      expect(showJoinButtons.length).toBeGreaterThan(0)
-      expect(showJoinButtons[0]).not.toBeDisabled()
-    }, { timeout: 500 })
-    
-    // Switch to join form - use getAllByTestId and take first
-    const showJoinButtons = screen.getAllByTestId('show-join-form-test')
-    fireEvent.click(showJoinButtons[0])
-    
-    // Wait for join form to appear
-    await waitFor(() => {
-      const roomIdInputs = screen.queryAllByTestId('room-id-input-test')
+      const roomIdInputs = screen.queryAllByTestId('room-code-input')
       expect(roomIdInputs.length).toBeGreaterThan(0)
     }, { timeout: 1000 })
-    const roomIdInputs = screen.getAllByTestId('room-id-input-test')
+    const roomIdInputs = screen.getAllByTestId('room-code-input')
     if (roomIdInputs.length > 0) {
       fireEvent.change(roomIdInputs[0], {
         target: { value: 'TEST01' }
@@ -209,7 +199,7 @@ describe('Full Game Integration Tests', () => {
     }
     
     // Join room - use getAllByTestId and take first
-    const joinButtons = screen.getAllByTestId('join-room-submit-test')
+    const joinButtons = screen.getAllByTestId('join-room-test')
     fireEvent.click(joinButtons[0])
     
     await waitFor(() => {
@@ -264,7 +254,7 @@ describe('Full Game Integration Tests', () => {
     })
     
     // Click random join - use getAllByTestId and take first
-    const randomJoinButtons = screen.getAllByTestId('join-random-room-test')
+    const randomJoinButtons = screen.getAllByTestId('join-random-room-button')
     fireEvent.click(randomJoinButtons[0])
     
     await waitFor(() => {

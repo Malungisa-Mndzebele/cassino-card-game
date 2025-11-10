@@ -106,11 +106,11 @@ test.describe('Complete Game Scenarios', () => {
         await newPlayer2Page.goto('/', { timeout: 30000 })
         await newPlayer2Page.waitForTimeout(2000)
         
-        await newPlayer2Page.getByTestId('player-name-input-create-test').fill('Bob')
-        await newPlayer2Page.getByTestId('show-join-form-test').click()
+        // Fill in join form (right column) - both forms are visible in 2-column layout
+        await newPlayer2Page.getByTestId('player-name-input-join').fill('Bob')
         await newPlayer2Page.waitForTimeout(500)
-        await newPlayer2Page.getByTestId('room-id-input-test').fill(roomId)
-        await newPlayer2Page.getByTestId('join-room-submit-test').click()
+        await newPlayer2Page.getByTestId('room-code-input').fill(roomId)
+        await newPlayer2Page.getByTestId('join-room-test').click()
         await newPlayer2Page.waitForTimeout(3000)
       } catch (e) {
         console.log('Reconnection attempt completed (may have issues)')
@@ -206,15 +206,12 @@ test.describe('Complete Game Scenarios', () => {
       await page.getByTestId('player-name-input-create-test').fill('TestPlayer')
       await page.waitForTimeout(500)
       
-      // Test invalid room join
-      const showJoinButton = page.getByTestId('show-join-form-test')
-      await expect(showJoinButton).toBeVisible({ timeout: 10000 })
-      await expect(showJoinButton).toBeEnabled({ timeout: 5000 })
-      await showJoinButton.click()
+      // Test invalid room join - both forms are visible in 2-column layout
+      await page.getByTestId('player-name-input-join').fill('ErrorTest')
       await page.waitForTimeout(500)
       
-      await page.getByTestId('room-id-input-test').fill('INVALID')
-      await page.getByTestId('join-room-submit-test').click()
+      await page.getByTestId('room-code-input').fill('INVALID')
+      await page.getByTestId('join-room-test').click()
       
       // Should show error or stay on page
       await page.waitForTimeout(2000)

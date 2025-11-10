@@ -69,7 +69,7 @@ test.describe('Random Room Join', () => {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // Click "Join Random Game" button
-      const joinRandomButton = player2Page.getByTestId('join-random-room-test')
+      const joinRandomButton = player2Page.getByTestId('join-random-room-button')
       await expect(joinRandomButton).toBeVisible({ timeout: 10000 })
       
       // Check for any error messages before clicking

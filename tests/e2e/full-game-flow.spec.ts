@@ -279,11 +279,11 @@ test.describe('Full Game Flow E2E Test', () => {
       console.log(`Room ID: ${roomId}`)
       
       // STEP 3: Player 2 joins
-      await player2Page.getByTestId('player-name-input-create-test').fill('Bob')
-      await player2Page.getByTestId('show-join-form-test').click()
+      // Fill in join form (right column) - both forms are visible in 2-column layout
+      await player2Page.getByTestId('player-name-input-join').fill('Bob')
       await new Promise(resolve => setTimeout(resolve, 500))
-      await player2Page.getByTestId('room-id-input-test').fill(roomId)
-      await player2Page.getByTestId('join-room-submit-test').click()
+      await player2Page.getByTestId('room-code-input').fill(roomId)
+      await player2Page.getByTestId('join-room-test').click()
       
       // Wait for both players to be connected
       await new Promise(resolve => setTimeout(resolve, 3000))
