@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/cassino/',  // Deploy to root, vite adds /cassino/ to paths
+  base: '/cassino/',  // URL base path for production deployment
   server: {
     port: 5173,
     strictPort: true,
