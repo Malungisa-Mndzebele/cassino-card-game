@@ -24,6 +24,11 @@ export default defineConfig({
     video: 'retain-on-failure',
     actionTimeout: 15000,
     navigationTimeout: 30000,
+    // Bypass cache like incognito mode
+    extraHTTPHeaders: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    },
   },
 
   timeout: 120000,
