@@ -15,9 +15,9 @@ test.describe('Live Deployment Tests', () => {
     // Check page loads - title is "Cassino" (Italian spelling)
     await expect(page).toHaveTitle(/Cassino/i);
     
-    // Check main elements are visible
-    await expect(page.getByText(/Create Room/i)).toBeVisible();
-    await expect(page.getByText(/Join Room/i)).toBeVisible();
+    // Check main elements are visible - using actual text from component
+    await expect(page.getByText(/Create New Room/i)).toBeVisible();
+    await expect(page.getByText(/Join Existing Room/i)).toBeVisible();
     
     console.log('✅ Landing page loaded successfully');
   });
@@ -27,12 +27,12 @@ test.describe('Live Deployment Tests', () => {
     
     await page.goto('/');
     
-    // Fill in player name
-    const nameInput = page.locator('input[placeholder*="name" i]').first();
+    // Fill in player name using test ID
+    const nameInput = page.locator('[data-testid="player-name-input-create-test"]');
     await nameInput.fill('TestPlayer');
     
-    // Click create room button
-    const createButton = page.getByRole('button', { name: /create room/i });
+    // Click create room button using test ID
+    const createButton = page.locator('[data-testid="create-room-test"]');
     await createButton.click();
     
     // Wait for room code to appear
@@ -46,12 +46,12 @@ test.describe('Live Deployment Tests', () => {
     
     await page.goto('/');
     
-    // Create room
-    await page.locator('input[placeholder*="name" i]').first().fill('CodeTest');
-    await page.getByRole('button', { name: /create room/i }).click();
+    // Create room using test IDs
+    await page.locator('[data-testid="player-name-input-create-test"]').fill('CodeTest');
+    await page.locator('[data-testid="create-room-test"]').click();
     
-    // Check for room code (4-character code)
-    const roomCodeElement = page.locator('text=/[A-Z0-9]{4}/');
+    // Check for room code (6-character code based on component)
+    const roomCodeElement = page.locator('text=/[A-Z0-9]{6}/');
     await expect(roomCodeElement).toBeVisible({ timeout: 10000 });
     
     const roomCode = await roomCodeElement.textContent();
@@ -64,8 +64,8 @@ test.describe('Live Deployment Tests', () => {
     await page.goto('/');
     
     const playerName = 'WaitingTest';
-    await page.locator('input[placeholder*="name" i]').first().fill(playerName);
-    await page.getByRole('button', { name: /create room/i }).click();
+    await page.locator('[data-testid="player-name-input-create-test"]').fill(playerName);
+    await page.locator('[data-testid="create-room-test"]').click();
     
     // Check player appears in room
     await expect(page.getByText(playerName)).toBeVisible({ timeout: 10000 });
@@ -79,14 +79,14 @@ test.describe('Live Deployment Tests', () => {
     let wsConnected = false;
     
     // Listen for WebSocket connections
-    page.on('websocket', ws => {
+    page.on('websocket', () => {
       console.log('WebSocket connection detected');
       wsConnected = true;
     });
     
     await page.goto('/');
-    await page.locator('input[placeholder*="name" i]').first().fill('WSTest');
-    await page.getByRole('button', { name: /create room/i }).click();
+    await page.locator('[data-testid="player-name-input-create-test"]').fill('WSTest');
+    await page.locator('[data-testid="create-room-test"]').click();
     
     // Wait a bit for WebSocket to connect
     await page.waitForTimeout(3000);
@@ -100,12 +100,15 @@ test.describe('Live Deployment Tests', () => {
     
     await page.goto('/');
     
-    // Switch to join room tab/section
-    const joinInput = page.locator('input[placeholder*="code" i], input[placeholder*="room" i]').first();
-    await expect(joinInput).toBeVisible();
+    // Check join room inputs are visible using test IDs
+    const roomCodeInput = page.locator('[data-testid="room-code-input"]');
+    await expect(roomCodeInput).toBeVisible();
     
-    const nameInput = page.locator('input[placeholder*="name" i]').last();
+    const nameInput = page.locator('[data-testid="player-name-input-join"]');
     await expect(nameInput).toBeVisible();
+    
+    const joinButton = page.locator('[data-testid="join-room-test"]');
+    await expect(joinButton).toBeVisible();
     
     console.log('✅ Join room interface is functional');
   });
@@ -117,9 +120,9 @@ test.describe('Live Deployment Tests', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
     
-    // Check elements are still visible
-    await expect(page.getByText(/Create Room/i)).toBeVisible();
-    await expect(page.getByText(/Join Room/i)).toBeVisible();
+    // Check elements are still visible - using actual text from component
+    await expect(page.getByText(/Create New Room/i)).toBeVisible();
+    await expect(page.getByText(/Join Existing Room/i)).toBeVisible();
     
     console.log('✅ Mobile layout working correctly');
   });
