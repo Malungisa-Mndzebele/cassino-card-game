@@ -12,8 +12,8 @@ export default defineConfig({
   retries: 2,
   workers: 1,
   reporter: [
-    ['html', { outputFolder: 'test-results/production-report' }],
-    ['json', { outputFile: 'test-results/production-results.json' }],
+    ['html', { outputFolder: 'playwright-report/production' }],
+    ['json', { outputFile: 'playwright-report/production-results.json' }],
     ['list']
   ],
   
