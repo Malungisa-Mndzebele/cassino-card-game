@@ -102,7 +102,7 @@ export function RoomManager({
                   placeholder="Enter your name"
                   className="bg-slate-800/50 border-emerald-500/30 text-white placeholder:text-white/40 h-12 text-lg focus:border-emerald-400"
                   disabled={isLoading}
-                  data-testid="player-name-input"
+                  data-testid="player-name-input-create-test"
                   onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                 />
               </div>
@@ -112,7 +112,7 @@ export function RoomManager({
                 onClick={handleCreate}
                 disabled={!playerName.trim() || isLoading}
                 className="w-full h-14 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-lg shadow-lg hover:shadow-emerald-500/50 transition-all"
-                data-testid="create-room-button"
+                data-testid="create-room-test"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-3">
@@ -226,7 +226,7 @@ export function RoomManager({
                 onClick={handleJoin}
                 disabled={!playerName.trim() || !roomId.trim() || isLoading}
                 className="w-full h-14 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-lg shadow-lg hover:shadow-blue-500/50 transition-all"
-                data-testid="join-room-button"
+                data-testid="join-room-test"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-3">
