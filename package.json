@@ -26,7 +26,6 @@
     "test:e2e:full-game": "playwright test tests/e2e/complete-game-scenarios.spec.ts",
     "test:e2e:create-join": "playwright test tests/e2e/create-join.spec.ts",
     "test:e2e:random-join": "playwright test tests/e2e/random-join.spec.ts",
-
     "test:all": "node run-all-tests.js",
     "test:coverage": "npm run test:frontend -- --coverage && npm run test:backend",
     "test:comprehensive": "node run-all-tests.js",
@@ -57,6 +56,7 @@
     "@typescript-eslint/parser": "^8.7.0",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.21",
+    "basic-ftp": "^5.0.5",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.34.3",
