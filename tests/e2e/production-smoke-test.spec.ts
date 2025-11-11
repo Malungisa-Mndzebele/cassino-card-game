@@ -33,11 +33,11 @@ test.describe('Production Smoke Tests', () => {
     await page.goto(PRODUCTION_URL);
     await page.waitForLoadState('networkidle');
     
-    // Look for create room button or form
-    const createButton = page.getByTestId('create-room-button').or(
-      page.locator('button:has-text("Create Room")')
-    ).first();
+    // Look for create room heading and button
+    const createHeading = page.getByRole('heading', { name: /create new room/i });
+    await expect(createHeading).toBeVisible({ timeout: 10000 });
     
+    const createButton = page.getByRole('button', { name: /create/i }).first();
     await expect(createButton).toBeVisible({ timeout: 10000 });
     
     console.log('✅ Room creation UI is visible');
@@ -50,48 +50,33 @@ test.describe('Production Smoke Tests', () => {
     // Wait for app to be ready
     await page.waitForTimeout(2000);
     
-    // Try multiple selectors for player name input
-    const nameInput = page.locator('input[type="text"]').first().or(
-      page.locator('input[placeholder*="name" i]')
-    ).or(
-      page.locator('input').first()
+    // Find the player name input in the Create New Room section
+    const nameInput = page.locator('input[id="create-player-name"]').or(
+      page.locator('input[type="text"]').first()
     );
     
-    // Check if input is visible
-    const inputVisible = await nameInput.isVisible({ timeout: 5000 }).catch(() => false);
+    await expect(nameInput).toBeVisible({ timeout: 10000 });
+    await nameInput.fill('ProductionTestPlayer');
     
-    if (inputVisible) {
-      await nameInput.fill('ProductionTestPlayer');
-      
-      // Click create room - try multiple selectors
-      const createButton = page.locator('button:has-text("Create")').first().or(
-        page.locator('button:has-text("Start")').first()
-      ).or(
-        page.locator('button[type="submit"]').first()
-      );
-      
-      const buttonVisible = await createButton.isVisible({ timeout: 5000 }).catch(() => false);
-      
-      if (buttonVisible) {
-        await createButton.click();
-        
-        // Wait for room to be created
-        await page.waitForTimeout(3000);
-        
-        // Check if we're in a room (look for game elements)
-        const inRoom = await page.locator('text=/Room|Game|Table/i').count() > 0;
-        
-        if (inRoom) {
-          console.log('✅ Room created successfully');
-        } else {
-          console.log('⚠️ Room creation may have issues - check UI');
-        }
-      } else {
-        console.log('⚠️ Create button not found - UI may have changed');
-      }
+    // Click create room button
+    const createButton = page.getByRole('button', { name: /create/i }).first();
+    await expect(createButton).toBeVisible({ timeout: 5000 });
+    await createButton.click();
+    
+    // Wait for room to be created and check for game UI
+    await page.waitForTimeout(3000);
+    
+    // Check if we're in a room (look for game elements or room code)
+    const inRoom = await page.locator('text=/Room Code|Waiting for players|Game/i').count() > 0;
+    
+    if (inRoom) {
+      console.log('✅ Room created successfully');
     } else {
-      console.log('⚠️ Name input not found - UI may have changed');
+      console.log('⚠️ Room creation may have issues - check UI');
     }
+    
+    // Don't fail if room creation has issues, just report
+    expect(inRoom).toBeTruthy();
   });
 
   test('should verify WebSocket connection capability', async ({ page }) => {
