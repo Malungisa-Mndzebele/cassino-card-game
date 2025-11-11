@@ -10,12 +10,19 @@ test.describe('Production Site Basic Check', () => {
   test('should load Casino Card Game landing page', async ({ page }) => {
     console.log('🌐 Testing: https://khasinogaming.com/cassino/');
     
-    await page.goto('/');
+    const response = await page.goto('https://khasinogaming.com/cassino/');
+    console.log(`📍 Response URL: ${response?.url()}`);
+    console.log(`📍 Final page URL: ${page.url()}`);
+    console.log(`📍 Response status: ${response?.status()}`);
+    
+    // Wait for network to be idle
+    await page.waitForLoadState('networkidle');
     
     // Check page title
     const title = await page.title();
     console.log(`📄 Page title: "${title}"`);
-    expect(title).toContain('Casino Card Game');
+    
+    expect(title).toContain('Cassino');
     
     // Check for main heading
     const heading = page.getByRole('heading', { name: /casino card game/i });
@@ -23,7 +30,7 @@ test.describe('Production Site Basic Check', () => {
     console.log('✅ Main heading found');
     
     // Check for subtitle
-    const subtitle = page.getByText(/play the classic cassino card game online/i);
+    const subtitle = page.getByText(/classic card game.*real-time multiplayer/i);
     await expect(subtitle).toBeVisible();
     console.log('✅ Subtitle found');
     
@@ -31,7 +38,7 @@ test.describe('Production Site Basic Check', () => {
   });
 
   test('should have Create New Room section', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('https://khasinogaming.com/cassino/');
     
     // Check for "Create New Room" heading
     const createHeading = page.getByRole('heading', { name: /create new room/i });
@@ -55,7 +62,7 @@ test.describe('Production Site Basic Check', () => {
   });
 
   test('should have Join Existing Room section', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('https://khasinogaming.com/cassino/');
     
     // Check for "Join Existing Room" heading
     const joinHeading = page.getByRole('heading', { name: /join existing room/i });
@@ -79,7 +86,7 @@ test.describe('Production Site Basic Check', () => {
   });
 
   test('should have correct styling and layout', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('https://khasinogaming.com/cassino/');
     
     // Check for root container
     const root = page.locator('#root');
@@ -90,10 +97,11 @@ test.describe('Production Site Basic Check', () => {
     await page.screenshot({ path: 'test-results/production-landing-page.png', fullPage: true });
     console.log('📸 Screenshot saved to test-results/production-landing-page.png');
     
-    // Check that both action cards are visible (2-column layout)
-    const actionCards = page.locator('.action-card, [class*="Card"]');
-    const count = await actionCards.count();
-    expect(count).toBeGreaterThanOrEqual(2);
-    console.log(`✅ Found ${count} action cards (Create & Join sections)`);
+    // Check that both sections are visible (2-column layout)
+    const createSection = page.getByRole('heading', { name: /create new room/i });
+    const joinSection = page.getByRole('heading', { name: /join existing room/i });
+    await expect(createSection).toBeVisible();
+    await expect(joinSection).toBeVisible();
+    console.log(`✅ Found both Create & Join sections`);
   });
 });

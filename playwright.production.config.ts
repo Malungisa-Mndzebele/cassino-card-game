@@ -18,7 +18,7 @@ export default defineConfig({
   ],
   
   use: {
-    baseURL: 'https://khasinogaming.com/cassino',
+    baseURL: 'https://khasinogaming.com/cassino/',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
