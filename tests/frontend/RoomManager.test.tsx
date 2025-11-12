@@ -51,11 +51,12 @@ describe('RoomManager', () => {
     const mockSetPlayerName = vi.fn()
     
     // Render with playerName already set - this simulates the state after user has entered their name
+    // Note: playerName must come after {...mockProps} to override the empty string
     render(
       <RoomManager 
-        {...mockProps} 
-        onCreateRoom={mockCreate} 
+        {...mockProps}
         playerName="TestPlayer"
+        onCreateRoom={mockCreate} 
         setPlayerName={mockSetPlayerName}
       />
     )
@@ -64,7 +65,18 @@ describe('RoomManager', () => {
     const showCreateButtons = screen.getAllByTestId('show-create-form-button')
     fireEvent.click(showCreateButtons[0])
     
-    // Wait for the form to appear and verify the button is enabled
+    // Wait for the form to appear
+    await waitFor(() => {
+      const nameInputs = screen.queryAllByTestId('player-name-input-create-test')
+      expect(nameInputs.length).toBeGreaterThan(0)
+    })
+    
+    // Verify the input has the correct value
+    const nameInputs = screen.getAllByTestId('player-name-input-create-test')
+    const input = nameInputs[0] as HTMLInputElement
+    expect(input.value).toBe('TestPlayer')
+    
+    // Wait for the button to be enabled
     await waitFor(() => {
       const createButtons = screen.queryAllByTestId('create-room-test')
       expect(createButtons.length).toBeGreaterThan(0)
