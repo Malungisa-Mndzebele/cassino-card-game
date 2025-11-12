@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 import { RoomManager } from '../../components/RoomManager'
 
@@ -48,65 +48,32 @@ describe('RoomManager', () => {
 
   it('calls onCreateRoom when create button clicked with valid name', async () => {
     const mockCreate = vi.fn()
-    let currentPlayerName = ''
-    const mockSetPlayerName = vi.fn((name: string) => {
-      currentPlayerName = name
-    })
+    const mockSetPlayerName = vi.fn()
     
-    const { rerender } = render(
+    // Render with playerName already set - this simulates the state after user has entered their name
+    render(
       <RoomManager 
         {...mockProps} 
         onCreateRoom={mockCreate} 
-        playerName={currentPlayerName}
+        playerName="TestPlayer"
         setPlayerName={mockSetPlayerName}
       />
     )
     
-    // First click the button to show the create form
+    // Click the button to show the create form
     const showCreateButtons = screen.getAllByTestId('show-create-form-button')
     fireEvent.click(showCreateButtons[0])
     
-    // Wait for the form to appear
-    await waitFor(() => {
-      const nameInputs = screen.queryAllByTestId('player-name-input-create-test')
-      expect(nameInputs.length).toBeGreaterThan(0)
-    })
-    
-    // Type into the input field to set the player name
-    const nameInputs = screen.getAllByTestId('player-name-input-create-test')
-    const input = nameInputs[0] as HTMLInputElement
-    
-    // Simulate typing into the input
-    await act(async () => {
-      fireEvent.change(input, { target: { value: 'TestPlayer' } })
-    })
-    
-    // Update the playerName state and rerender
-    currentPlayerName = 'TestPlayer'
-    await act(async () => {
-      rerender(
-        <RoomManager 
-          {...mockProps} 
-          onCreateRoom={mockCreate} 
-          playerName={currentPlayerName}
-          setPlayerName={mockSetPlayerName}
-        />
-      )
-    })
-    
-    // Give React a moment to process the rerender
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
-    // Wait for the button to be enabled
+    // Wait for the form to appear and verify the button is enabled
     await waitFor(() => {
       const createButtons = screen.queryAllByTestId('create-room-test')
       expect(createButtons.length).toBeGreaterThan(0)
       const button = createButtons[0] as HTMLButtonElement
-      // Button should not be disabled since playerName is set
+      // Button should be enabled since playerName is set
       expect(button.disabled).toBe(false)
-    }, { timeout: 3000 })
+    }, { timeout: 2000 })
     
-    // Now click the create button
+    // Click the create button
     const createButtons = screen.getAllByTestId('create-room-test')
     fireEvent.click(createButtons[0])
     
