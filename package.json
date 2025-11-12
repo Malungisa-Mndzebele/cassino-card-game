@@ -26,6 +26,8 @@
     "test:e2e:full-game": "playwright test tests/e2e/complete-game-scenarios.spec.ts",
     "test:e2e:create-join": "playwright test tests/e2e/create-join.spec.ts",
     "test:e2e:random-join": "playwright test tests/e2e/random-join.spec.ts",
+    "test:production": "playwright test --config=playwright.production.config.ts tests/e2e/production-smoke-test.spec.ts",
+    "test:live": "playwright test --config=playwright.production.config.ts tests/e2e/live-deployment-test.spec.ts",
     "test:all": "node run-all-tests.js",
     "test:local": "npm run test:backend && npm run test:frontend",
     "test:local:e2e": "playwright test tests/e2e/create-join.spec.ts tests/e2e/full-game-flow.spec.ts tests/e2e/complete-game-scenarios.spec.ts tests/e2e/random-join.spec.ts tests/e2e/websocket-test.spec.ts tests/e2e/fixed-smoke-test.spec.ts tests/performance/load-test.spec.ts",

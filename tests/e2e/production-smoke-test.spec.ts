@@ -50,29 +50,48 @@ test.describe('Production Smoke Tests', () => {
     // Wait for app to be ready
     await page.waitForTimeout(2000);
     
+    // First, click the "Create Room" button to show the form
+    const showCreateButton = page.locator('[data-testid="show-create-form-button"]').or(
+      page.getByRole('button', { name: /create room/i }).first()
+    );
+    await expect(showCreateButton).toBeVisible({ timeout: 10000 });
+    await showCreateButton.click();
+    
+    // Wait for form to appear
+    await page.waitForTimeout(1000);
+    
     // Find the player name input in the Create New Room section
-    const nameInput = page.locator('input[id="create-player-name"]').or(
-      page.locator('input[type="text"]').first()
+    const nameInput = page.locator('[data-testid="player-name-input-create-test"]').or(
+      page.locator('input[id="create-player-name"]').or(
+        page.locator('input[type="text"]').first()
+      )
     );
     
     await expect(nameInput).toBeVisible({ timeout: 10000 });
     await nameInput.fill('ProductionTestPlayer');
     
-    // Click create room button
-    const createButton = page.getByRole('button', { name: /create/i }).first();
+    // Click the actual create room button (not the show form button)
+    const createButton = page.locator('[data-testid="create-room-test"]').or(
+      page.getByRole('button', { name: /^create room$/i }).first()
+    );
     await expect(createButton).toBeVisible({ timeout: 5000 });
+    await expect(createButton).toBeEnabled({ timeout: 5000 });
     await createButton.click();
     
     // Wait for room to be created and check for game UI
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
     
     // Check if we're in a room (look for game elements or room code)
-    const inRoom = await page.locator('text=/Room Code|Waiting for players|Game/i').count() > 0;
+    const inRoom = await page.locator('text=/Room Code|Waiting for players|Game|Casino Room/i').count() > 0;
     
     if (inRoom) {
       console.log('✅ Room created successfully');
     } else {
-      console.log('⚠️ Room creation may have issues - check UI');
+      // Take a screenshot for debugging
+      await page.screenshot({ path: 'test-results/room-creation-debug.png', fullPage: true });
+      console.log('⚠️ Room creation may have issues - screenshot saved');
+      console.log('   Current URL:', page.url());
+      console.log('   Page title:', await page.title());
     }
     
     // Don't fail if room creation has issues, just report
@@ -96,27 +115,41 @@ test.describe('Production Smoke Tests', () => {
     
     await page.goto(PRODUCTION_URL);
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(2000);
     
-    // Try to create a room (which should establish WebSocket)
-    const nameInput = page.locator('input[type="text"]').first().or(
-      page.locator('input').first()
+    // First, click the "Create Room" button to show the form
+    const showCreateButton = page.locator('[data-testid="show-create-form-button"]').or(
+      page.getByRole('button', { name: /create room/i }).first()
     );
     
-    const inputVisible = await nameInput.isVisible({ timeout: 5000 }).catch(() => false);
+    const buttonVisible = await showCreateButton.isVisible({ timeout: 5000 }).catch(() => false);
     
-    if (inputVisible) {
-      await nameInput.fill('WSTestPlayer');
+    if (buttonVisible) {
+      await showCreateButton.click();
+      await page.waitForTimeout(1000);
       
-      const createButton = page.locator('button:has-text("Create")').first().or(
-        page.locator('button[type="submit"]').first()
+      // Try to create a room (which should establish WebSocket)
+      const nameInput = page.locator('[data-testid="player-name-input-create-test"]').or(
+        page.locator('input[id="create-player-name"]').or(
+          page.locator('input[type="text"]').first()
+        )
       );
       
-      const buttonVisible = await createButton.isVisible({ timeout: 5000 }).catch(() => false);
+      const inputVisible = await nameInput.isVisible({ timeout: 5000 }).catch(() => false);
       
-      if (buttonVisible) {
-        await createButton.click();
-        await page.waitForTimeout(5000);
+      if (inputVisible) {
+        await nameInput.fill('WSTestPlayer');
+        
+        const createButton = page.locator('[data-testid="create-room-test"]').or(
+          page.getByRole('button', { name: /^create room$/i }).first()
+        );
+        
+        const createButtonVisible = await createButton.isVisible({ timeout: 5000 }).catch(() => false);
+        
+        if (createButtonVisible) {
+          await createButton.click();
+          await page.waitForTimeout(5000);
+        }
       }
     }
     
@@ -130,6 +163,7 @@ test.describe('Production Smoke Tests', () => {
     if (wsErrors.length === 0) {
       console.log('✅ No WebSocket errors detected');
     } else {
+      console.log('⚠️ WebSocket errors:', wsErrors.slice(0, 3));
       console.log('⚠️ WebSocket messages:', wsMessages.slice(0, 3));
     }
     
