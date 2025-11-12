@@ -47,8 +47,8 @@ test.describe('Production Smoke Tests', () => {
     await page.goto(PRODUCTION_URL);
     await page.waitForLoadState('networkidle');
     
-    // Wait for app to be ready
-    await page.waitForTimeout(2000);
+    // Wait for main title to ensure app is loaded
+    await expect(page.locator('text=Casino Card Game')).toBeVisible({ timeout: 10000 });
     
     // First, click the "Create Room" button to show the form
     const showCreateButton = page.locator('[data-testid="show-create-form-button"]').or(
@@ -57,16 +57,12 @@ test.describe('Production Smoke Tests', () => {
     await expect(showCreateButton).toBeVisible({ timeout: 10000 });
     await showCreateButton.click();
     
-    // Wait for form to appear
-    await page.waitForTimeout(1000);
-    
-    // Find the player name input in the Create New Room section
+    // Wait for form to appear by checking for the input field
     const nameInput = page.locator('[data-testid="player-name-input-create-test"]').or(
       page.locator('input[id="create-player-name"]').or(
         page.locator('input[type="text"]').first()
       )
     );
-    
     await expect(nameInput).toBeVisible({ timeout: 10000 });
     await nameInput.fill('ProductionTestPlayer');
     
@@ -78,11 +74,10 @@ test.describe('Production Smoke Tests', () => {
     await expect(createButton).toBeEnabled({ timeout: 5000 });
     await createButton.click();
     
-    // Wait for room to be created and check for game UI
-    await page.waitForTimeout(5000);
-    
-    // Check if we're in a room (look for game elements or room code)
-    const inRoom = await page.locator('text=/Room Code|Waiting for players|Game|Casino Room/i').count() > 0;
+    // Wait for room to be created - look for room-specific elements
+    // This will wait for one of these elements to appear, which is faster than fixed timeout
+    const roomIndicator = page.locator('text=/Room Code|Waiting for players|Game|Casino Room|Ready/i').first();
+    const inRoom = await roomIndicator.waitFor({ state: 'visible', timeout: 15000 }).then(() => true).catch(() => false);
     
     if (inRoom) {
       console.log('✅ Room created successfully');
@@ -92,6 +87,9 @@ test.describe('Production Smoke Tests', () => {
       console.log('⚠️ Room creation may have issues - screenshot saved');
       console.log('   Current URL:', page.url());
       console.log('   Page title:', await page.title());
+      // Check what's actually on the page
+      const bodyText = await page.locator('body').textContent();
+      console.log('   Page content preview:', bodyText?.substring(0, 200));
     }
     
     // Don't fail if room creation has issues, just report
