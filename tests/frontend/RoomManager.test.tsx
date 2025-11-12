@@ -48,14 +48,16 @@ describe('RoomManager', () => {
 
   it('calls onCreateRoom when create button clicked with valid name', async () => {
     const mockCreate = vi.fn()
-    const mockSetPlayerName = vi.fn()
+    let currentPlayerName = ''
+    const mockSetPlayerName = vi.fn((name: string) => {
+      currentPlayerName = name
+    })
     
-    // Render with playerName already set to simulate the state after user input
-    render(
+    const { rerender } = render(
       <RoomManager 
         {...mockProps} 
         onCreateRoom={mockCreate} 
-        playerName="TestPlayer"
+        playerName={currentPlayerName}
         setPlayerName={mockSetPlayerName}
       />
     )
@@ -70,14 +72,36 @@ describe('RoomManager', () => {
       expect(nameInputs.length).toBeGreaterThan(0)
     })
     
-    // Wait for the create button to be visible and enabled
+    // Type into the input field to set the player name
+    const nameInputs = screen.getAllByTestId('player-name-input-create-test')
+    const input = nameInputs[0] as HTMLInputElement
+    
+    // Simulate typing into the input
+    fireEvent.change(input, { target: { value: 'TestPlayer' } })
+    
+    // Update the playerName state and rerender
+    currentPlayerName = 'TestPlayer'
+    rerender(
+      <RoomManager 
+        {...mockProps} 
+        onCreateRoom={mockCreate} 
+        playerName={currentPlayerName}
+        setPlayerName={mockSetPlayerName}
+      />
+    )
+    
+    // Wait for the input to have the correct value and button to be enabled
     await waitFor(() => {
+      const updatedInputs = screen.getAllByTestId('player-name-input-create-test')
+      const updatedInput = updatedInputs[0] as HTMLInputElement
+      expect(updatedInput.value).toBe('TestPlayer')
+      
       const createButtons = screen.queryAllByTestId('create-room-test')
       expect(createButtons.length).toBeGreaterThan(0)
       const button = createButtons[0] as HTMLButtonElement
       // Button should not be disabled since playerName is set
       expect(button.disabled).toBe(false)
-    }, { timeout: 2000 })
+    }, { timeout: 3000 })
     
     // Now click the create button
     const createButtons = screen.getAllByTestId('create-room-test')
