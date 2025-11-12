@@ -48,16 +48,14 @@ describe('RoomManager', () => {
 
   it('calls onCreateRoom when create button clicked with valid name', async () => {
     const mockCreate = vi.fn()
-    let currentPlayerName = ''
-    const mockSetPlayerName = vi.fn((name: string) => {
-      currentPlayerName = name
-    })
+    const mockSetPlayerName = vi.fn()
     
-    const { rerender } = render(
+    // Render with playerName already set to simulate the state after user input
+    render(
       <RoomManager 
         {...mockProps} 
         onCreateRoom={mockCreate} 
-        playerName={currentPlayerName}
+        playerName="TestPlayer"
         setPlayerName={mockSetPlayerName}
       />
     )
@@ -72,31 +70,12 @@ describe('RoomManager', () => {
       expect(nameInputs.length).toBeGreaterThan(0)
     })
     
-    // Set the player name by triggering a change event
-    const nameInputs = screen.getAllByTestId('player-name-input-create-test')
-    fireEvent.change(nameInputs[0], {
-      target: { value: 'TestPlayer' }
-    })
-    
-    // Update the playerName after the change event
-    currentPlayerName = 'TestPlayer'
-    
-    // Re-render with the updated player name (simulating state update)
-    rerender(
-      <RoomManager 
-        {...mockProps} 
-        onCreateRoom={mockCreate} 
-        playerName={currentPlayerName}
-        setPlayerName={mockSetPlayerName}
-      />
-    )
-    
     // Wait for the create button to be visible and enabled
     await waitFor(() => {
       const createButtons = screen.queryAllByTestId('create-room-test')
       expect(createButtons.length).toBeGreaterThan(0)
       const button = createButtons[0] as HTMLButtonElement
-      // Button should not be disabled since we set playerName
+      // Button should not be disabled since playerName is set
       expect(button.disabled).toBe(false)
     }, { timeout: 2000 })
     
