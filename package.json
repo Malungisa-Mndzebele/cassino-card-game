@@ -27,6 +27,8 @@
     "test:e2e:create-join": "playwright test tests/e2e/create-join.spec.ts",
     "test:e2e:random-join": "playwright test tests/e2e/random-join.spec.ts",
     "test:all": "node run-all-tests.js",
+    "test:local": "npm run test:backend && npm run test:frontend",
+    "test:local:e2e": "playwright test tests/e2e/create-join.spec.ts tests/e2e/full-game-flow.spec.ts tests/e2e/complete-game-scenarios.spec.ts tests/e2e/random-join.spec.ts tests/e2e/websocket-test.spec.ts tests/e2e/fixed-smoke-test.spec.ts tests/performance/load-test.spec.ts",
     "test:coverage": "npm run test:frontend -- --coverage && npm run test:backend",
     "test:comprehensive": "node run-all-tests.js",
     "deploy:guide": "echo '📖 See FLYIO_SETUP.md for Fly.io deployment instructions'"

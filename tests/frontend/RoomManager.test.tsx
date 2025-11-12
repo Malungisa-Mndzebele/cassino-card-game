@@ -19,6 +19,11 @@ describe('RoomManager', () => {
   it('renders create room form by default', () => {
     render(<RoomManager {...mockProps} />)
     
+    // First click the button to show the create form
+    const showCreateButtons = screen.getAllByTestId('show-create-form-button')
+    fireEvent.click(showCreateButtons[0])
+    
+    // Now the form should be visible
     const nameInputs = screen.queryAllByTestId('player-name-input-create-test')
     expect(nameInputs.length).toBeGreaterThan(0)
     const createButtons = screen.queryAllByTestId('create-room-test')
@@ -28,23 +33,79 @@ describe('RoomManager', () => {
   it('shows join room form when toggled', async () => {
     render(<RoomManager {...mockProps} playerName="TestPlayer" />)
     
-    // Verify both create and join sections are visible (2-column layout)
+    // Verify room manager is rendered
     const roomManagers = screen.getAllByTestId('room-manager')
     expect(roomManagers[0]).toBeInTheDocument()
     
-    // Check for join room button
+    // Click the button to show the join form
+    const showJoinButtons = screen.getAllByTestId('show-join-form-button')
+    fireEvent.click(showJoinButtons[0])
+    
+    // Now check for join room button
     const joinButtons = screen.queryAllByTestId('join-room-test')
     expect(joinButtons.length).toBeGreaterThan(0)
   })
 
   it('calls onCreateRoom when create button clicked with valid name', async () => {
     const mockCreate = vi.fn()
-    render(<RoomManager {...mockProps} onCreateRoom={mockCreate} playerName="TestPlayer" />)
+    let currentPlayerName = ''
+    const mockSetPlayerName = vi.fn((name: string) => {
+      currentPlayerName = name
+    })
     
-    // Just verify the component renders with the callback
+    const { rerender } = render(
+      <RoomManager 
+        {...mockProps} 
+        onCreateRoom={mockCreate} 
+        playerName={currentPlayerName}
+        setPlayerName={mockSetPlayerName}
+      />
+    )
+    
+    // First click the button to show the create form
+    const showCreateButtons = screen.getAllByTestId('show-create-form-button')
+    fireEvent.click(showCreateButtons[0])
+    
+    // Wait for the form to appear
+    await waitFor(() => {
+      const nameInputs = screen.queryAllByTestId('player-name-input-create-test')
+      expect(nameInputs.length).toBeGreaterThan(0)
+    })
+    
+    // Set the player name by triggering a change event
+    const nameInputs = screen.getAllByTestId('player-name-input-create-test')
+    fireEvent.change(nameInputs[0], {
+      target: { value: 'TestPlayer' }
+    })
+    
+    // Update the playerName after the change event
+    currentPlayerName = 'TestPlayer'
+    
+    // Re-render with the updated player name (simulating state update)
+    rerender(
+      <RoomManager 
+        {...mockProps} 
+        onCreateRoom={mockCreate} 
+        playerName={currentPlayerName}
+        setPlayerName={mockSetPlayerName}
+      />
+    )
+    
+    // Wait for the create button to be visible and enabled
+    await waitFor(() => {
+      const createButtons = screen.queryAllByTestId('create-room-test')
+      expect(createButtons.length).toBeGreaterThan(0)
+      const button = createButtons[0] as HTMLButtonElement
+      // Button should not be disabled since we set playerName
+      expect(button.disabled).toBe(false)
+    }, { timeout: 2000 })
+    
+    // Now click the create button
     const createButtons = screen.getAllByTestId('create-room-test')
-    expect(createButtons[0]).toBeInTheDocument()
-    expect(mockCreate).toBeDefined()
+    fireEvent.click(createButtons[0])
+    
+    // Verify the callback was called
+    expect(mockCreate).toHaveBeenCalled()
   })
 
   it('calls onJoinRoom when join form submitted', async () => {
@@ -67,13 +128,19 @@ describe('RoomManager', () => {
   it('shows loading state when isLoading is true', () => {
     render(<RoomManager {...mockProps} isLoading={true} playerName="TestPlayer" />)
     
-    // Check if any button shows loading text
+    // First click the button to show the create form
+    const showCreateButtons = screen.getAllByTestId('show-create-form-button')
+    fireEvent.click(showCreateButtons[0])
+    
+    // Now check if any button shows loading text
     const createButtons = screen.getAllByTestId('create-room-test')
     const hasLoadingText = createButtons.some(button => 
       button.textContent?.includes('Creating...') || button.textContent?.includes('Joining...')
     )
     
-    // Just verify the component renders in loading state
+    // Verify the component renders in loading state
     expect(createButtons[0]).toBeInTheDocument()
+    // The button should be disabled when loading
+    expect(createButtons[0]).toBeDisabled()
   })
 })

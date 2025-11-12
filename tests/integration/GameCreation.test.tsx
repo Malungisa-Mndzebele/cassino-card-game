@@ -62,6 +62,11 @@ describe('Game Creation Tests', () => {
   it('allows player to enter name', () => {
     render(<App />)
     
+    // First click the button to show the create form
+    const showCreateButtons = screen.getAllByTestId('show-create-form-button')
+    fireEvent.click(showCreateButtons[0])
+    
+    // Now the input should be visible
     const nameInputs = screen.getAllByTestId('player-name-input-create-test')
     fireEvent.change(nameInputs[0], {
       target: { value: 'TestPlayer' }
@@ -73,6 +78,11 @@ describe('Game Creation Tests', () => {
   it('shows create room button when name is entered', () => {
     render(<App />)
     
+    // First click the button to show the create form
+    const showCreateButtons = screen.getAllByTestId('show-create-form-button')
+    fireEvent.click(showCreateButtons[0])
+    
+    // Now the input should be visible
     const nameInputs = screen.getAllByTestId('player-name-input-create-test')
     fireEvent.change(nameInputs[0], {
       target: { value: 'TestPlayer' }

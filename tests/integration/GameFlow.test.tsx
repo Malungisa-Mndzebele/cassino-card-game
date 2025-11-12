@@ -99,6 +99,10 @@ describe('Game Flow Integration', () => {
 
     render(<App />)
     
+    // First click the button to show the create form
+    const showCreateButtons = screen.getAllByTestId('show-create-form-button')
+    fireEvent.click(showCreateButtons[0])
+    
     // Fill in player name and create room - use getAllByTestId and take first
     const nameInputs = screen.getAllByTestId('player-name-input-create-test')
     fireEvent.change(nameInputs[0], {
