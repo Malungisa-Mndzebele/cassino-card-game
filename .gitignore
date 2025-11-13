@@ -131,6 +131,16 @@ convert_ssh_key.py
 start_local.*
 startup_local.*
 
+# FTP deployment scripts with hardcoded credentials
+deploy-ftp.js
+deploy-ftp-simple.js
+download-index.js
+check-ftp.js
+check-ftp-files.js
+check-parent-ftp.js
+check-current-ftp.js
+deploy-ftp.ps1
+
 # Database files
 *.db
 *.sqlite

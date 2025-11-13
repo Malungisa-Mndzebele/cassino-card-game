@@ -33,7 +33,10 @@
     "test:local:e2e": "playwright test tests/e2e/create-join.spec.ts tests/e2e/full-game-flow.spec.ts tests/e2e/complete-game-scenarios.spec.ts tests/e2e/random-join.spec.ts tests/e2e/websocket-test.spec.ts tests/e2e/fixed-smoke-test.spec.ts tests/performance/load-test.spec.ts",
     "test:coverage": "npm run test:frontend -- --coverage && npm run test:backend",
     "test:comprehensive": "node run-all-tests.js",
-    "deploy:guide": "echo '📖 See FLYIO_SETUP.md for Fly.io deployment instructions'"
+    "deploy:guide": "echo '📖 See FLYIO_SETUP.md for Fly.io deployment instructions'",
+    "deploy:ftp": "node deploy-secure.js",
+    "deploy:check": "node check-ftp-secure.js",
+    "security:cleanup": "node cleanup-sensitive-files.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
@@ -61,6 +64,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.21",
     "basic-ftp": "^5.0.5",
+    "dotenv": "^16.4.5",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.34.3",

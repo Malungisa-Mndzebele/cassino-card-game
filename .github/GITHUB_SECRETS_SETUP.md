@@ -12,7 +12,7 @@ Go to your GitHub repository → Settings → Secrets and variables → Actions 
 
 ### 2. FTP_PASSWORD
 - **Name**: `FTP_PASSWORD`
-- **Value**: `@QWERTYasd`
+- **Value**: `your-new-secure-ftp-password`
 
 ### Optional (If SSH is enabled)
 
@@ -22,7 +22,7 @@ Go to your GitHub repository → Settings → Secrets and variables → Actions 
 
 ### 4. SSH_PASSWORD
 - **Name**: `SSH_PASSWORD`
-- **Value**: `@QWERTYasd`
+- **Value**: `your-new-secure-ssh-password`
 
 ## How to Add Secrets
 
