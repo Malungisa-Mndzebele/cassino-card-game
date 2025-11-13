@@ -41,7 +41,7 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl ssh console -C "cd /app && python -m alembic upgrade head" -a cassino-game-backend || echo "Migrations may have already been applied"
+          flyctl ssh console -C "python -m alembic upgrade head" -a cassino-game-backend || echo "Migrations may have already been applied"
 
       - name: Verify deployment
         env:
