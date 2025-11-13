@@ -66,6 +66,25 @@ class GameSession(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     room_id = Column(String(6), ForeignKey("rooms.id"))
     player_id = Column(Integer, ForeignKey("players.id"))
+    session_token = Column(String(256), unique=True, index=True, nullable=True)
     connected_at = Column(DateTime(timezone=True), server_default=func.now())
     last_heartbeat = Column(DateTime(timezone=True), server_default=func.now())
+    disconnected_at = Column(DateTime(timezone=True), nullable=True)
+    reconnected_at = Column(DateTime(timezone=True), nullable=True)
     is_active = Column(Boolean, default=True)
+    connection_count = Column(Integer, default=0)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(256), nullable=True)
+
+
+class GameActionLog(Base):
+    __tablename__ = "game_action_log"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    room_id = Column(String(6), ForeignKey("rooms.id"), index=True)
+    player_id = Column(Integer, ForeignKey("players.id"))
+    action_type = Column(String(50), nullable=False)  # "capture", "build", "trail", "ready", "shuffle"
+    action_data = Column(JSON, nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    sequence_number = Column(Integer, nullable=False)
+    action_id = Column(String(64), unique=True, index=True)  # For deduplication

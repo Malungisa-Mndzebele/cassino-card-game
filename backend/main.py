@@ -94,6 +94,125 @@ async def health_check():
 async def root():
     return {"message": "Casino Card Game API", "version": "1.0.0"}
 
+# Heartbeat monitoring endpoint
+@app.get("/api/heartbeat/{room_id}")
+async def get_heartbeat_status(room_id: str, db: Session = Depends(get_db)):
+    """Get heartbeat status for all players in a room"""
+    from session_manager import SessionManager
+    
+    session_manager = SessionManager(db)
+    sessions = session_manager.get_room_sessions(room_id)
+    
+    players_status = []
+    for session in sessions:
+        # Calculate time since last heartbeat
+        time_since_heartbeat = (datetime.now() - session.last_heartbeat).total_seconds()
+        
+        status = {
+            "player_id": session.player_id,
+            "last_heartbeat": session.last_heartbeat.isoformat(),
+            "seconds_since_heartbeat": int(time_since_heartbeat),
+            "is_healthy": time_since_heartbeat < 15,
+            "is_connected": session.disconnected_at is None,
+            "disconnected_at": session.disconnected_at.isoformat() if session.disconnected_at else None
+        }
+        players_status.append(status)
+    
+    return {
+        "room_id": room_id,
+        "players": players_status
+    }
+
+# Claim victory endpoint for abandoned games
+@app.post("/api/game/claim-victory")
+async def claim_victory(
+    room_id: str,
+    player_id: int,
+    db: Session = Depends(get_db)
+):
+    """Claim victory when opponent has abandoned the game"""
+    from session_manager import SessionManager
+    from datetime import timedelta
+    
+    room = get_room_or_404(db, room_id)
+    
+    # Get all sessions in room
+    session_manager = SessionManager(db)
+    sessions = session_manager.get_room_sessions(room_id)
+    
+    # Check if opponent has been disconnected for > 5 minutes
+    five_minutes_ago = datetime.now() - timedelta(minutes=5)
+    opponent_abandoned = False
+    
+    for session in sessions:
+        if session.player_id != player_id:
+            if session.disconnected_at and session.disconnected_at < five_minutes_ago:
+                opponent_abandoned = True
+                break
+    
+    if not opponent_abandoned:
+        raise HTTPException(
+            status_code=400,
+            detail="Opponent has not been disconnected long enough to claim victory"
+        )
+    
+    # Award victory to claiming player
+    players_in_room = get_sorted_players(room)
+    is_player1 = player_id == players_in_room[0].id
+    
+    room.game_phase = "finished"
+    room.game_completed = True
+    room.winner = 1 if is_player1 else 2
+    
+    db.commit()
+    
+    # Broadcast game end
+    await manager.broadcast_json_to_room({
+        "type": "game_ended",
+        "reason": "opponent_abandoned",
+        "winner": room.winner
+    }, room_id)
+    
+    return {
+        "success": True,
+        "message": "Victory claimed",
+        "winner": room.winner,
+        "game_state": game_state_to_response(room)
+    }
+
+# State recovery endpoint
+@app.get("/api/recovery/{room_id}/{player_id}")
+async def get_recovery_state(
+    room_id: str,
+    player_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get recovery state for a reconnecting player"""
+    from state_recovery import StateRecoveryService
+    
+    recovery_service = StateRecoveryService(db)
+    recovery_state = recovery_service.get_recovery_state(room_id, player_id)
+    
+    if not recovery_state:
+        raise HTTPException(status_code=404, detail="Room not found")
+    
+    return {
+        "game_state": recovery_state.game_state,
+        "missed_actions": [
+            {
+                "id": action.id,
+                "player_id": action.player_id,
+                "action_type": action.action_type,
+                "timestamp": action.timestamp.isoformat()
+            }
+            for action in recovery_state.missed_actions
+        ],
+        "is_your_turn": recovery_state.is_your_turn,
+        "time_disconnected": recovery_state.time_disconnected,
+        "opponent_status": recovery_state.opponent_status,
+        "summary": recovery_state.missed_actions_summary
+    }
+
 # Add explicit CORS preflight handler
 @app.options("/{full_path:path}")
 async def options_handler(full_path: str):
@@ -108,32 +227,24 @@ async def options_handler(full_path: str):
         }
     )
 
+# Import enhanced WebSocket manager and background tasks
+from websocket_manager import EnhancedConnectionManager
+from background_tasks import background_task_manager
+
 # WebSocket connection manager
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: Dict[str, List[WebSocket]] = {}
+manager = EnhancedConnectionManager()
 
-    async def connect(self, websocket: WebSocket, room_id: str):
-        await websocket.accept()
-        if room_id not in self.active_connections:
-            self.active_connections[room_id] = []
-        self.active_connections[room_id].append(websocket)
+# Startup event
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks on application startup"""
+    await background_task_manager.start()
 
-    def disconnect(self, websocket: WebSocket, room_id: str):
-        if room_id in self.active_connections:
-            self.active_connections[room_id].remove(websocket)
-            if not self.active_connections[room_id]:
-                del self.active_connections[room_id]
-
-    async def broadcast_to_room(self, message: str, room_id: str):
-        if room_id in self.active_connections:
-            for connection in self.active_connections[room_id]:
-                try:
-                    await connection.send_text(message)
-                except:
-                    pass
-
-manager = ConnectionManager()
+# Shutdown event
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Stop background tasks on application shutdown"""
+    await background_task_manager.stop()
 
 # Initialize game logic
 game_logic = CasinoGameLogic()
@@ -475,7 +586,22 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: Session = 
 @app.post("/game/play-card", response_model=StandardResponse)
 async def play_card(request: PlayCardRequest, db: Session = Depends(get_db)):
     """Play a card (capture, build, or trail) with complete game logic"""
+    from action_logger import ActionLogger
+    
     room = get_room_or_404(db, request.room_id)
+    
+    # Log the action
+    action_logger = ActionLogger(db)
+    action_id = action_logger.log_game_action(
+        room_id=request.room_id,
+        player_id=request.player_id,
+        action_type=request.action,
+        action_data={
+            "card_id": request.card_id,
+            "target_cards": request.target_cards,
+            "build_value": request.build_value
+        }
+    )
     
     # Check if game is in progress
     if room.game_phase not in ["round1", "round2"]:
@@ -667,15 +793,81 @@ async def reset_game(room_id: str, db: Session = Depends(get_db)):
 
 # WebSocket endpoint for real-time updates
 @app.websocket("/ws/{room_id}")
-async def websocket_endpoint(websocket: WebSocket, room_id: str):
-    await manager.connect(websocket, room_id)
+async def websocket_endpoint(
+    websocket: WebSocket, 
+    room_id: str,
+    session_token: str = None,
+    db: Session = Depends(get_db)
+):
+    """
+    WebSocket endpoint with session support
+    
+    Query params:
+        session_token: Optional session token for reconnection
+    """
+    session_id = None
+    game_session = None
+    
     try:
+        # Connect with session validation
+        success, error, game_session = await manager.connect(
+            websocket, room_id, session_token, db
+        )
+        
+        if not success:
+            return
+        
+        session_id = game_session.id if game_session else None
+        
+        # Main message loop
         while True:
             data = await websocket.receive_text()
-            # Handle real-time messages here
-            await manager.broadcast_to_room(data, room_id)
+            
+            try:
+                message = json.loads(data)
+                message_type = message.get("type")
+                
+                # Handle different message types
+                if message_type == "ping":
+                    # Heartbeat ping
+                    if session_id:
+                        pong_response = await manager.handle_heartbeat(
+                            room_id, session_id, db
+                        )
+                        await websocket.send_json(pong_response)
+                
+                elif message_type == "state_update":
+                    # Broadcast state update to room
+                    await manager.broadcast_to_room(data, room_id)
+                
+                elif message_type == "takeover_session":
+                    # Handle session takeover from another tab
+                    if session_id:
+                        # Close old connection if exists
+                        await manager.broadcast_json_to_room({
+                            "type": "session_taken_over",
+                            "session_id": session_id
+                        }, room_id)
+                
+                else:
+                    # Default: broadcast to room
+                    await manager.broadcast_to_room(data, room_id)
+                    
+            except json.JSONDecodeError:
+                # Not JSON, broadcast as-is
+                await manager.broadcast_to_room(data, room_id)
+                
     except WebSocketDisconnect:
-        manager.disconnect(websocket, room_id)
+        pass
+    finally:
+        # Clean up on disconnect
+        manager.disconnect(websocket, room_id, session_id, db)
+        
+        # Broadcast updated connection status
+        try:
+            await manager.broadcast_connection_status(room_id, db)
+        except:
+            pass
 
 if __name__ == "__main__":
     import uvicorn
