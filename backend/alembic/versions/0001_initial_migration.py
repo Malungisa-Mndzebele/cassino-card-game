@@ -20,7 +20,7 @@ def upgrade() -> None:
     # Create rooms table
     op.create_table('rooms',
         sa.Column('id', sa.String(length=6), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
         sa.Column('status', sa.String(length=20), nullable=True),
         sa.Column('game_phase', sa.String(length=20), nullable=True),
         sa.Column('current_turn', sa.Integer(), nullable=True),
@@ -41,7 +41,7 @@ def upgrade() -> None:
         sa.Column('game_completed', sa.Boolean(), nullable=True),
         sa.Column('last_play', sa.JSON(), nullable=True),
         sa.Column('last_action', sa.String(length=50), nullable=True),
-        sa.Column('last_update', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+        sa.Column('last_update', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
         sa.Column('winner', sa.Integer(), nullable=True),
         sa.Column('player1_ready', sa.Boolean(), nullable=True),
         sa.Column('player2_ready', sa.Boolean(), nullable=True),
@@ -55,7 +55,7 @@ def upgrade() -> None:
         sa.Column('room_id', sa.String(length=6), nullable=True),
         sa.Column('name', sa.String(length=50), nullable=False),
         sa.Column('ready', sa.Boolean(), nullable=True),
-        sa.Column('joined_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+        sa.Column('joined_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
         sa.ForeignKeyConstraint(['room_id'], ['rooms.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
@@ -66,8 +66,8 @@ def upgrade() -> None:
         sa.Column('id', sa.String(length=36), nullable=False),
         sa.Column('room_id', sa.String(length=6), nullable=True),
         sa.Column('player_id', sa.Integer(), nullable=True),
-        sa.Column('connected_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-        sa.Column('last_heartbeat', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+        sa.Column('connected_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
+        sa.Column('last_heartbeat', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
         sa.Column('is_active', sa.Boolean(), nullable=True),
         sa.ForeignKeyConstraint(['player_id'], ['players.id'], ),
         sa.ForeignKeyConstraint(['room_id'], ['rooms.id'], ),
@@ -81,3 +81,4 @@ def downgrade() -> None:
     op.drop_table('players')
     op.drop_index(op.f('ix_rooms_id'), table_name='rooms')
     op.drop_table('rooms')
+
