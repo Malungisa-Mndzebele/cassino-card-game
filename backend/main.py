@@ -1,3 +1,44 @@
+"""
+Casino Card Game Backend API
+
+FastAPI application providing REST and WebSocket endpoints for the Casino card game.
+Handles room management, game logic, real-time communication, and session persistence.
+
+Key Features:
+    - Room creation and matchmaking
+    - Real-time WebSocket game state synchronization
+    - Session management with reconnection support
+    - Complete game logic validation
+    - Action logging for replay and recovery
+    - Health monitoring and heartbeat tracking
+
+API Endpoints:
+    REST:
+        - POST /rooms/create - Create new game room
+        - POST /rooms/join - Join existing room
+        - POST /rooms/join-random - Join random available room
+        - GET /rooms/{room_id}/state - Get current game state
+        - POST /rooms/player-ready - Set player ready status
+        - POST /game/start-shuffle - Start shuffle phase
+        - POST /game/select-face-up-cards - Deal initial cards
+        - POST /game/play-card - Execute game action
+        - POST /game/reset - Reset game
+        - GET /health - Health check
+    
+    WebSocket:
+        - WS /ws/{room_id} - Real-time game updates
+
+Environment Variables:
+    DATABASE_URL: Database connection string
+    CORS_ORIGINS: Comma-separated allowed origins
+    ROOT_PATH: API root path prefix
+    SESSION_SECRET_KEY: Secret for session token signing
+
+Example:
+    >>> # Start server
+    >>> uvicorn main:app --host 0.0.0.0 --port 8000
+"""
+
 from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 import os
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,9 +62,24 @@ from game_logic import CasinoGameLogic, GameCard, Build
 # Note: Database tables are now managed by Alembic migrations
 # Run migrations with: alembic upgrade head
 
-# Dependency to get client IP address
+
 def get_client_ip(request: Request) -> str:
-    """Extract client IP address from request"""
+    """
+    Extract client IP address from request, handling proxies.
+    
+    Checks X-Forwarded-For and X-Real-IP headers for proxied requests,
+    falling back to direct client host if not behind a proxy.
+    
+    Args:
+        request (Request): FastAPI request object
+    
+    Returns:
+        str: Client IP address
+    
+    Example:
+        >>> ip = get_client_ip(request)
+        >>> # Returns "192.168.1.1" or similar
+    """
     # Check for forwarded headers (when behind proxy/load balancer)
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
@@ -250,24 +306,99 @@ async def shutdown_event():
 game_logic = CasinoGameLogic()
 
 # Utility functions
+
 def generate_room_id() -> str:
-    """Generate a 6-character room ID"""
+    """
+    Generate a unique 6-character room code.
+    
+    Creates a random alphanumeric code using uppercase letters and digits.
+    Caller should verify uniqueness in database.
+    
+    Returns:
+        str: 6-character room code (e.g., "ABC123")
+    
+    Example:
+        >>> room_id = generate_room_id()
+        >>> len(room_id)
+        6
+        >>> room_id.isupper() and room_id.isalnum()
+        True
+    """
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
+
 def convert_game_cards_to_dict(cards: List[GameCard]) -> List[Dict[str, Any]]:
-    """Convert GameCard objects to dictionary format for JSON storage"""
+    """
+    Convert GameCard objects to dictionary format for JSON storage.
+    
+    Args:
+        cards (list): List of GameCard objects
+    
+    Returns:
+        list: List of card dictionaries with id, suit, rank, value keys
+    
+    Example:
+        >>> card = GameCard("A_hearts", "hearts", "A", 14)
+        >>> convert_game_cards_to_dict([card])
+        [{'id': 'A_hearts', 'suit': 'hearts', 'rank': 'A', 'value': 14}]
+    """
     return [{"id": card.id, "suit": card.suit, "rank": card.rank, "value": card.value} for card in cards]
 
+
 def convert_dict_to_game_cards(cards_dict: List[Dict[str, Any]]) -> List[GameCard]:
-    """Convert dictionary format to GameCard objects"""
+    """
+    Convert dictionary format to GameCard objects.
+    
+    Args:
+        cards_dict (list): List of card dictionaries
+    
+    Returns:
+        list: List of GameCard objects
+    
+    Example:
+        >>> card_dict = {'id': 'A_hearts', 'suit': 'hearts', 'rank': 'A', 'value': 14}
+        >>> cards = convert_dict_to_game_cards([card_dict])
+        >>> cards[0].rank
+        'A'
+    """
     return [GameCard(id=card["id"], suit=card["suit"], rank=card["rank"], value=card["value"]) for card in cards_dict]
 
+
 def convert_builds_to_dict(builds: List[Build]) -> List[Dict[str, Any]]:
-    """Convert Build objects to dictionary format for JSON storage"""
+    """
+    Convert Build objects to dictionary format for JSON storage.
+    
+    Args:
+        builds (list): List of Build objects
+    
+    Returns:
+        list: List of build dictionaries with id, cards, value, owner keys
+    
+    Example:
+        >>> card = GameCard("5_hearts", "hearts", "5", 5)
+        >>> build = Build("build_1", [card], 8, 1)
+        >>> convert_builds_to_dict([build])
+        [{'id': 'build_1', 'cards': [...], 'value': 8, 'owner': 1}]
+    """
     return [{"id": build.id, "cards": convert_game_cards_to_dict(build.cards), "value": build.value, "owner": build.owner} for build in builds]
 
+
 def convert_dict_to_builds(builds_dict: List[Dict[str, Any]]) -> List[Build]:
-    """Convert dictionary format to Build objects"""
+    """
+    Convert dictionary format to Build objects.
+    
+    Args:
+        builds_dict (list): List of build dictionaries
+    
+    Returns:
+        list: List of Build objects
+    
+    Example:
+        >>> build_dict = {'id': 'build_1', 'cards': [...], 'value': 8, 'owner': 1}
+        >>> builds = convert_dict_to_builds([build_dict])
+        >>> builds[0].value
+        8
+    """
     return [Build(id=build["id"], cards=convert_dict_to_game_cards(build["cards"]), value=build["value"], owner=build["owner"]) for build in builds_dict]
 
 def game_state_to_response(room: Room) -> GameStateResponse:
@@ -309,19 +440,66 @@ def game_state_to_response(room: Room) -> GameStateResponse:
     )
 
 # Helper functions to reduce duplication across endpoints
+
 def get_room_or_404(db: Session, room_id: str) -> Room:
-    """Fetch a room or raise 404 if not found."""
+    """
+    Fetch a room from database or raise 404 error.
+    
+    Args:
+        db (Session): Database session
+        room_id (str): Room identifier
+    
+    Returns:
+        Room: Room object if found
+    
+    Raises:
+        HTTPException: 404 if room not found
+    
+    Example:
+        >>> room = get_room_or_404(db, "ABC123")
+    """
     room = db.query(Room).filter(Room.id == room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     return room
 
+
 def get_sorted_players(room: Room) -> List[Player]:
-    """Return players sorted by joined time (player 1 first)."""
+    """
+    Return players sorted by join time (player 1 first).
+    
+    Args:
+        room (Room): Room object with players relationship
+    
+    Returns:
+        list: Players sorted by joined_at timestamp
+    
+    Example:
+        >>> players = get_sorted_players(room)
+        >>> players[0]  # Player 1 (joined first)
+        >>> players[1]  # Player 2 (joined second)
+    """
     return sorted(room.players, key=lambda p: p.joined_at)
 
+
 def get_player_or_404(db: Session, room_id: str, player_id: int) -> Player:
-    """Fetch a player in a room or raise 404 if not found."""
+    """
+    Fetch a player in a specific room or raise 404 error.
+    
+    Args:
+        db (Session): Database session
+        room_id (str): Room identifier
+        player_id (int): Player identifier
+    
+    Returns:
+        Player: Player object if found
+    
+    Raises:
+        HTTPException: 404 if player not found in room
+    
+    Example:
+        >>> player = get_player_or_404(db, "ABC123", 1)
+    """
     player = db.query(Player).filter(
         Player.id == player_id,
         Player.room_id == room_id,
@@ -330,8 +508,21 @@ def get_player_or_404(db: Session, room_id: str, player_id: int) -> Player:
         raise HTTPException(status_code=404, detail="Player not found")
     return player
 
+
 def assert_players_turn(room: Room, player_id: int) -> None:
-    """Validate it's the given player's turn, else 400."""
+    """
+    Validate it's the specified player's turn, raise 400 if not.
+    
+    Args:
+        room (Room): Room object with game state
+        player_id (int): Player identifier to validate
+    
+    Raises:
+        HTTPException: 400 if not enough players or not player's turn
+    
+    Example:
+        >>> assert_players_turn(room, 1)  # Raises if not player 1's turn
+    """
     players_in_room = get_sorted_players(room)
     if len(players_in_room) < 2:
         raise HTTPException(status_code=400, detail="Not enough players")

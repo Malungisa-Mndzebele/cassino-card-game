@@ -1,8 +1,35 @@
 /**
  * Casino Card Game - Main Application
- * Version: 1.0.1
- * Production deployment with comprehensive test coverage
- * Deployment verification: 2025-11-09
+ * 
+ * Root component that orchestrates the entire game application.
+ * Manages game state, WebSocket connections, user preferences, and statistics.
+ * 
+ * Architecture:
+ * - Custom hooks for state management (no Redux/Zustand)
+ * - WebSocket-based real-time synchronization
+ * - localStorage persistence for preferences and statistics
+ * - Phase-based conditional rendering
+ * 
+ * Key Features:
+ * - Room creation and joining
+ * - Real-time multiplayer gameplay
+ * - Session management with reconnection
+ * - Sound effects and visual feedback
+ * - Statistics tracking
+ * - Responsive design for mobile and desktop
+ * 
+ * @component
+ * @version 1.0.1
+ * @author Casino Card Game Team
+ * @see {@link https://khasinogaming.com/cassino/} Production deployment
+ * 
+ * @example
+ * ```tsx
+ * import App from './App'
+ * 
+ * // Render the application
+ * <App />
+ * ```
  */
 import { useState, useEffect } from 'react'
 import { GamePhases } from './components/GamePhases'
@@ -22,6 +49,26 @@ import { useWebSocket } from './hooks/useWebSocket'
 import { useGameActions } from './hooks/useGameActions'
 import { useRoomActions } from './hooks/useRoomActions'
 
+/**
+ * Main App Component
+ * 
+ * Orchestrates all game functionality including:
+ * - State management via custom hooks
+ * - WebSocket connection lifecycle
+ * - Game phase rendering
+ * - Sound effects and preferences
+ * - Statistics tracking
+ * - Error handling and loading states
+ * 
+ * State Flow:
+ * 1. User creates/joins room → RoomManager
+ * 2. Players ready up → CasinoRoomView/Dealer
+ * 3. Game starts → PokerTableView (rounds 1-2)
+ * 4. Game ends → GamePhases (finished)
+ * 5. Reset or leave → Back to RoomManager
+ * 
+ * @returns {JSX.Element} Rendered application
+ */
 export default function App() {
   // Custom hooks for state management
   const gameStateHook = useGameState()

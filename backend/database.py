@@ -1,3 +1,23 @@
+"""
+Database Configuration and Connection Management
+
+This module configures SQLAlchemy engine and session management for the application.
+It supports both SQLite (development) and PostgreSQL (production) databases with
+automatic fallback and connection pooling.
+
+Environment Variables:
+    DATABASE_URL: Full database connection string
+    ENVIRONMENT: "production" or other (determines SQLite fallback)
+    FLY_APP_NAME: Fly.io app name (indicates production environment)
+
+Example:
+    >>> from database import get_db, engine
+    >>> # Use in FastAPI dependency injection
+    >>> @app.get("/items")
+    >>> async def get_items(db: Session = Depends(get_db)):
+    ...     return db.query(Item).all()
+"""
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -63,6 +83,24 @@ Base = declarative_base()
 
 # Dependency to get database session
 def get_db():
+    """
+    FastAPI dependency for database session management.
+    
+    Creates a new database session for each request and ensures it's properly
+    closed after the request completes. Use with FastAPI's Depends() injection.
+    
+    Yields:
+        Session: SQLAlchemy database session
+    
+    Example:
+        >>> from fastapi import Depends
+        >>> from database import get_db
+        >>> 
+        >>> @app.get("/rooms/{room_id}")
+        >>> async def get_room(room_id: str, db: Session = Depends(get_db)):
+        ...     room = db.query(Room).filter(Room.id == room_id).first()
+        ...     return room
+    """
     db = SessionLocal()
     try:
         yield db

@@ -3,18 +3,56 @@ import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { LogOut, Users, Trophy } from 'lucide-react'
 
+/**
+ * Props for the AppHeader component
+ * @interface AppHeaderProps
+ */
 interface AppHeaderProps {
+  /** 6-character room code */
   roomId: string
+  /** Current WebSocket connection status */
   connectionStatus: 'connected' | 'connecting' | 'disconnected'
+  /** Current player's name */
   myName: string
+  /** Opponent player's name */
   opponentName: string
+  /** Current player's score */
   myScore: number
+  /** Opponent player's score */
   opponentScore: number
+  /** Optional current game phase */
   phase?: string
+  /** Optional current round number */
   round?: number
+  /** Callback when leave button is clicked */
   onLeave: () => void
 }
 
+/**
+ * AppHeader Component
+ * 
+ * Displays the game header with room information, connection status,
+ * player scores, and leave game button. Shown during non-gameplay phases.
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <AppHeader
+ *   roomId="ABC123"
+ *   connectionStatus="connected"
+ *   myName="Alice"
+ *   opponentName="Bob"
+ *   myScore={5}
+ *   opponentScore={3}
+ *   phase="round1"
+ *   round={1}
+ *   onLeave={() => leaveGame()}
+ * />
+ * ```
+ * 
+ * @param {AppHeaderProps} props - Component props
+ * @returns {JSX.Element} Rendered header component
+ */
 export function AppHeader({
   roomId,
   connectionStatus,

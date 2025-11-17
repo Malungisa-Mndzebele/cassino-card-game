@@ -1,20 +1,66 @@
 import React from 'react'
 import { Card } from './Card'
 
+/**
+ * Represents a playing card
+ * @interface GameCard
+ */
 interface GameCard {
+  /** Unique card identifier */
   id: string
+  /** Card suit */
   suit: string
+  /** Card rank */
   rank: string
 }
 
+/**
+ * Props for the PlayerHand component
+ * @interface PlayerHandProps
+ */
 interface PlayerHandProps {
+  /** Array of cards in the player's hand */
   cards: GameCard[]
+  /** Whether this is the opponent's hand (shows card backs) */
   isOpponent: boolean
+  /** Name of the player */
   playerName: string
+  /** Optional callback when a card is clicked */
   onPlayCard?: (cardId: string) => void
+  /** Whether the player can currently play cards */
   canPlay?: boolean
 }
 
+/**
+ * PlayerHand Component
+ * 
+ * Displays a player's hand of cards with appropriate styling and interaction.
+ * Shows card backs for opponent's hand and face-up cards for current player.
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * // Current player's hand
+ * <PlayerHand
+ *   cards={myCards}
+ *   isOpponent={false}
+ *   playerName="Alice"
+ *   onPlayCard={(cardId) => playCard(cardId)}
+ *   canPlay={true}
+ * />
+ * 
+ * // Opponent's hand (hidden cards)
+ * <PlayerHand
+ *   cards={opponentCards}
+ *   isOpponent={true}
+ *   playerName="Bob"
+ *   canPlay={false}
+ * />
+ * ```
+ * 
+ * @param {PlayerHandProps} props - Component props
+ * @returns {JSX.Element} Rendered player hand
+ */
 export function PlayerHand({ 
   cards, 
   isOpponent, 

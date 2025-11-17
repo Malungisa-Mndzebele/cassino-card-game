@@ -6,24 +6,74 @@ import { Badge } from './ui/badge'
 import { GamePreferences } from './GameSettings'
 import { Dealer } from './Dealer'
 
+/**
+ * Represents a playing card
+ * @interface GameCard
+ */
 interface GameCard {
+  /** Unique card identifier */
   id: string
+  /** Card suit */
   suit: string
+  /** Card rank */
   rank: string
 }
 
+/**
+ * Props for the GamePhases component
+ * @interface GamePhasesProps
+ */
 interface GamePhasesProps {
+  /** Complete game state object */
   gameState: any
+  /** Current player's ID (1 or 2) */
   playerId: number
+  /** Callback for selecting face-up cards during cardSelection phase */
   onSelectFaceUpCards: (cardIds: string[]) => void
+  /** Callback for playing a card (capture/build/trail) */
   onPlayCard: (cardId: string, action: string, targetCards?: string[], buildValue?: number) => void
+  /** Callback for resetting the game after it finishes */
   onResetGame: () => void
+  /** Callback when player marks themselves as ready */
   onPlayerReady: () => void
+  /** Callback when player marks themselves as not ready */
   onPlayerNotReady: () => void
+  /** Callback for Player 1 to shuffle the deck */
   onStartShuffle?: () => void
+  /** User preferences for sound, hints, and statistics */
   preferences: GamePreferences
 }
 
+/**
+ * GamePhases Component
+ * 
+ * Manages and renders different game phases including:
+ * - dealer: Pre-game ready phase
+ * - shuffling: Deck shuffle animation
+ * - cardSelection: Player 1 selects initial table cards
+ * - dealing: Card dealing animation
+ * - round1/round2: Active gameplay phases
+ * - finished: Game over with winner display
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <GamePhases
+ *   gameState={gameState}
+ *   playerId={1}
+ *   onSelectFaceUpCards={(cards) => selectCards(cards)}
+ *   onPlayCard={(card, action, targets, value) => playCard(card, action, targets, value)}
+ *   onResetGame={() => resetGame()}
+ *   onPlayerReady={() => setReady(true)}
+ *   onPlayerNotReady={() => setReady(false)}
+ *   onStartShuffle={() => shuffle()}
+ *   preferences={preferences}
+ * />
+ * ```
+ * 
+ * @param {GamePhasesProps} props - Component props
+ * @returns {JSX.Element | null} Rendered phase-specific UI or null
+ */
 export function GamePhases({ 
   gameState, 
   playerId, 

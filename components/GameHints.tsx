@@ -2,37 +2,77 @@ import React from 'react'
 import { Badge } from './ui/badge'
 import { Lightbulb, Target, Plus, ArrowRight } from 'lucide-react'
 
+/**
+ * Represents a playing card in the game
+ * @interface GameCard
+ */
 interface GameCard {
+  /** Unique card identifier */
   id: string
+  /** Card suit: hearts, diamonds, clubs, or spades */
   suit: string
+  /** Card rank: A, 2-10, J, Q, K */
   rank: string
 }
 
+/**
+ * Represents a build on the table
+ * @interface Build
+ */
 interface Build {
+  /** Unique build identifier */
   id: string
+  /** Cards in the build */
   cards: GameCard[]
+  /** Target value of the build */
   value: number
+  /** Player ID who owns the build */
   owner: number
 }
 
+/**
+ * Represents a possible move with scoring
+ * @interface PossibleMove
+ */
 interface PossibleMove {
+  /** Type of move: capture, build, or trail */
   type: 'capture' | 'build' | 'trail'
+  /** Card from hand to play */
   handCard: GameCard
+  /** Target cards for capture/build */
   targetCards?: GameCard[]
+  /** Target builds for capture */
   targetBuilds?: Build[]
+  /** Value for build action */
   buildValue?: number
-  score: number // How good this move is (0-100)
+  /** Move quality score (0-100, higher is better) */
+  score: number
+  /** Human-readable description of the move */
   description: string
 }
 
+/**
+ * Props for the GameHints component
+ * @interface GameHintsProps
+ */
 interface GameHintsProps {
+  /** Cards in player's hand */
   playerHand: GameCard[]
+  /** Cards on the table */
   tableCards: GameCard[]
+  /** Active builds */
   builds: Build[]
+  /** Whether hints are enabled */
   enabled: boolean
+  /** Current player's ID */
   playerId: number
 }
 
+/**
+ * Converts card rank to numeric value
+ * @param {string} rank - Card rank
+ * @returns {number} Numeric value
+ */
 function getCardValue(rank: string): number {
   if (rank === 'A') return 14
   if (rank === 'K') return 13
@@ -234,6 +274,33 @@ function getSuitSymbol(suit: string): string {
   }
 }
 
+/**
+ * GameHints Component
+ * 
+ * Analyzes the current game state and suggests optimal moves to the player.
+ * Calculates scores for all possible moves and displays the top 3 suggestions.
+ * 
+ * Scoring algorithm considers:
+ * - Capturing high-value cards (Aces, 2♠, 10♦)
+ * - Multi-card captures
+ * - Strategic builds
+ * - Spades for majority bonus
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <GameHints
+ *   playerHand={playerCards}
+ *   tableCards={tableCards}
+ *   builds={activeBuilds}
+ *   enabled={true}
+ *   playerId={1}
+ * />
+ * ```
+ * 
+ * @param {GameHintsProps} props - Component props
+ * @returns {JSX.Element | null} Rendered hints panel or null if disabled
+ */
 export function GameHints({ playerHand, tableCards, builds, enabled }: GameHintsProps) {
   if (!enabled) return null
 

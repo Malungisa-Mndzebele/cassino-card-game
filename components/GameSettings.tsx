@@ -6,13 +6,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from './ui/badge'
 import { Settings, BarChart3, Lightbulb, Volume2, VolumeX } from 'lucide-react'
 
+/**
+ * User preferences for game settings
+ * @interface GamePreferences
+ */
 export interface GamePreferences {
+  /** Whether gameplay hints are enabled */
   hintsEnabled: boolean
+  /** Whether statistics tracking is enabled */
   statisticsEnabled: boolean
+  /** Whether sound effects are enabled */
   soundEnabled: boolean
+  /** Sound volume level (0.0 to 1.0) */
   soundVolume: number
 }
 
+/**
+ * Default preference values
+ */
 const DEFAULT_PREFERENCES: GamePreferences = {
   hintsEnabled: true,
   statisticsEnabled: true,
@@ -20,25 +31,71 @@ const DEFAULT_PREFERENCES: GamePreferences = {
   soundVolume: 0.5
 }
 
+/**
+ * Props for the GameSettings component
+ * @interface GameSettingsProps
+ */
 interface GameSettingsProps {
+  /** Current user preferences */
   preferences: GamePreferences
+  /** Callback when preferences are updated */
   onPreferencesChange: (preferences: GamePreferences) => void
+  /** Optional statistics data to display */
   statistics?: GameStatistics
 }
 
+/**
+ * Player statistics tracked across games
+ * @interface GameStatistics
+ */
 export interface GameStatistics {
+  /** Total number of games played */
   gamesPlayed: number
+  /** Number of games won */
   gamesWon: number
+  /** Number of games lost */
   gamesLost: number
+  /** Cumulative score across all games */
   totalScore: number
+  /** Highest score achieved in a single game */
   bestScore: number
+  /** Average score per game */
   averageScore: number
+  /** Longest consecutive win streak */
   longestWinStreak: number
+  /** Current active win streak */
   currentWinStreak: number
+  /** Percentage of successful captures */
   captureRate: number
+  /** Percentage of successful builds */
   buildRate: number
 }
 
+/**
+ * GameSettings Component
+ * 
+ * Provides a modal dialog for managing game preferences and viewing statistics.
+ * Settings are persisted to localStorage and include:
+ * - Sound effects toggle and volume control
+ * - Gameplay hints toggle
+ * - Statistics tracking toggle and display
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * const [prefs, setPrefs] = useGamePreferences();
+ * const [stats] = useGameStatistics();
+ * 
+ * <GameSettings
+ *   preferences={prefs}
+ *   onPreferencesChange={setPrefs}
+ *   statistics={stats}
+ * />
+ * ```
+ * 
+ * @param {GameSettingsProps} props - Component props
+ * @returns {JSX.Element} Rendered settings dialog trigger and content
+ */
 export function GameSettings({ preferences, onPreferencesChange, statistics }: GameSettingsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [showStats, setShowStats] = useState(false)
@@ -228,7 +285,22 @@ export function GameSettings({ preferences, onPreferencesChange, statistics }: G
   )
 }
 
-// Hook for managing preferences
+/**
+ * Custom hook for managing game preferences with localStorage persistence
+ * 
+ * @param {GamePreferences} [defaultPreferences] - Optional default preferences
+ * @returns {[GamePreferences, (prefs: GamePreferences) => void]} Tuple of [preferences, updatePreferences]
+ * 
+ * @example
+ * ```tsx
+ * const [preferences, setPreferences] = useGamePreferences({
+ *   soundEnabled: true,
+ *   soundVolume: 0.7,
+ *   hintsEnabled: false,
+ *   statisticsEnabled: true
+ * });
+ * ```
+ */
 function useGamePreferences(defaultPreferences?: GamePreferences): [GamePreferences, (prefs: GamePreferences) => void] {
   const [preferences, setPreferences] = useState<GamePreferences>(defaultPreferences || {
     hintsEnabled: false,
@@ -266,7 +338,26 @@ function useGamePreferences(defaultPreferences?: GamePreferences): [GamePreferen
   return [preferences, updatePreferences]
 }
 
-// Hook for managing statistics
+/**
+ * Custom hook for managing game statistics with localStorage persistence
+ * 
+ * @returns {[GameStatistics, (update: Partial<GameStatistics>) => void, () => void]} 
+ *          Tuple of [statistics, updateStatistics, resetStatistics]
+ * 
+ * @example
+ * ```tsx
+ * const [stats, updateStats, resetStats] = useGameStatistics();
+ * 
+ * // Update after game ends
+ * updateStats({
+ *   gamesPlayed: stats.gamesPlayed + 1,
+ *   gamesWon: stats.gamesWon + 1
+ * });
+ * 
+ * // Reset all statistics
+ * resetStats();
+ * ```
+ */
 function useGameStatistics(): [GameStatistics, (update: Partial<GameStatistics>) => void, () => void] {
   const [statistics, setStatistics] = useState<GameStatistics>({
     gamesPlayed: 0,

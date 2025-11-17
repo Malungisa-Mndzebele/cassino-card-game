@@ -4,14 +4,44 @@ import { Badge } from './ui/badge'
 import { Card, CardContent } from './ui/card'
 import { Crown, Users, Clock, CheckCircle, XCircle, Sparkles, PlayCircle, Shuffle } from 'lucide-react'
 
+/**
+ * Props for the Dealer component
+ * @interface DealerProps
+ */
 interface DealerProps {
+  /** Complete game state object containing players, ready status, and room info */
   gameState: any
+  /** Current player's ID (1 or 2) */
   playerId: number
+  /** Callback when player clicks "I'm Ready" button */
   onPlayerReady: () => void
+  /** Callback when player clicks "Not Ready" button */
   onPlayerNotReady: () => void
+  /** Callback when Player 1 clicks "Shuffle the Deck" (only shown when both ready) */
   onStartShuffle?: () => void
 }
 
+/**
+ * Dealer Component
+ * 
+ * Displays a modal overlay with the dealer character and player ready status.
+ * Manages the pre-game phase where players confirm they're ready to begin.
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <Dealer
+ *   gameState={gameState}
+ *   playerId={1}
+ *   onPlayerReady={() => setPlayerReady(true)}
+ *   onPlayerNotReady={() => setPlayerReady(false)}
+ *   onStartShuffle={() => initializeGame()}
+ * />
+ * ```
+ * 
+ * @param {DealerProps} props - Component props
+ * @returns {JSX.Element} Rendered dealer modal
+ */
 export function Dealer({ gameState, playerId, onPlayerReady, onPlayerNotReady, onStartShuffle }: DealerProps) {
   const isPlayer1Ready = gameState.player1Ready
   const isPlayer2Ready = gameState.player2Ready

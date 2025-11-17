@@ -3,27 +3,68 @@ import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Crown, Star, Sparkles } from 'lucide-react'
 
+/**
+ * Props for the Card component
+ * @interface CardProps
+ */
 interface CardProps {
+  /** Card object containing id, suit, and rank */
   card?: {
     id: string
     suit: string
     rank: string
   }
-  // Support individual props for backward compatibility
+  /** Card ID (for backward compatibility) */
   id?: string
+  /** Card suit: hearts, diamonds, clubs, or spades (for backward compatibility) */
   suit?: string
+  /** Card rank: A, 2-10, J, Q, K (for backward compatibility) */
   rank?: string
+  /** Callback function when card is clicked, receives card object */
   onClick?: (card: { id: string; suit: string; rank: string }) => void
+  /** Whether the card is disabled and cannot be clicked */
   disabled?: boolean
+  /** Whether the card is currently selected */
   selected?: boolean
+  /** Whether the card should be highlighted (e.g., as a valid move) */
   highlighted?: boolean
+  /** Size variant of the card */
   size?: 'small' | 'medium' | 'normal' | 'large'
+  /** Whether to show point badges for special cards */
   showPoints?: boolean
-  // Additional props used by other components
+  /** Whether the card can be played (affects cursor and hover states) */
   isPlayable?: boolean
+  /** Whether to show card back instead of face (for opponent's hand) */
   isHidden?: boolean
 }
 
+/**
+ * Card Component
+ * 
+ * Displays a playing card with suit, rank, and optional special effects.
+ * Supports multiple sizes, selection states, and point indicators for scoring cards.
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * // Basic card display
+ * <Card suit="hearts" rank="A" id="A_hearts" />
+ * 
+ * // Interactive card with click handler
+ * <Card 
+ *   card={{ id: "K_spades", suit: "spades", rank: "K" }}
+ *   onClick={(card) => console.log('Clicked:', card)}
+ *   selected={true}
+ *   size="large"
+ * />
+ * 
+ * // Hidden card (opponent's hand)
+ * <Card suit="clubs" rank="5" id="5_clubs" isHidden={true} />
+ * ```
+ * 
+ * @param {CardProps} props - Component props
+ * @returns {JSX.Element} Rendered card component
+ */
 export function Card({ 
   card, 
   id: cardId,

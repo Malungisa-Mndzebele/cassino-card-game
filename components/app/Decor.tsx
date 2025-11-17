@@ -1,6 +1,27 @@
 import React from 'react'
 import { Heart, Diamond, Spade, Club, Crown, Star } from 'lucide-react'
 
+/**
+ * Decor Component
+ * 
+ * Renders floating decorative card suit symbols and casino icons
+ * in the background for visual ambiance. Uses CSS animations for
+ * floating effects with staggered delays.
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * // Show decorations on landing page
+ * <Decor visible={!isConnected} />
+ * 
+ * // Hide decorations during gameplay
+ * <Decor visible={false} />
+ * ```
+ * 
+ * @param {Object} props - Component props
+ * @param {boolean} props.visible - Whether decorations should be visible
+ * @returns {JSX.Element | null} Rendered decorations or null if not visible
+ */
 export function Decor({ visible }: { visible: boolean }) {
   if (!visible) return null
   return (

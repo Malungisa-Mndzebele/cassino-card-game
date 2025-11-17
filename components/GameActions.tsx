@@ -6,30 +6,62 @@ import { Input } from './ui/input'
 import { GameHints } from './GameHints'
 import { soundManager } from './SoundSystem'
 
+/**
+ * Represents a playing card in the game
+ * @interface GameCard
+ */
 interface GameCard {
+  /** Unique card identifier (e.g., "A_hearts") */
   id: string
+  /** Card suit: hearts, diamonds, clubs, or spades */
   suit: string
+  /** Card rank: A, 2-10, J, Q, K */
   rank: string
 }
 
+/**
+ * Represents a build created by a player
+ * @interface Build
+ */
 interface Build {
+  /** Unique build identifier */
   id: string
+  /** Array of cards in the build */
   cards: GameCard[]
+  /** Target value of the build */
   value: number
+  /** Player ID who created the build (1 or 2) */
   owner: number
 }
 
+/**
+ * Props for the GameActions component
+ * @interface GameActionsProps
+ */
 interface GameActionsProps {
+  /** Cards in the current player's hand */
   playerHand: GameCard[]
+  /** Cards currently on the table */
   tableCards: GameCard[]
+  /** Active builds on the table */
   builds: Build[]
+  /** Callback when player executes an action (capture, build, or trail) */
   onPlayCard: (cardId: string, action: string, targetCards?: string[], buildValue?: number) => void
+  /** Whether it's currently this player's turn */
   isMyTurn: boolean
+  /** Whether to show gameplay hints */
   hintsEnabled?: boolean
+  /** Whether sound effects are enabled */
   soundEnabled?: boolean
+  /** Current player's ID (1 or 2) */
   playerId: number
 }
 
+/**
+ * Converts card rank to numeric value for game logic
+ * @param {string} rank - Card rank (A, 2-10, J, Q, K)
+ * @returns {number} Numeric value (A=14, K=13, Q=12, J=11, 2-10=face value)
+ */
 function getCardValue(rank: string): number {
   if (rank === 'A') return 14
   if (rank === 'K') return 13
@@ -38,6 +70,40 @@ function getCardValue(rank: string): number {
   return parseInt(rank)
 }
 
+/**
+ * GameActions Component
+ * 
+ * Provides the interactive UI for playing cards during a game turn.
+ * Handles card selection, action choice (capture/build/trail), and move validation.
+ * 
+ * Features:
+ * - Hand card selection with visual feedback
+ * - Action buttons for capture, build, and trail
+ * - Build value input with validation
+ * - Table card and build selection for captures
+ * - Real-time move validation and hints
+ * - Sound effects for actions
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <GameActions
+ *   playerHand={[{ id: "A_hearts", suit: "hearts", rank: "A" }]}
+ *   tableCards={[{ id: "5_clubs", suit: "clubs", rank: "5" }]}
+ *   builds={[]}
+ *   onPlayCard={(cardId, action, targets, buildValue) => {
+ *     console.log('Playing:', cardId, action);
+ *   }}
+ *   isMyTurn={true}
+ *   hintsEnabled={true}
+ *   soundEnabled={true}
+ *   playerId={1}
+ * />
+ * ```
+ * 
+ * @param {GameActionsProps} props - Component props
+ * @returns {JSX.Element} Rendered game actions interface
+ */
 export function GameActions({ 
   playerHand, 
   tableCards, 

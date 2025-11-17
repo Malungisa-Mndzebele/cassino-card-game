@@ -3,17 +3,56 @@ import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Crown, Users, Sparkles, Play } from 'lucide-react'
 
+/**
+ * Props for the CasinoRoomView component
+ * @interface CasinoRoomViewProps
+ */
 interface CasinoRoomViewProps {
+  /** Unique 6-character room code */
   roomId: string
+  /** Array of players in the room with id and name */
   players: Array<{ id: number; name: string }>
+  /** Whether Player 1 is ready to start */
   player1Ready: boolean
+  /** Whether Player 2 is ready to start */
   player2Ready: boolean
+  /** Current player's ID (1 or 2) */
   playerId: number
+  /** Callback when player clicks "I'm Ready" button */
   onPlayerReady: () => void
+  /** Callback when player clicks "Not Ready" button */
   onPlayerNotReady: () => void
+  /** Callback when Player 1 clicks "Shuffle the Deck" (only available when both ready) */
   onStartShuffle?: () => void
 }
 
+/**
+ * CasinoRoomView Component
+ * 
+ * Displays the waiting room/lobby view with a classic casino poker table aesthetic.
+ * Shows player avatars, ready status, room code, and controls for starting the game.
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <CasinoRoomView
+ *   roomId="ABC123"
+ *   players={[
+ *     { id: 1, name: "Alice" },
+ *     { id: 2, name: "Bob" }
+ *   ]}
+ *   player1Ready={true}
+ *   player2Ready={false}
+ *   playerId={1}
+ *   onPlayerReady={() => setReady(true)}
+ *   onPlayerNotReady={() => setReady(false)}
+ *   onStartShuffle={() => startGame()}
+ * />
+ * ```
+ * 
+ * @param {CasinoRoomViewProps} props - Component props
+ * @returns {JSX.Element} Rendered casino room view
+ */
 export function CasinoRoomView({
   roomId,
   players,

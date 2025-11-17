@@ -5,19 +5,65 @@ import { Button } from './ui/button'
 import { LogOut } from 'lucide-react'
 import type { GameState } from '../apiClient'
 
+/**
+ * Props for the PokerTableView component
+ * @interface PokerTableViewProps
+ */
 interface PokerTableViewProps {
+  /** Complete game state object */
   gameState: GameState
+  /** Current player's ID (1 or 2) */
   playerId: number
+  /** Callback for playing a card */
   onPlayCard: (cardId: string, action: string, targetCards?: string[], buildValue?: number) => void
+  /** Optional callback for leaving the game */
   onLeave?: () => void
 }
 
+/**
+ * Represents a playing card
+ * @interface GameCard
+ */
 interface GameCard {
+  /** Unique card identifier */
   id: string
+  /** Card suit */
   suit: string
+  /** Card rank */
   rank: string
 }
 
+/**
+ * PokerTableView Component
+ * 
+ * Renders the main game table with a classic casino poker aesthetic.
+ * Displays player hands, community cards, dealer position, and game controls.
+ * Provides an immersive full-screen gaming experience during active rounds.
+ * 
+ * Features:
+ * - Classic casino table design with green felt and wood paneling
+ * - Player positions with holographic UI overlays
+ * - Community cards display in center
+ * - Dealer deck visualization
+ * - Score tracking and turn indicators
+ * - Interactive card play for current player
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <PokerTableView
+ *   gameState={gameState}
+ *   playerId={1}
+ *   onPlayCard={(cardId, action, targets, value) => {
+ *     console.log('Playing card:', cardId, action);
+ *   }}
+ *   onLeave={() => leaveGame()}
+ * />
+ * ```
+ * 
+ * @param {PokerTableViewProps} props - Component props
+ * @returns {JSX.Element} Rendered poker table view
+ */
 export function PokerTableView({
   gameState,
   playerId,

@@ -5,18 +5,63 @@ import { Label } from './ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Gamepad2, Users, PlayCircle, Shuffle, Target, Layers, FileText } from 'lucide-react'
 
+/**
+ * Props for the RoomManager component
+ * @interface RoomManagerProps
+ */
 interface RoomManagerProps {
+  /** Current room code value */
   roomId: string
+  /** Callback to update room code */
   setRoomId: (roomId: string) => void
+  /** Current player name value */
   playerName: string
+  /** Callback to update player name */
   setPlayerName: (name: string) => void
+  /** Callback to create a new room */
   onCreateRoom: () => void
+  /** Callback to join an existing room */
   onJoinRoom: (roomId: string, playerName: string) => void
+  /** Optional callback to join a random available room */
   onJoinRandomRoom?: () => void
+  /** Error message to display */
   error: string
+  /** Whether an operation is in progress */
   isLoading: boolean
 }
 
+/**
+ * RoomManager Component
+ * 
+ * Provides the landing page and lobby interface for creating or joining game rooms.
+ * Features a casino-themed design with game rules and instructions.
+ * 
+ * Features:
+ * - Create new room with player name
+ * - Join existing room with 6-character code
+ * - Join random available room (matchmaking)
+ * - Display game rules and instructions
+ * - Form validation and error handling
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <RoomManager
+ *   roomId={roomCode}
+ *   setRoomId={setRoomCode}
+ *   playerName={name}
+ *   setPlayerName={setName}
+ *   onCreateRoom={() => createNewRoom()}
+ *   onJoinRoom={(code, name) => joinExistingRoom(code, name)}
+ *   onJoinRandomRoom={() => joinRandom()}
+ *   error={errorMessage}
+ *   isLoading={loading}
+ * />
+ * ```
+ * 
+ * @param {RoomManagerProps} props - Component props
+ * @returns {JSX.Element} Rendered room manager interface
+ */
 export function RoomManager({
   roomId,
   setRoomId,

@@ -1,9 +1,37 @@
 import { useEffect, useRef } from 'react'
 
+/**
+ * Props for the SoundSystem component
+ * @interface SoundSystemProps
+ */
 interface SoundSystemProps {
+  /** Optional callback when sound system is initialized and ready */
   onSoundReady?: () => void
 }
 
+/**
+ * SoundManager Class
+ * 
+ * Manages audio context and sound effect playback using Web Audio API.
+ * Creates procedural sound effects for game actions without external audio files.
+ * 
+ * Sound effects:
+ * - capture: Ascending chime for capturing cards
+ * - build: Building chime for creating builds
+ * - trail: Simple note for trailing cards
+ * - gameStart: Fanfare for game beginning
+ * - gameEnd: Resolution chord for game completion
+ * - error: Dissonant tone for errors
+ * 
+ * @class
+ * @example
+ * ```tsx
+ * const soundManager = new SoundManager();
+ * await soundManager.initialize();
+ * soundManager.setMasterVolume(0.5);
+ * await soundManager.playSound('capture', 1.0);
+ * ```
+ */
 export class SoundManager {
   private audioContext: AudioContext | null = null
   private sounds: Map<string, AudioBuffer> = new Map()
@@ -112,6 +140,21 @@ export class SoundManager {
 // Global sound manager instance
 export const soundManager = new SoundManager()
 
+/**
+ * SoundSystem Component
+ * 
+ * Initializes the global sound manager on mount and notifies when ready.
+ * This component renders nothing but manages audio initialization lifecycle.
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <SoundSystem onSoundReady={() => setSoundReady(true)} />
+ * ```
+ * 
+ * @param {SoundSystemProps} props - Component props
+ * @returns {null} No visual output
+ */
 export function SoundSystem({ onSoundReady }: SoundSystemProps) {
   const initialized = useRef(false)
 

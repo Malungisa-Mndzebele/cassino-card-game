@@ -183,44 +183,191 @@ npx playwright test tests/e2e/production-smoke-test.spec.ts --config=playwright.
 
 ## 🚢 Deployment
 
-### Automated Deployment (GitHub Actions)
+### Production URLs
+- **Frontend**: https://khasinogaming.com/cassino/
+- **Backend API**: https://cassino-game-backend.fly.dev
+- **Health Check**: https://cassino-game-backend.fly.dev/health
 
-The project uses GitHub Actions for CI/CD:
+### Prerequisites
+- Node.js 18+ and npm
+- Python 3.11+
+- Fly.io CLI (for backend)
+- FTP credentials (for frontend)
 
-#### Backend Deployment (Fly.io)
-- **Trigger**: Push to `master` branch with backend changes
-- **URL**: https://cassino-game-backend.fly.dev
-- **Workflow**: `.github/workflows/deploy-backend.yml`
+---
 
-#### Frontend Deployment (khasinogaming.com)
-- **Trigger**: Push to `master` branch with frontend changes
-- **URL**: https://khasinogaming.com/cassino/
-- **Workflow**: `.github/workflows/deploy-frontend.yml`
+### Backend Deployment (Fly.io)
 
-### Manual Deployment
-
-#### Backend (Fly.io)
+#### Initial Setup
 ```bash
-# Deploy
+# Install Fly.io CLI
+# Windows: iwr https://fly.io/install.ps1 -useb | iex
+# Mac/Linux: curl -L https://fly.io/install.sh | sh
+
+# Login to Fly.io
+flyctl auth login
+
+# Create app (first time only)
+flyctl launch
+```
+
+#### Deploy Backend
+```bash
+# Deploy to Fly.io
 flyctl deploy
 
-# Run migrations
+# Run database migrations
 flyctl ssh console -C "cd /app && python -m alembic upgrade head"
+
+# Check deployment status
+flyctl status
+
+# View logs
+flyctl logs
 
 # Check health
 curl https://cassino-game-backend.fly.dev/health
 ```
 
-#### Frontend (FTP)
+#### Backend Environment Variables
+Set in Fly.io dashboard or via CLI:
 ```bash
-# Build
+flyctl secrets set DATABASE_URL="postgresql://..."
+flyctl secrets set CORS_ORIGINS="https://khasinogaming.com"
+```
+
+---
+
+### Frontend Deployment (FTP)
+
+#### Setup FTP Credentials
+Create `.env` file in project root:
+```bash
+# FTP Configuration
+FTP_HOST=your-ftp-host.com
+FTP_USER=your-username
+FTP_PASSWORD=your-password
+FTP_PORT=21
+FTP_SECURE=false
+```
+
+#### Deploy Frontend
+```bash
+# 1. Build production bundle
 npm run build
 
-# Upload dist/ contents to:
-# Server: [Your FTP Host]
-# Directory: / (root)
-# Note: Vite base is /cassino/, FTP deploys to root
+# 2. Deploy via FTP (automated)
+npm run deploy:ftp
+
+# 3. Verify deployment
+npm run test:production
 ```
+
+#### Manual FTP Deployment
+If automated deployment fails:
+1. Build: `npm run build`
+2. Upload contents of `dist/` folder to `/public_html/cassino/` on your FTP server
+3. Ensure `index.html` is in the cassino directory
+4. Verify at https://khasinogaming.com/cassino/
+
+#### Frontend Configuration
+The app is configured for `/cassino/` base path in `vite.config.ts`:
+```typescript
+export default defineConfig({
+  base: '/cassino/',  // Important: matches deployment path
+  // ...
+})
+```
+
+---
+
+### Deployment Verification
+
+#### Test Production Backend
+```bash
+# Run production smoke tests
+npm run test:production
+
+# Test specific endpoints
+curl https://cassino-game-backend.fly.dev/health
+curl https://cassino-game-backend.fly.dev/
+```
+
+#### Test Production Frontend
+```bash
+# Run live deployment tests
+npm run test:live
+
+# Or visit directly
+open https://khasinogaming.com/cassino/
+```
+
+---
+
+### Deployment Checklist
+
+**Before Deploying:**
+- [ ] All tests passing locally (`node run-all-tests.js`)
+- [ ] Code committed to repository
+- [ ] Environment variables configured
+- [ ] Database migrations created (if needed)
+
+**Backend Deployment:**
+- [ ] `flyctl deploy` successful
+- [ ] Migrations run: `flyctl ssh console -C "cd /app && python -m alembic upgrade head"`
+- [ ] Health check passes: `curl https://cassino-game-backend.fly.dev/health`
+- [ ] Logs show no errors: `flyctl logs`
+
+**Frontend Deployment:**
+- [ ] Build successful: `npm run build`
+- [ ] FTP credentials in `.env`
+- [ ] Deploy successful: `npm run deploy:ftp`
+- [ ] Site loads: https://khasinogaming.com/cassino/
+- [ ] Production tests pass: `npm run test:live`
+
+---
+
+### Rollback Procedure
+
+#### Backend Rollback
+```bash
+# List recent deployments
+flyctl releases
+
+# Rollback to previous version
+flyctl releases rollback <version>
+```
+
+#### Frontend Rollback
+```bash
+# Checkout previous version
+git checkout <previous-commit>
+
+# Rebuild and redeploy
+npm run build
+npm run deploy:ftp
+```
+
+---
+
+### Monitoring
+
+#### Backend Monitoring
+```bash
+# View real-time logs
+flyctl logs
+
+# Check metrics
+flyctl dashboard
+
+# SSH into container
+flyctl ssh console
+```
+
+#### Frontend Monitoring
+- Check browser console for errors
+- Run production tests: `npm run test:production`
+- Monitor via hosting provider dashboard
 
 ---
 
