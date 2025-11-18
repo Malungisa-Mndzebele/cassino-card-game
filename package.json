@@ -12,7 +12,7 @@
     "install:frontend": "npm install",
     "install:all": "npm run install:backend && npm run install:frontend",
     "test": "cd backend && python test_api_comprehensive.py",
-    "test:backend": "cd backend && python test_api_comprehensive.py",
+    "test:backend": "cd backend && pytest test_api_comprehensive.py",
     "clean": "del /s /q /f node_modules 2>nul || rmdir /s /q node_modules 2>nul",
     "fresh-install": "npm run clean && npm install",
     "type-check": "tsc --noEmit",

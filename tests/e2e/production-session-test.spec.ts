@@ -71,7 +71,7 @@ test.describe('Production Session Management', () => {
   test('should establish WebSocket with session token', async ({ page }) => {
     console.log('🔌 Testing WebSocket with session...');
     
-    let wsMessages: any[] = [];
+    const wsMessages: any[] = [];
     
     // Listen for WebSocket messages
     page.on('websocket', ws => {
