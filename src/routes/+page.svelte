@@ -53,8 +53,8 @@
 							<div class="players-ready">
 								<div class="player-ready-status">
 									<span class="player-name">{players[0]?.name}</span>
-									<span class="ready-indicator {gameState.player1_ready ? 'ready' : 'not-ready'}">
-										{gameState.player1_ready ? '✓ Ready' : '⏳ Not Ready'}
+									<span class="ready-indicator {gameState.player1Ready ? 'ready' : 'not-ready'}">
+										{gameState.player1Ready ? '✓ Ready' : '⏳ Not Ready'}
 									</span>
 								</div>
 								
@@ -62,8 +62,8 @@
 								
 								<div class="player-ready-status">
 									<span class="player-name">{players[1]?.name}</span>
-									<span class="ready-indicator {gameState.player2_ready ? 'ready' : 'not-ready'}">
-										{gameState.player2_ready ? '✓ Ready' : '⏳ Not Ready'}
+									<span class="ready-indicator {gameState.player2Ready ? 'ready' : 'not-ready'}">
+										{gameState.player2Ready ? '✓ Ready' : '⏳ Not Ready'}
 									</span>
 								</div>
 							</div>
@@ -90,11 +90,11 @@
 								</p>
 								
 								<!-- Sample Cards Display -->
-								{#if gameState?.player1_hand && gameState.player1_hand.length > 0}
+								{#if gameState?.player1Hand && gameState.player1Hand.length > 0}
 									<div class="mt-8">
 										<p class="text-gray-300 mb-4">Your Hand:</p>
 										<div class="flex gap-2 justify-center flex-wrap">
-											{#each gameState.player1_hand.slice(0, 4) as card}
+											{#each gameState.player1Hand.slice(0, 4) as card}
 												<Card {card} size="medium" isPlayable={false} />
 											{/each}
 										</div>

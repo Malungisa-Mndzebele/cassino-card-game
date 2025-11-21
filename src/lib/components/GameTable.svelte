@@ -15,14 +15,14 @@
 	$: player1 = players[0];
 	$: player2 = players[1];
 	$: myHand = $isMyTurn && player1?.id === $gameStore.playerId 
-		? gameState?.player1_hand || []
+		? gameState?.player1Hand || []
 		: player2?.id === $gameStore.playerId
-		? gameState?.player2_hand || []
+		? gameState?.player2Hand || []
 		: [];
 	$: opponentHand = $isMyTurn && player1?.id === $gameStore.playerId
-		? gameState?.player2_hand || []
-		: gameState?.player1_hand || [];
-	$: tableCards = gameState?.table_cards || [];
+		? gameState?.player2Hand || []
+		: gameState?.player1Hand || [];
+	$: tableCards = gameState?.tableCards || [];
 	$: builds = gameState?.builds || [];
 	
 	function handleHandCardClick(card: CardType) {
@@ -162,10 +162,10 @@
 	</div>
 	
 	<!-- Last Action Display -->
-	{#if gameState?.last_action}
+	{#if gameState?.lastAction}
 		<div class="last-action">
 			<span class="last-action-label">Last Action:</span>
-			<span class="last-action-text">{gameState.last_action}</span>
+			<span class="last-action-text">{gameState.lastAction}</span>
 		</div>
 	{/if}
 </div>

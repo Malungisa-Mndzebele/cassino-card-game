@@ -91,13 +91,13 @@
 			
 			const response = await joinRandomRoom(sanitized);
 			
-			gameStore.setRoomId(response.game_state.room_id);
+			gameStore.setRoomId(response.game_state.roomId);
 			gameStore.setPlayerId(response.player_id);
 			gameStore.setPlayerName(sanitized);
 			gameStore.setGameState(response.game_state);
 			
 			// Connect WebSocket
-			await connectionStore.connect(response.game_state.room_id);
+			await connectionStore.connect(response.game_state.roomId);
 			
 		} catch (err: any) {
 			error = err.message || 'Failed to join random room';

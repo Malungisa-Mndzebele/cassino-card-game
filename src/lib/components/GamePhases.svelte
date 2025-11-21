@@ -15,8 +15,8 @@
 	$: player1 = players[0];
 	$: player2 = players[1];
 	$: isPlayer1 = player1?.id === $gameStore.playerId;
-	$: myReady = isPlayer1 ? gameState?.player1_ready : gameState?.player2_ready;
-	$: opponentReady = isPlayer1 ? gameState?.player2_ready : gameState?.player1_ready;
+	$: myReady = isPlayer1 ? gameState?.player1Ready : gameState?.player2Ready;
+	$: opponentReady = isPlayer1 ? gameState?.player2Ready : gameState?.player1Ready;
 	
 	function handleReady() {
 		if (onReady) {
@@ -60,8 +60,8 @@
 			<div class="ready-status">
 				<div class="player-status">
 					<span class="player-name">{player1?.name || 'Player 1'}</span>
-					<span class="status-badge {gameState?.player1_ready ? 'ready' : 'not-ready'}">
-						{gameState?.player1_ready ? '✓ Ready' : '⏳ Not Ready'}
+					<span class="status-badge {gameState?.player1Ready ? 'ready' : 'not-ready'}">
+						{gameState?.player1Ready ? '✓ Ready' : '⏳ Not Ready'}
 					</span>
 				</div>
 				
@@ -69,8 +69,8 @@
 				
 				<div class="player-status">
 					<span class="player-name">{player2?.name || 'Player 2'}</span>
-					<span class="status-badge {gameState?.player2_ready ? 'ready' : 'not-ready'}">
-						{gameState?.player2_ready ? '✓ Ready' : '⏳ Not Ready'}
+					<span class="status-badge {gameState?.player2Ready ? 'ready' : 'not-ready'}">
+						{gameState?.player2Ready ? '✓ Ready' : '⏳ Not Ready'}
 					</span>
 				</div>
 			</div>
@@ -92,7 +92,7 @@
 		<div class="phase-container dealer-phase">
 			<h2 class="phase-title">Dealer Phase</h2>
 			
-			{#if !gameState?.shuffle_complete}
+			{#if !gameState?.shuffleComplete}
 				<!-- Shuffle Step -->
 				<div class="shuffle-step">
 					<p class="phase-description">
@@ -118,7 +118,7 @@
 					{/if}
 				</div>
 				
-			{:else if !gameState?.card_selection_complete}
+			{:else if !gameState?.cardSelectionComplete}
 				<!-- Card Selection Step -->
 				<div class="card-selection-step">
 					<p class="phase-description">
@@ -186,7 +186,7 @@
 						{gameState.winner === 1 ? player1?.name : player2?.name} Wins!
 					</p>
 					<p class="final-score">
-						Final Score: {gameState.player1_score} - {gameState.player2_score}
+						Final Score: {gameState.player1Score} - {gameState.player2Score}
 					</p>
 				</div>
 			{:else}

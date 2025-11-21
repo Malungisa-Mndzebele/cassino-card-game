@@ -11,8 +11,8 @@
 	onMount(() => {
 		// Update elapsed time every second
 		interval = window.setInterval(() => {
-			if ($gameStore.gameState?.last_update) {
-				const start = new Date($gameStore.gameState.last_update);
+			if ($gameStore.gameState?.lastUpdate) {
+				const start = new Date($gameStore.gameState.lastUpdate);
 				const now = new Date();
 				const seconds = Math.floor((now.getTime() - start.getTime()) / 1000);
 				elapsedTime = formatElapsedTime(seconds);

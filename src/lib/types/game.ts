@@ -1,5 +1,6 @@
 // Game types
 export interface Card {
+    id: string;
     rank: string;
     suit: string;
     value: number;
@@ -29,8 +30,12 @@ export interface GameState {
     player2Score: number;
     player1Ready: boolean;
     player2Ready: boolean;
-    winner: string | null;
+    winner: string | number | null;
     lastAction: GameAction | null;
+    lastUpdate?: string;
+    builds?: any[];
+    shuffleComplete?: boolean;
+    cardSelectionComplete?: boolean;
 }
 
 export type GamePhase =
@@ -56,12 +61,14 @@ export interface CreateRoomResponse {
     room_id: string;
     player_id: string;
     player_name: string;
+    game_state: GameState;
 }
 
 export interface JoinRoomResponse {
     room_id: string;
     player_id: string;
     player_name: string;
+    game_state: GameState;
 }
 
 export interface GameStateResponse {
