@@ -48,7 +48,7 @@ jobs:
           npm run build
           echo "✅ Build complete"
           # Verify API URL is in the build
-          if grep -r "cassino-game-backend.fly.dev" dist/ > /dev/null 2>&1; then
+          if grep -r "cassino-game-backend.fly.dev" build/ > /dev/null 2>&1; then
             echo "✅ API URL found in build"
           else
             echo "⚠️ Warning: API URL not found in build - will use default"
@@ -60,7 +60,7 @@ jobs:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist/
+          local-dir: ./build/
           server-dir: /
           exclude: |
             **/.git*
