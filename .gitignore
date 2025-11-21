@@ -149,6 +149,7 @@ deploy-ftp.ps1
 # Python virtual environments and packages
 Lib/
 lib/
+!src/lib/
 venv/
 .venv/
 backend/Lib/

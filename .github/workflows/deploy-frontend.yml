@@ -7,25 +7,19 @@ on:
       - master
     paths:
       - 'src/**'
-      - 'components/**'
       - 'public/**'
       - 'package.json'
       - 'vite.config.ts'
+      - 'svelte.config.js'
       - 'tailwind.config.js'
       - 'tsconfig.json'
-      - 'index.html'
-      - 'apiClient.ts'
-      - 'App.tsx'
-      - 'main.tsx'
       - 'package-lock.json'
-      - 'utils/**'
-      - 'hooks/**'
   workflow_dispatch:
 
 jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
-    name: Build and Deploy Frontend
+    name: Build and Deploy Frontend (SvelteKit)
     
     steps:
       - name: Checkout code

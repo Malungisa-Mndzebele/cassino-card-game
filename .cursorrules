@@ -1,0 +1,296 @@
+# Casino Card Game - Cursor Rules
+
+## Project Overview
+
+This is a real-time multiplayer Casino card game with:
+- **Frontend**: React 18 + TypeScript + Vite + TailwindCSS
+- **Backend**: FastAPI (Python 3.11+) with WebSocket support
+- **Database**: SQLite (local dev) / MySQL (production/staging)
+- **Session Management**: Redis
+- **Deployment**: Fly.io (backend) / FTP (frontend)
+- **Base Path**: `/cassino/` for production
+
+## Technology Stack
+
+### Frontend
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite (base path `/cassino/`)
+- **Styling**: TailwindCSS
+- **Icons**: Lucide React
+- **State Management**: Custom hooks (no Redux/Zustand)
+- **Real-time**: Native WebSocket API
+- **Testing**: Vitest (unit), Playwright (E2E)
+
+### Backend
+- **Framework**: FastAPI (Python 3.11+)
+- **ORM**: SQLAlchemy 2.0 (async)
+- **Migrations**: Alembic
+- **Validation**: Pydantic v2
+- **WebSocket**: Starlette WebSocket
+- **Session**: Redis (optional, graceful fallback)
+- **Testing**: Pytest
+- **Database Drivers**: 
+  - SQLite: `aiosqlite` (local dev)
+  - MySQL: `pymysql` (production/staging)
+
+### Infrastructure
+- **Backend Hosting**: Fly.io with managed PostgreSQL
+- **Frontend Hosting**: FTP to khasinogaming.com
+- **CI/CD**: GitHub Actions
+- **Docker**: docker-compose.yml for local Redis/PostgreSQL
+
+## Project Structure
+
+```
+cassino-card-game/
+├── backend/                    # Python FastAPI backend
+│   ├── main.py                # Main API server
+│   ├── models.py              # SQLAlchemy models
+│   ├── schemas.py             # Pydantic schemas
+│   ├── game_logic.py          # Game rules engine
+│   ├── database.py            # Database configuration
+│   ├── websocket_manager.py   # WebSocket handling
+│   ├── session_manager.py     # Session management
+│   ├── redis_client.py        # Redis client
+│   ├── requirements.txt       # Python dependencies
+│   └── alembic/               # Database migrations
+├── components/                 # React components
+│   ├── CasinoRoomView.tsx     # Waiting room
+│   ├── PokerTableView.tsx     # Main game view
+│   ├── RoomManager.tsx        # Room creation/joining
+│   └── ui/                    # Reusable UI components
+├── hooks/                      # Custom React hooks
+│   ├── useGameState.ts        # Game state management
+│   ├── useWebSocket.ts        # WebSocket connection
+│   ├── useGameActions.ts      # Game action handlers
+│   ├── useRoomActions.ts      # Room management
+│   └── useConnectionState.ts  # Connection status
+├── src/                        # SvelteKit (legacy/alternative)
+├── tests/                      # Test suites
+│   ├── frontend/              # Component tests (Vitest)
+│   ├── e2e/                   # End-to-end tests (Playwright)
+│   └── integration/           # Integration tests
+├── App.tsx                     # Main React app
+├── main.tsx                    # React entry point
+├── vite.config.ts             # Vite configuration
+└── package.json               # Node dependencies
+```
+
+## Coding Patterns
+
+### General Principles
+- **Simplicity**: Prefer simple solutions over complex ones
+- **DRY**: Avoid code duplication; check existing codebase first
+- **Environment-aware**: Code should work in dev, test, and prod
+- **Focused changes**: Only modify code related to the task
+- **Clean codebase**: Keep files organized and under 200-300 lines
+- **No mocking in prod**: Mocking only for tests, never in dev/prod code
+
+### React/TypeScript
+- Use `useCallback`/`useMemo` only when necessary (avoid premature optimization)
+- Keep hooks stable: use `useCallback` for functions in dependencies
+- Use functional state updates in effects to satisfy exhaustive-deps
+- Type all props and function signatures; avoid `any` in exported APIs
+- Gate debug logs behind `import.meta.env.DEV` checks
+- Build with Vite; set `base` to `/cassino/` for production
+- Prefer relative API paths via proxy; avoid hardcoding ports
+
+### Backend (FastAPI)
+- Centralize common DB lookups (e.g., `get_room_or_404`) to avoid duplication
+- Keep request/response schemas in `schemas.py`, models in `models.py`
+- Use Alembic for all schema changes; never create tables ad-hoc
+- Use async/await with SQLAlchemy async sessions
+- Support graceful Redis fallback (check availability, don't fail if unavailable)
+- Use Pydantic v2 models with `ConfigDict` for configuration
+- Document all endpoints with docstrings
+
+### Database
+- **Local Development**: SQLite (`sqlite+aiosqlite:///`)
+- **Production/Staging**: MySQL (`mysql+pymysql://`)
+- Always use Alembic migrations for schema changes
+- Use async SQLAlchemy sessions (`AsyncSession`)
+- Connection pooling configured in `database.py`
+
+### WebSocket
+- Endpoint: `/ws/{room_id}`
+- Session token support for reconnection
+- Heartbeat mechanism for connection health
+- Graceful disconnection handling
+- Broadcast to room on state changes
+
+## Testing
+
+### Frontend Tests
+- **Unit/Component**: Vitest
+- **E2E**: Playwright
+- Run tests: `npm run test:frontend` or `npm run test:e2e`
+- Always run tests after implementation
+- Fix tests one file at a time if failures occur
+
+### Backend Tests
+- **Framework**: Pytest with pytest-asyncio
+- Run tests: `cd backend && pytest` or `python test_api_comprehensive.py`
+- Test files: `test_*.py` in backend directory
+- Use async test fixtures from `conftest.py`
+
+### Test Coverage
+- Target: High coverage (currently 97.2%)
+- Write tests for all major functionality
+- Test edge cases and error conditions
+
+## Environment Variables
+
+### Backend (`backend/.env`)
+```bash
+# Database (local dev uses SQLite by default)
+DATABASE_URL=sqlite+aiosqlite:///./test_casino_game.db  # Dev
+# DATABASE_URL=mysql+pymysql://user:pass@host:3306/db  # Production
+
+# Server
+HOST=0.0.0.0
+PORT=8000
+
+# CORS
+CORS_ORIGINS=http://localhost:5173,https://khasinogaming.com
+
+# Optional
+ROOT_PATH=  # Only if mounting behind subpath
+SESSION_SECRET_KEY=  # For session token signing
+```
+
+### Frontend (`.env`)
+```bash
+# API URLs (auto-configured in production)
+VITE_API_URL=http://localhost:8000                    # Dev
+# VITE_API_URL=https://cassino-game-backend.fly.dev  # Production
+
+VITE_WS_URL=ws://localhost:8000                       # Dev
+# VITE_WS_URL=wss://cassino-game-backend.fly.dev     # Production
+```
+
+## Deployment
+
+### Backend (Fly.io)
+- Deploy: `flyctl deploy`
+- Run migrations: `flyctl ssh console -C "cd /app && python -m alembic upgrade head"`
+- Health check: `https://cassino-game-backend.fly.dev/health`
+- Set secrets: `flyctl secrets set DATABASE_URL="..."`
+
+### Frontend (FTP)
+- Build: `npm run build`
+- Deploy: `npm run deploy:ftp`
+- Base path: `/cassino/` (configured in `vite.config.ts`)
+- Verify: `https://khasinogaming.com/cassino/`
+
+## API Endpoints
+
+### REST
+- `POST /rooms/create` - Create new room
+- `POST /rooms/join` - Join existing room
+- `POST /rooms/join-random` - Join random available room
+- `GET /rooms/{room_id}/state` - Get game state
+- `POST /rooms/player-ready` - Set player ready status
+- `POST /game/start-shuffle` - Start shuffle phase
+- `POST /game/select-face-up-cards` - Deal initial cards
+- `POST /game/play-card` - Play card (capture/build/trail)
+- `POST /game/reset` - Reset game
+- `GET /health` - Health check
+
+### WebSocket
+- `WS /ws/{room_id}` - Real-time game updates
+- Query params: `session_token` (optional, for reconnection)
+
+## Game Logic
+
+### Game Phases
+1. `waiting` - Waiting for players
+2. `dealer` - Shuffle and card selection
+3. `round1` - First round of gameplay
+4. `round2` - Second round of gameplay
+5. `finished` - Game complete
+
+### Scoring
+- Aces: 1 point each (4 total)
+- 2 of Spades (Big Casino): 1 point
+- 10 of Diamonds (Little Casino): 2 points
+- Most Cards: 2 points (27+ cards)
+- Most Spades: 2 points (7+ spades)
+- Maximum score per round: 11 points
+
+### Actions
+- **Capture**: Take cards matching hand card value
+- **Build**: Create combination for future capture
+- **Trail**: Place card on table when no capture/build possible
+
+## Common Tasks
+
+### Starting Development
+```bash
+# Install dependencies
+npm install
+cd backend && pip install -r requirements.txt
+
+# Start backend
+npm run start:backend  # or: cd backend && python start_production.py
+
+# Start frontend (new terminal)
+npm run dev
+
+# Start databases (optional)
+npm run start:db  # Starts Redis and PostgreSQL via docker-compose
+```
+
+### Running Tests
+```bash
+# All tests
+node run-all-tests.js
+
+# Frontend tests
+npm run test:frontend
+
+# E2E tests
+npm run test:e2e
+
+# Backend tests
+cd backend && pytest
+```
+
+### Database Migrations
+```bash
+# Create migration
+cd backend
+alembic revision --autogenerate -m "description"
+
+# Apply migration
+alembic upgrade head
+
+# Rollback
+alembic downgrade -1
+```
+
+## Important Notes
+
+1. **Database**: Use SQLite for local dev, MySQL for production/staging (not PostgreSQL)
+2. **Base Path**: Frontend is deployed at `/cassino/` - all routes must account for this
+3. **WebSocket**: Supports session tokens for reconnection
+4. **Redis**: Optional but recommended; code should gracefully handle Redis unavailability
+5. **State Management**: Custom hooks pattern, no external state management library
+6. **File Size**: Refactor files when they exceed 200-300 lines
+7. **Testing**: Always write tests for new features
+8. **Type Safety**: Use TypeScript strictly; avoid `any` types
+
+## Code Review Checklist
+
+- [ ] Tests written and passing
+- [ ] TypeScript types are correct
+- [ ] No hardcoded values (use env vars)
+- [ ] Error handling implemented
+- [ ] Logging appropriate (dev vs prod)
+- [ ] Database migrations created if schema changed
+- [ ] WebSocket reconnection handled
+- [ ] CORS configured correctly
+- [ ] Base path `/cassino/` considered
+- [ ] Code follows existing patterns
+- [ ] No code duplication
+- [ ] Files under 300 lines
+

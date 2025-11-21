@@ -96,7 +96,7 @@ graph TB
 
 ### 1. Frontend: Optimistic State Manager
 
-**Location**: `hooks/useOptimisticState.ts`
+**Location**: `lib/stores/optimisticState.svelte.ts`
 
 **Responsibilities**:
 - Apply optimistic updates immediately
@@ -106,8 +106,9 @@ graph TB
 
 **Interface**:
 ```typescript
+// Svelte 5 runes-based store
 interface OptimisticStateManager {
-  // State
+  // Reactive state (using $state rune)
   localState: GameState
   pendingActions: PendingAction[]
   stateVersion: number
@@ -117,11 +118,6 @@ interface OptimisticStateManager {
   confirmAction(actionId: string, serverState: GameState): void
   rejectAction(actionId: string, reason: string): void
   rollbackTo(version: number): void
-  
-  // Callbacks
-  onOptimisticApplied: (action: GameAction) => void
-  onActionConfirmed: (actionId: string) => void
-  onActionRejected: (actionId: string, reason: string) => void
 }
 
 interface PendingAction {
@@ -135,31 +131,48 @@ interface PendingAction {
 
 **Optimistic Update Algorithm**:
 ```typescript
-function applyOptimistic(action: GameAction) {
-  // 1. Generate unique action ID
-  const actionId = generateActionId()
+// Using Svelte 5 runes
+function createOptimisticStateManager() {
+  let localState = $state<GameState>(initialState)
+  let pendingActions = $state<PendingAction[]>([])
+  let stateVersion = $state(0)
   
-  // 2. Apply action to local state
-  const newState = applyActionToState(localState, action)
+  function applyOptimistic(action: GameAction) {
+    // 1. Generate unique action ID
+    const actionId = generateActionId()
+    
+    // 2. Apply action to local state
+    const newState = applyActionToState(localState, action)
+    
+    // 3. Increment local version
+    const newVersion = stateVersion + 1
+    
+    // 4. Store as pending
+    pendingActions.push({
+      id: actionId,
+      action,
+      localVersion: newVersion,
+      timestamp: Date.now(),
+      status: 'pending'
+    })
+    
+    // 5. Update UI immediately (reactive)
+    localState = newState
+    stateVersion = newVersion
+    
+    // 6. Send to server
+    sendToServer(actionId, action)
+  }
   
-  // 3. Increment local version
-  const newVersion = stateVersion + 1
-  
-  // 4. Store as pending
-  pendingActions.push({
-    id: actionId,
-    action,
-    localVersion: newVersion,
-    timestamp: Date.now(),
-    status: 'pending'
-  })
-  
-  // 5. Update UI immediately
-  setLocalState(newState)
-  setStateVersion(newVersion)
-  
-  // 6. Send to server
-  sendToServer(actionId, action)
+  return {
+    get localState() { return localState },
+    get pendingActions() { return pendingActions },
+    get stateVersion() { return stateVersion },
+    applyOptimistic,
+    confirmAction,
+    rejectAction,
+    rollbackTo
+  }
 }
 ```
 
@@ -228,7 +241,7 @@ function computeChecksum(state: GameState): string {
 
 ### 3. Frontend: Action Queue
 
-**Location**: `hooks/useActionQueue.ts`
+**Location**: `lib/stores/actionQueue.svelte.ts`
 
 **Responsibilities**:
 - Buffer actions during network delays
@@ -238,8 +251,9 @@ function computeChecksum(state: GameState): string {
 
 **Interface**:
 ```typescript
+// Svelte 5 runes-based store
 interface ActionQueue {
-  // State
+  // Reactive state
   queue: QueuedAction[]
   isProcessing: boolean
   maxQueueSize: number
@@ -249,11 +263,6 @@ interface ActionQueue {
   dequeue(): QueuedAction | null
   flush(): Promise<void>
   clear(): void
-  
-  // Callbacks
-  onActionSent: (action: QueuedAction) => void
-  onActionFailed: (action: QueuedAction, error: Error) => void
-  onQueueFull: () => void
 }
 
 interface QueuedAction {
@@ -267,32 +276,48 @@ interface QueuedAction {
 
 **Queue Processing**:
 ```typescript
-async function flush() {
-  if (isProcessing || queue.length === 0) return
+// Using Svelte 5 runes
+function createActionQueue() {
+  let queue = $state<QueuedAction[]>([])
+  let isProcessing = $state(false)
+  const maxQueueSize = 10
   
-  isProcessing = true
-  
-  while (queue.length > 0) {
-    const action = queue[0]
+  async function flush() {
+    if (isProcessing || queue.length === 0) return
     
-    try {
-      await sendToServer(action)
-      queue.shift() // Remove on success
-      onActionSent(action)
-    } catch (error) {
-      action.retryCount++
+    isProcessing = true
+    
+    while (queue.length > 0) {
+      const action = queue[0]
       
-      if (action.retryCount >= action.maxRetries) {
-        queue.shift() // Remove after max retries
-        onActionFailed(action, error)
-      } else {
-        // Exponential backoff
-        await delay(Math.pow(2, action.retryCount) * 1000)
+      try {
+        await sendToServer(action)
+        queue.shift() // Remove on success
+      } catch (error) {
+        action.retryCount++
+        
+        if (action.retryCount >= action.maxRetries) {
+          queue.shift() // Remove after max retries
+          console.error('Action failed after max retries:', error)
+        } else {
+          // Exponential backoff
+          await delay(Math.pow(2, action.retryCount) * 1000)
+        }
       }
     }
+    
+    isProcessing = false
   }
   
-  isProcessing = false
+  return {
+    get queue() { return queue },
+    get isProcessing() { return isProcessing },
+    maxQueueSize,
+    enqueue,
+    dequeue,
+    flush,
+    clear
+  }
 }
 ```
 
@@ -687,9 +712,9 @@ graph TD
 ### Unit Tests
 
 **Frontend**:
-- `useOptimisticState.test.ts` - Optimistic updates and rollback
+- `optimisticState.test.ts` - Optimistic updates and rollback (Svelte store)
 - `stateValidator.test.ts` - Checksum computation and validation
-- `useActionQueue.test.ts` - Queue management and retry logic
+- `actionQueue.test.ts` - Queue management and retry logic (Svelte store)
 - `stateDelta.test.ts` - Delta computation and application
 
 **Backend**:
@@ -833,7 +858,7 @@ test('concurrent actions are resolved correctly', async ({ page, context }) => {
 - Update API responses to include version
 
 ### Phase 3: Optimistic Updates (Week 2)
-- Create useOptimisticState hook
+- Create optimisticState Svelte store (using runes)
 - Implement rollback mechanism
 - Add pending action UI indicators
 - Test with staging backend

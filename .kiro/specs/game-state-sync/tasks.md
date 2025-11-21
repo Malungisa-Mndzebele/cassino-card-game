@@ -10,23 +10,33 @@ The implementation follows a backend-first approach to establish event sourcing 
 
 ## Task List
 
-- [ ] 1. Backend: Database schema for event sourcing
+- [x] 1. Backend: Database schema for event sourcing
+
+
   - Add version tracking to rooms
   - Create game_events table
   - Create state_snapshots table
   - Add indexes for performance
   - _Requirements: 1.1, 5.1, 5.2, 5.5_
 
-- [ ] 1.1 Create Alembic migration for version tracking
+- [x] 1.1 Create Alembic migration for version tracking
+
+
+
   - Add version column to rooms table (Integer, default 0)
   - Add checksum column to rooms table (String 64)
   - Add last_modified column (DateTime)
   - Add modified_by column (Integer, player_id)
   - Test migration up and down
+
+
+
   - _Requirements: 1.1, 4.4_
 
 - [ ] 1.2 Create game_events table migration
   - Define GameEvent model with room_id, sequence_number, version, player_id, action_type, action_data, timestamp, checksum
+
+
   - Create unique constraint on (room_id, sequence_number)
   - Add index on (room_id, version)
   - Add foreign keys to rooms and players

@@ -5,11 +5,12 @@ This document contains comprehensive architecture diagrams for the Casino Card G
 ## Table of Contents
 
 1. [Component Hierarchy Diagram](#component-hierarchy-diagram)
-2. [Data Flow Diagram](#data-flow-diagram)
-3. [WebSocket Communication Flow](#websocket-communication-flow)
-4. [Database Schema Diagram](#database-schema-diagram)
-5. [State Management Flow](#state-management-flow)
-6. [Deployment Architecture](#deployment-architecture)
+2. [Backend Services Architecture](#backend-services-architecture)
+3. [Data Flow Diagram](#data-flow-diagram)
+4. [WebSocket Communication Flow](#websocket-communication-flow)
+5. [Database Schema Diagram](#database-schema-diagram)
+6. [State Management Flow](#state-management-flow)
+7. [Deployment Architecture](#deployment-architecture)
 
 ---
 
@@ -105,6 +106,123 @@ graph LR
     style B fill:#87CEEB,stroke:#333,stroke-width:2px
     style C fill:#87CEEB,stroke:#333,stroke-width:2px
     style D fill:#90EE90,stroke:#333,stroke-width:2px
+```
+
+---
+
+## Backend Services Architecture
+
+### Service Layer Diagram
+
+```mermaid
+graph TB
+    subgraph "API Layer"
+        REST[REST Endpoints]
+        WS[WebSocket Endpoints]
+    end
+    
+    subgraph "Service Layer"
+        SM[SessionManager<br/>Session Lifecycle]
+        SR[StateRecoveryService<br/>Reconnection Handling]
+        AL[ActionLogger<br/>Audit Trail]
+        CM[CacheManager<br/>Performance]
+        BG[BackgroundTaskManager<br/>Cleanup & Monitoring]
+        WSM[WebSocketManager<br/>Real-time Comm]
+    end
+    
+    subgraph "Data Layer"
+        RD[(Redis<br/>Sessions & Cache)]
+        DB[(PostgreSQL<br/>Persistent Storage)]
+    end
+    
+    REST --> SM
+    REST --> AL
+    REST --> CM
+    WS --> WSM
+    WS --> SM
+    
+    SM --> RD
+    SM --> DB
+    SR --> DB
+    SR --> AL
+    AL --> DB
+    CM --> RD
+    BG --> RD
+    BG --> DB
+    WSM --> SM
+    
+    style SM fill:#FFD700,stroke:#333,stroke-width:2px
+    style SR fill:#87CEEB,stroke:#333,stroke-width:2px
+    style AL fill:#90EE90,stroke:#333,stroke-width:2px
+    style CM fill:#FF6B6B,stroke:#333,stroke-width:2px
+    style BG fill:#DDA0DD,stroke:#333,stroke-width:2px
+    style RD fill:#DC143C,stroke:#333,stroke-width:2px
+    style DB fill:#4169E1,stroke:#333,stroke-width:2px
+```
+
+### Redis Key Structure
+
+```mermaid
+graph LR
+    R[Redis] --> S[session:token]
+    R --> G[game:state:room_id]
+    R --> P[player:player_id]
+    R --> RM[room:room_id]
+    R --> AR[rooms:active]
+    
+    S --> S1[Session Metadata<br/>TTL: 30min]
+    G --> G1[Cached Game State<br/>TTL: 5min]
+    P --> P1[Player Data<br/>TTL: 30min]
+    RM --> RM1[Room Metadata<br/>TTL: 1hr]
+    AR --> AR1[Set of Active Rooms<br/>No TTL]
+    
+    style R fill:#DC143C,stroke:#333,stroke-width:3px
+    style S fill:#FFD700,stroke:#333,stroke-width:2px
+    style G fill:#87CEEB,stroke:#333,stroke-width:2px
+    style P fill:#90EE90,stroke:#333,stroke-width:2px
+    style RM fill:#FF6B6B,stroke:#333,stroke-width:2px
+    style AR fill:#DDA0DD,stroke:#333,stroke-width:2px
+```
+
+### Service Interaction Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as API Endpoint
+    participant SM as SessionManager
+    participant CM as CacheManager
+    participant AL as ActionLogger
+    participant RD as Redis
+    participant DB as Database
+    
+    Note over C,API: Player Connects
+    C->>API: POST /rooms/join
+    API->>SM: create_session()
+    SM->>RD: Store Session Token
+    SM->>DB: INSERT GameSession
+    SM-->>API: Session Token
+    API-->>C: Room Data + Token
+    
+    Note over C,API: Player Action
+    C->>API: POST /game/play-card
+    API->>AL: log_game_action()
+    AL->>DB: INSERT GameActionLog
+    API->>DB: UPDATE Room State
+    API->>CM: cache_game_state()
+    CM->>RD: SET game:state:*
+    API-->>C: Updated State
+    
+    Note over C,API: Player Reconnects
+    C->>API: WS /ws/{room} + Token
+    API->>SM: validate_session()
+    SM->>RD: GET session:*
+    RD-->>SM: Session Valid
+    SM->>CM: get_cached_game_state()
+    CM->>RD: GET game:state:*
+    RD-->>CM: Cached State
+    CM-->>API: Game State
+    API-->>C: Current State
 ```
 
 ---
@@ -552,8 +670,9 @@ graph TB
             BE2[FastAPI Instance 2<br/>Port 8000]
         end
         
-        subgraph Database
+        subgraph Data Layer
             PG[(PostgreSQL<br/>Managed Database)]
+            RD[(Redis<br/>Cache & Sessions)]
         end
     end
     
@@ -571,6 +690,8 @@ graph TB
     LB --> BE2
     BE1 --> PG
     BE2 --> PG
+    BE1 --> RD
+    BE2 --> RD
     
     GH --> GH1
     GH --> GH2
@@ -583,6 +704,7 @@ graph TB
     style CDN fill:#90EE90,stroke:#333,stroke-width:2px
     style LB fill:#FFD700,stroke:#333,stroke-width:2px
     style PG fill:#FF6B6B,stroke:#333,stroke-width:2px
+    style RD fill:#DC143C,stroke:#333,stroke-width:2px
 ```
 
 ### Request Flow in Production
@@ -593,6 +715,7 @@ sequenceDiagram
     participant CDN as Web Server
     participant LB as Fly.io Load Balancer
     participant BE as Backend Instance
+    participant RD as Redis
     participant DB as PostgreSQL
     
     Note over B,CDN: Initial Page Load
@@ -601,22 +724,29 @@ sequenceDiagram
     B->>CDN: GET /cassino/assets/*
     CDN-->>B: JS, CSS, Images
     
-    Note over B,LB: API Requests
+    Note over B,LB: API Requests with Session
     B->>LB: POST /rooms/create
     LB->>BE: Forward Request
     BE->>DB: INSERT Room
     DB-->>BE: Success
-    BE-->>LB: Response
-    LB-->>B: Room Data
+    BE->>RD: Cache Room Data
+    BE->>RD: Create Session Token
+    BE-->>LB: Response + Session Token
+    LB-->>B: Room Data + Token
+    B->>B: Store Token in localStorage
     
     Note over B,BE: WebSocket Connection
-    B->>LB: WSS /ws/{roomId}
+    B->>LB: WSS /ws/{roomId} + Token
     LB->>BE: Upgrade Connection
+    BE->>RD: Validate Session
+    RD-->>BE: Session Valid
     BE-->>B: WebSocket Established
     
     loop Real-time Updates
+        BE->>RD: Cache Game State
         BE->>B: Game State Update
         B->>BE: Heartbeat
+        BE->>RD: Update Session TTL
     end
 ```
 
@@ -629,6 +759,7 @@ graph LR
         D2[SQLite DB]
         D3[localhost:5173]
         D4[localhost:8000]
+        D5[Redis localhost:6379]
     end
     
     subgraph Production
@@ -636,17 +767,23 @@ graph LR
         P2[PostgreSQL]
         P3[khasinogaming.com]
         P4[cassino-game-backend.fly.dev]
+        P5[Redis Managed Instance]
     end
     
     D1 --> D2
     D1 --> D3
     D1 --> D4
+    D1 --> D5
     D3 -->|API Calls| D4
+    D4 --> D2
+    D4 --> D5
     
     P1 --> P2
     P1 --> P4
+    P1 --> P5
     P3 -->|API Calls| P4
     P4 --> P2
+    P4 --> P5
     
     style D1 fill:#87CEEB,stroke:#333,stroke-width:2px
     style P1 fill:#90EE90,stroke:#333,stroke-width:2px

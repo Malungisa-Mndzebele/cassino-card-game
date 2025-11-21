@@ -74,10 +74,11 @@ Score the most points by capturing cards from the table. First player to 11 poin
 ## 🛠️ Technology Stack
 
 ### Frontend
-- **React 18** with TypeScript
+- **SvelteKit** with TypeScript
+- **Svelte 5** with runes for reactivity
 - **Vite** for fast builds
 - **TailwindCSS** for styling
-- **Lucide React** for icons
+- **Lucide Svelte** for icons
 - **WebSocket** for real-time updates
 
 ### Backend
@@ -88,7 +89,7 @@ Score the most points by capturing cards from the table. First player to 11 poin
 - **Alembic** for database migrations
 
 ### Testing
-- **Vitest** for unit tests
+- **Vitest** with **Svelte Testing Library** for component tests
 - **Playwright** for E2E tests
 - **Pytest** for backend tests
 - **97.2% test coverage** (70/72 tests passing)
@@ -110,17 +111,20 @@ cassino-card-game/
 │   ├── game_logic.py          # Game rules engine
 │   ├── requirements.txt       # Python dependencies
 │   └── test_*.py              # Backend tests
-├── components/                 # React components
-│   ├── CasinoRoomView.tsx    # Main game view
-│   ├── PokerTableView.tsx    # Game table
-│   ├── GamePhases.tsx        # Game phase management
-│   └── ui/                    # Reusable UI components
-├── hooks/                      # Custom React hooks
-│   ├── useGameState.ts       # Game state management
-│   ├── useWebSocket.ts       # WebSocket connection
-│   ├── useGameActions.ts     # Game action handlers
-│   ├── useRoomActions.ts     # Room management
-│   └── useConnectionState.ts # Connection status
+├── src/                        # SvelteKit source
+│   ├── routes/                # SvelteKit routes
+│   ├── lib/                   # Shared libraries
+│   │   ├── components/        # Svelte components
+│   │   │   ├── CasinoRoomView.svelte
+│   │   │   ├── PokerTableView.svelte
+│   │   │   ├── GamePhases.svelte
+│   │   │   └── ui/            # Reusable UI components
+│   │   └── stores/            # Svelte stores (state management)
+│   │       ├── gameState.svelte.ts
+│   │       ├── websocket.svelte.ts
+│   │       ├── gameActions.svelte.ts
+│   │       ├── roomActions.svelte.ts
+│   │       └── connectionState.svelte.ts
 ├── tests/                      # Test suites
 │   ├── frontend/              # Component tests (Vitest)
 │   ├── e2e/                   # End-to-end tests (Playwright)
@@ -464,23 +468,23 @@ Events:
 
 ### Frontend Architecture
 ```
-App.tsx
-  ├── Custom Hooks (State Management)
-  │   ├── useGameState
-  │   ├── useConnectionState
-  │   ├── useWebSocket
-  │   ├── useGameActions
-  │   └── useRoomActions
+SvelteKit App
+  ├── Svelte Stores (State Management)
+  │   ├── gameState (Svelte 5 runes)
+  │   ├── connectionState
+  │   ├── websocket
+  │   ├── gameActions
+  │   └── roomActions
   │
-  ├── Views
-  │   ├── RoomManager (Lobby)
-  │   ├── CasinoRoomView (Waiting Room)
-  │   └── PokerTableView (Game Table)
+  ├── Routes (SvelteKit)
+  │   ├── / (Lobby)
+  │   ├── /room/[id] (Waiting Room)
+  │   └── /game/[id] (Game Table)
   │
   └── Components
-      ├── GamePhases
-      ├── Card
-      ├── AppHeader
+      ├── GamePhases.svelte
+      ├── Card.svelte
+      ├── AppHeader.svelte
       └── UI Components
 ```
 
@@ -566,7 +570,7 @@ npm run test:e2e:debug
 - **Test Coverage**: 97.2%
 - **Components**: 25+
 - **API Endpoints**: 10+
-- **Custom Hooks**: 5
+- **Svelte Stores**: 5
 - **Deployment**: Automated CI/CD
 
 ---
@@ -581,7 +585,7 @@ MIT License - feel free to use and modify!
 
 - Classic Casino card game rules
 - FastAPI framework
-- React and Vite communities
+- Svelte and SvelteKit communities
 - Fly.io for backend hosting
 
 ---

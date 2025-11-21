@@ -2,32 +2,43 @@
 
 ## Frontend
 
-- **React 18** with TypeScript
+- **SvelteKit** - Full-stack framework
+- **Svelte 5** - Component framework with runes for reactivity
 - **Vite** - Build tool and dev server
 - **TailwindCSS** - Utility-first CSS framework
-- **Lucide React** - Icon library
+- **Lucide Svelte** - Icon library
 - **WebSocket API** - Real-time communication
-- **Custom Hooks** - State management pattern (no Redux/Zustand)
+- **Svelte Stores** - State management pattern (using runes)
 
 ## Backend
 
 - **FastAPI** - Python web framework
 - **SQLAlchemy** - ORM for database operations
 - **SQLite** (development) / **PostgreSQL** (production)
+- **Redis** - Session storage and caching
 - **Alembic** - Database migrations
 - **WebSocket** - Real-time bidirectional communication
 - **Pydantic** - Data validation and schemas
 
+## Backend Services
+
+- **SessionManager** - Redis-based session lifecycle management
+- **StateRecoveryService** - Game state recovery for reconnections
+- **ActionLogger** - Complete audit trail of game actions
+- **CacheManager** - Redis caching for performance optimization
+- **BackgroundTaskManager** - Automated cleanup and monitoring
+- **WebSocketManager** - Real-time connection handling
+
 ## Testing
 
 - **Vitest** - Frontend unit/component tests
+- **Svelte Testing Library** - Svelte component testing utilities
 - **Playwright** - E2E and integration tests
 - **Pytest** - Backend tests
-- **Testing Library** - React component testing utilities
 
 ## Deployment
 
-- **Backend**: Fly.io (PostgreSQL managed database)
+- **Backend**: Fly.io with PostgreSQL and Redis managed instances
 - **Frontend**: FTP deployment to khasinogaming.com
 - **CI/CD**: GitHub Actions for automated testing and deployment
 - **Base Path**: Frontend deployed at `/cassino/` subdirectory
@@ -107,7 +118,8 @@ npm run deploy:check
 - `VITE_WS_URL` - WebSocket endpoint
 
 ### Backend (backend/.env)
-- `DATABASE_URL` - Database connection string
+- `DATABASE_URL` - Database connection string (PostgreSQL in production)
+- `REDIS_URL` - Redis connection string (default: redis://localhost:6379)
 - `CORS_ORIGINS` - Allowed CORS origins
 - `HOST` / `PORT` - Server configuration
 
@@ -116,3 +128,22 @@ npm run deploy:check
 - Node.js >= 18.0.0
 - Python >= 3.11
 - npm >= 8.0.0
+- Redis >= 6.0 (for session management and caching)
+
+## Important Notes
+
+### Property Naming Convention
+- **Backend**: Uses snake_case (e.g., `player1_hand`, `table_cards`)
+- **Frontend**: Uses camelCase (e.g., `player1Hand`, `tableCards`)
+- **Transformation**: Happens at API boundary in hooks
+
+### Redis Usage
+- Session tokens stored with 30-minute TTL (sliding window)
+- Game state cached with 5-minute TTL
+- Player data cached with 30-minute TTL
+- Automatic fallback to database if Redis unavailable
+
+### Background Tasks
+- Heartbeat monitor: Runs every 30 seconds
+- Session cleanup: Runs every 5 minutes
+- Abandoned game checker: Runs every 10 minutes

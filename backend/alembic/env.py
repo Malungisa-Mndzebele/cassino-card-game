@@ -28,7 +28,12 @@ target_metadata = Base.metadata
 
 def get_url():
     """Get database URL from environment or config"""
-    return DATABASE_URL or config.get_main_option("sqlalchemy.url")
+    url = DATABASE_URL or config.get_main_option("sqlalchemy.url")
+    # Convert aiosqlite to sqlite for synchronous Alembic migrations
+    if url and 'sqlite+aiosqlite' in url:
+        url = url.replace('sqlite+aiosqlite', 'sqlite')
+        print(f"ℹ️  Updated SQLite URL for Alembic: {url}")
+    return url
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.

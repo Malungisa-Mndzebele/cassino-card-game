@@ -33,32 +33,33 @@ Core backend modules follow a clean separation of concerns:
 
 ## Frontend Structure
 
-### Components (`components/`)
+### SvelteKit Structure (`src/`)
 
-- `App.tsx` - Root component, orchestrates all hooks and views
-- `RoomManager.tsx` - Lobby for creating/joining rooms
-- `CasinoRoomView.tsx` - Waiting room before game starts
-- `PokerTableView.tsx` - Main game table (round1/round2 phases)
-- `GamePhases.tsx` - Handles special phases (cardSelection, dealing, finished)
-- `Card.tsx` - Individual card component
-- `Dealer.tsx` - Dealer/shuffle animations
-- `GameActions.tsx` - Action buttons (capture, build, trail)
-- `GameHints.tsx` - Hint system for valid moves
-- `GameSettings.tsx` - Settings panel and preferences
-- `PlayerHand.tsx` - Player's hand display
-- `SoundSystem.tsx` - Audio management
-- `ui/` - Reusable UI primitives (buttons, dialogs, etc.)
-- `app/` - App-level components (header, decorations)
-
-### Custom Hooks (`hooks/`)
-
-State management is handled through custom hooks, not global state libraries:
-
-- `useGameState.ts` - Core game state (cards, scores, phase)
-- `useConnectionState.ts` - Connection status and errors
-- `useWebSocket.ts` - WebSocket connection and message handling
-- `useGameActions.ts` - Game action handlers (playCard, shuffle, etc.)
-- `useRoomActions.ts` - Room management (create, join, leave)
+- `routes/` - SvelteKit file-based routing
+  - `+page.svelte` - Home/lobby page
+  - `room/[id]/+page.svelte` - Waiting room
+  - `game/[id]/+page.svelte` - Game table
+- `lib/` - Shared libraries
+  - `components/` - Svelte components
+    - `RoomManager.svelte` - Lobby for creating/joining rooms
+    - `CasinoRoomView.svelte` - Waiting room before game starts
+    - `PokerTableView.svelte` - Main game table (round1/round2 phases)
+    - `GamePhases.svelte` - Handles special phases (cardSelection, dealing, finished)
+    - `Card.svelte` - Individual card component
+    - `Dealer.svelte` - Dealer/shuffle animations
+    - `GameActions.svelte` - Action buttons (capture, build, trail)
+    - `GameHints.svelte` - Hint system for valid moves
+    - `GameSettings.svelte` - Settings panel and preferences
+    - `PlayerHand.svelte` - Player's hand display
+    - `SoundSystem.svelte` - Audio management
+    - `ui/` - Reusable UI primitives (buttons, dialogs, etc.)
+    - `app/` - App-level components (header, decorations)
+  - `stores/` - Svelte stores (state management)
+    - `gameState.svelte.ts` - Core game state (cards, scores, phase) using Svelte 5 runes
+    - `connectionState.svelte.ts` - Connection status and errors
+    - `websocket.svelte.ts` - WebSocket connection and message handling
+    - `gameActions.svelte.ts` - Game action handlers (playCard, shuffle, etc.)
+    - `roomActions.svelte.ts` - Room management (create, join, leave)
 
 ### Types (`types/`)
 
@@ -91,11 +92,11 @@ State management is handled through custom hooks, not global state libraries:
 
 ### Frontend Architecture
 
-App.tsx uses a **custom hooks pattern** for state management:
-1. State hooks manage specific domains (game, connection, websocket)
-2. Action hooks encapsulate business logic
-3. Components remain presentational and receive props
-4. No global state library - hooks compose together
+SvelteKit uses a **Svelte stores pattern** for state management:
+1. Stores manage specific domains (game, connection, websocket) using Svelte 5 runes
+2. Action stores encapsulate business logic
+3. Components remain presentational and subscribe to stores
+4. No global state library - Svelte's built-in reactivity handles state
 
 ### Backend Architecture
 
@@ -120,9 +121,9 @@ FastAPI follows a **layered architecture**:
 ## Key Conventions
 
 - **TypeScript**: Strict typing, interfaces in `types/gameTypes.ts`
-- **Component Props**: Explicit prop interfaces, no prop drilling beyond 2 levels
-- **API Client**: Centralized in `apiClient.ts`
-- **Error Handling**: Errors displayed via connection state hook
+- **Component Props**: Explicit prop interfaces using Svelte's typed props
+- **API Client**: Centralized in `lib/api/client.ts`
+- **Error Handling**: Errors displayed via connection state store
 - **Testing**: Test IDs use `data-testid` attribute
 - **Styling**: TailwindCSS utility classes, custom casino theme colors
-- **File Naming**: PascalCase for components, camelCase for utilities/hooks
+- **File Naming**: PascalCase for components (.svelte), camelCase for utilities/stores (.ts)

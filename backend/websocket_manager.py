@@ -1,29 +1,110 @@
 """
-Enhanced WebSocket Manager with Session Support
-Handles WebSocket connections with session validation and heartbeat
+Enhanced WebSocket Manager with Redis Pub/Sub
+
+Handles WebSocket connections with Redis pub/sub for horizontal scaling,
+session validation, heartbeat tracking, and message broadcasting across
+multiple server instances.
 """
 
 from fastapi import WebSocket, WebSocketDisconnect
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 import json
 import logging
+import asyncio
 from datetime import datetime
 
-from session_manager import SessionManager
-from models import GameSession
-
+from session_manager import get_session_manager
+from redis_client import redis_client
+from cache_manager import cache_manager
 
 logger = logging.getLogger(__name__)
 
 
-class EnhancedConnectionManager:
-    """Enhanced WebSocket connection manager with session support"""
+class WebSocketConnectionManager:
+    """
+    WebSocket connection manager with Redis pub/sub for horizontal scaling.
+    
+    Supports multiple server instances by using Redis pub/sub to broadcast
+    messages across all instances. Each instance maintains its own WebSocket
+    connections but can send messages to any room on any instance.
+    """
     
     def __init__(self):
-        # Map of room_id -> list of (websocket, session_id) tuples
-        self.active_connections: Dict[str, List[tuple[WebSocket, str]]] = {}
-        # Map of session_id -> websocket for quick lookup
+        # Local connections: room_id -> set of WebSocket connections
+        self.active_connections: Dict[str, Set[WebSocket]] = {}
+        
+        # Session to WebSocket mapping for quick lookup
         self.session_websockets: Dict[str, WebSocket] = {}
+        
+        # WebSocket to session_id mapping
+        self.websocket_sessions: Dict[WebSocket, str] = {}
+        
+        # Redis pub/sub subscriber task
+        self._subscriber_task: Optional[asyncio.Task] = None
+        
+        # Instance ID for debugging
+        import uuid
+        self.instance_id = str(uuid.uuid4())[:8]
+        
+        logger.info(f"WebSocket manager initialized (instance: {self.instance_id})")
+    
+    async def start_subscriber(self):
+        """Start Redis pub/sub subscriber for cross-instance messaging"""
+        if self._subscriber_task is None:
+            self._subscriber_task = asyncio.create_task(self._subscribe_to_redis())
+            logger.info("Redis pub/sub subscriber started")
+    
+    async def stop_subscriber(self):
+        """Stop Redis pub/sub subscriber"""
+        if self._subscriber_task:
+            self._subscriber_task.cancel()
+            try:
+                await self._subscriber_task
+            except asyncio.CancelledError:
+                pass
+            self._subscriber_task = None
+            logger.info("Redis pub/sub subscriber stopped")
+    
+    async def _subscribe_to_redis(self):
+        """
+        Subscribe to Redis pub/sub channels and forward messages to local WebSockets.
+        
+        This allows messages published from any server instance to be delivered
+        to WebSocket connections on this instance.
+        """
+        try:
+            client = await redis_client.get_async_client()
+            pubsub = client.pubsub()
+            
+            # Subscribe to all room channels (pattern matching)
+            await pubsub.psubscribe("room:*")
+            
+            logger.info("Subscribed to Redis pub/sub channels")
+            
+            async for message in pubsub.listen():
+                if message["type"] == "pmessage":
+                    try:
+                        # Extract room_id from channel name (room:ROOM_ID)
+                        channel = message["channel"]
+                        room_id = channel.split(":", 1)[1]
+                        
+                        # Parse message data
+                        data = json.loads(message["data"])
+                        
+                        # Forward to local WebSocket connections
+                        await self._broadcast_to_local_connections(room_id, data)
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing Redis message: {e}")
+        
+        except asyncio.CancelledError:
+            logger.info("Redis subscriber cancelled")
+            raise
+        except Exception as e:
+            logger.error(f"Redis subscriber error: {e}")
+            # Attempt to reconnect after delay
+            await asyncio.sleep(5)
+            await self._subscribe_to_redis()
     
     async def connect(
         self,
@@ -31,28 +112,28 @@ class EnhancedConnectionManager:
         room_id: str,
         session_token: Optional[str],
         db_session
-    ) -> tuple[bool, Optional[str], Optional[GameSession]]:
+    ) -> tuple[bool, Optional[str], Optional[dict]]:
         """
         Establish WebSocket connection with session validation
         
         Args:
             websocket: WebSocket connection
             room_id: Room identifier
-            session_token: Optional session token for reconnection
+            session_token: Optional session token for authentication
             db_session: Database session
-            
+        
         Returns:
-            Tuple of (success, error_message, game_session)
+            Tuple of (success, error_message, session_data)
         """
         await websocket.accept()
         
-        # If session token provided, validate it
-        game_session = None
+        # Validate session if token provided
+        session_data = None
         if session_token:
-            session_manager = SessionManager(db_session)
-            game_session = session_manager.validate_session(session_token)
+            session_manager = get_session_manager(db_session)
+            session_data = await session_manager.validate_session(session_token)
             
-            if not game_session:
+            if not session_data:
                 await websocket.send_json({
                     "type": "error",
                     "code": "invalid_session",
@@ -62,7 +143,7 @@ class EnhancedConnectionManager:
                 return False, "Invalid session token", None
             
             # Check if session belongs to this room
-            if game_session.room_id != room_id:
+            if session_data.get("room_id") != room_id:
                 await websocket.send_json({
                     "type": "error",
                     "code": "wrong_room",
@@ -72,152 +153,117 @@ class EnhancedConnectionManager:
                 return False, "Session room mismatch", None
             
             # Check for concurrent connection
-            if game_session.id in self.session_websockets:
-                # Concurrent connection detected
-                await websocket.send_json({
-                    "type": "concurrent_connection",
-                    "message": "Game is open in another tab. Take over this session?"
+            session_id = session_data.get("token")
+            if session_id in self.session_websockets:
+                # Close old connection
+                old_ws = self.session_websockets[session_id]
+                await old_ws.send_json({
+                    "type": "connection_takeover",
+                    "message": "Connection taken over from another location"
                 })
-                # Don't close yet, wait for client response
-                logger.warning(f"Concurrent connection detected for session {game_session.id}")
+                await old_ws.close(code=1000, reason="Connection takeover")
+                logger.warning(f"Connection takeover for session {session_id}")
             
             # Update heartbeat
-            session_manager.update_heartbeat(game_session.id)
+            await session_manager.update_heartbeat(session_token)
             
-            logger.info(f"Session {game_session.id} connected to room {room_id}")
+            # Store session mapping
+            self.session_websockets[session_id] = websocket
+            self.websocket_sessions[websocket] = session_id
+            
+            logger.info(f"Session {session_id} connected to room {room_id}")
         
         # Add to active connections
         if room_id not in self.active_connections:
-            self.active_connections[room_id] = []
+            self.active_connections[room_id] = set()
         
-        session_id = game_session.id if game_session else None
-        self.active_connections[room_id].append((websocket, session_id))
-        
-        if session_id:
-            self.session_websockets[session_id] = websocket
+        self.active_connections[room_id].add(websocket)
         
         # Broadcast connection status
-        await self.broadcast_connection_status(room_id, db_session)
+        await self.broadcast_to_room({
+            "type": "player_connected",
+            "room_id": room_id,
+            "timestamp": datetime.utcnow().isoformat()
+        }, room_id)
         
-        return True, None, game_session
+        return True, None, session_data
     
-    def disconnect(self, websocket: WebSocket, room_id: str, session_id: Optional[str], db_session):
+    async def disconnect(self, websocket: WebSocket, room_id: str):
         """
         Handle WebSocket disconnection
         
         Args:
             websocket: WebSocket connection
             room_id: Room identifier
-            session_id: Session identifier if available
-            db_session: Database session
         """
         # Remove from active connections
         if room_id in self.active_connections:
-            self.active_connections[room_id] = [
-                (ws, sid) for ws, sid in self.active_connections[room_id]
-                if ws != websocket
-            ]
+            self.active_connections[room_id].discard(websocket)
             if not self.active_connections[room_id]:
                 del self.active_connections[room_id]
         
-        # Remove from session websockets
+        # Remove from session mappings
+        session_id = self.websocket_sessions.pop(websocket, None)
         if session_id and session_id in self.session_websockets:
             del self.session_websockets[session_id]
         
-        # Mark session as disconnected
         if session_id:
-            session_manager = SessionManager(db_session)
-            session_manager.mark_disconnected(session_id)
             logger.info(f"Session {session_id} disconnected from room {room_id}")
-    
-    async def broadcast_to_room(self, message: str, room_id: str):
-        """
-        Broadcast message to all connections in a room
         
-        Args:
-            message: Message to broadcast
-            room_id: Room identifier
-        """
-        if room_id in self.active_connections:
-            disconnected = []
-            for websocket, session_id in self.active_connections[room_id]:
-                try:
-                    await websocket.send_text(message)
-                except Exception as e:
-                    logger.error(f"Failed to send to session {session_id}: {e}")
-                    disconnected.append((websocket, session_id))
-            
-            # Remove disconnected websockets
-            for ws, sid in disconnected:
-                self.active_connections[room_id].remove((ws, sid))
-                if sid and sid in self.session_websockets:
-                    del self.session_websockets[sid]
+        # Broadcast disconnection
+        await self.broadcast_to_room({
+            "type": "player_disconnected",
+            "room_id": room_id,
+            "timestamp": datetime.utcnow().isoformat()
+        }, room_id)
     
-    async def broadcast_json_to_room(self, data: dict, room_id: str):
+    async def broadcast_to_room(self, data: dict, room_id: str):
         """
-        Broadcast JSON data to all connections in a room
+        Broadcast message to all connections in a room across all instances.
+        
+        Uses Redis pub/sub to ensure message reaches all server instances.
         
         Args:
             data: Data to broadcast
             room_id: Room identifier
         """
-        message = json.dumps(data)
-        await self.broadcast_to_room(message, room_id)
+        # Publish to Redis (will be received by all instances including this one)
+        await redis_client.publish(f"room:{room_id}", data)
     
-    async def broadcast_connection_status(self, room_id: str, db_session):
+    async def _broadcast_to_local_connections(self, room_id: str, data: dict):
         """
-        Broadcast connection status of all players in room
+        Broadcast message to local WebSocket connections only.
+        
+        Called by Redis subscriber when a message is received.
         
         Args:
             room_id: Room identifier
-            db_session: Database session
+            data: Data to broadcast
         """
-        session_manager = SessionManager(db_session)
-        sessions = session_manager.get_room_sessions(room_id)
+        if room_id not in self.active_connections:
+            return
         
-        players_status = []
-        for session in sessions:
-            status = {
-                "player_id": session.player_id,
-                "connected": session.id in self.session_websockets,
-                "disconnected_since": session.disconnected_at.isoformat() if session.disconnected_at else None
-            }
-            players_status.append(status)
+        # Send to all local connections
+        disconnected = []
+        for websocket in self.active_connections[room_id]:
+            try:
+                await websocket.send_json(data)
+            except Exception as e:
+                logger.error(f"Failed to send to WebSocket: {e}")
+                disconnected.append(websocket)
         
-        await self.broadcast_json_to_room({
-            "type": "connection_status",
-            "players": players_status
-        }, room_id)
-    
-    async def handle_heartbeat(self, room_id: str, session_id: str, db_session) -> dict:
-        """
-        Process heartbeat ping and respond with pong
-        
-        Args:
-            room_id: Room identifier
-            session_id: Session identifier
-            db_session: Database session
-            
-        Returns:
-            Pong response data
-        """
-        session_manager = SessionManager(db_session)
-        session_manager.update_heartbeat(session_id)
-        
-        return {
-            "type": "pong",
-            "timestamp": datetime.now().isoformat(),
-            "session_id": session_id
-        }
+        # Remove disconnected WebSockets
+        for ws in disconnected:
+            await self.disconnect(ws, room_id)
     
     async def send_to_session(self, session_id: str, data: dict) -> bool:
         """
-        Send data to a specific session
+        Send data to a specific session (if connected to this instance)
         
         Args:
             session_id: Session identifier
             data: Data to send
-            
+        
         Returns:
             True if sent successfully, False otherwise
         """
@@ -230,29 +276,70 @@ class EnhancedConnectionManager:
                 return False
         return False
     
-    def get_connected_sessions(self, room_id: str) -> List[str]:
+    async def handle_heartbeat(self, websocket: WebSocket, db_session) -> dict:
         """
-        Get list of connected session IDs for a room
+        Process heartbeat ping and respond with pong
+        
+        Args:
+            websocket: WebSocket connection
+            db_session: Database session
+        
+        Returns:
+            Pong response data
+        """
+        session_id = self.websocket_sessions.get(websocket)
+        
+        if session_id:
+            session_manager = get_session_manager(db_session)
+            await session_manager.update_heartbeat(session_id)
+        
+        return {
+            "type": "pong",
+            "timestamp": datetime.utcnow().isoformat(),
+            "instance_id": self.instance_id
+        }
+    
+    def get_connected_count(self, room_id: str) -> int:
+        """
+        Get number of connections in a room on this instance
         
         Args:
             room_id: Room identifier
-            
-        Returns:
-            List of session IDs
-        """
-        if room_id not in self.active_connections:
-            return []
         
-        return [sid for _, sid in self.active_connections[room_id] if sid]
+        Returns:
+            Number of connections
+        """
+        return len(self.active_connections.get(room_id, set()))
     
     def is_session_connected(self, session_id: str) -> bool:
         """
-        Check if a session is currently connected
+        Check if a session is connected to this instance
         
         Args:
             session_id: Session identifier
-            
+        
         Returns:
             True if connected, False otherwise
         """
         return session_id in self.session_websockets
+    
+    async def get_room_stats(self, room_id: str) -> dict:
+        """
+        Get statistics for a room
+        
+        Args:
+            room_id: Room identifier
+        
+        Returns:
+            Statistics dictionary
+        """
+        return {
+            "room_id": room_id,
+            "local_connections": self.get_connected_count(room_id),
+            "instance_id": self.instance_id,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+
+# Global connection manager instance
+manager = WebSocketConnectionManager()

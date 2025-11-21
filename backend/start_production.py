@@ -49,9 +49,13 @@ def main():
         
         # Test database connection before starting server
         try:
-            from database import engine
-            with engine.connect() as conn:
-                pass
+            from database import async_engine
+            # Test async connection
+            async def test_connection():
+                async with async_engine.connect() as conn:
+                    pass
+            import asyncio
+            asyncio.run(test_connection())
             print("✅ Database connection successful", file=sys.stderr)
         except Exception as db_error:
             print(f"❌ Database connection failed: {db_error}", file=sys.stderr)

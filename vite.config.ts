@@ -1,32 +1,14 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [react()],
-  base: '/cassino/',  // URL base path for production deployment
+  plugins: [sveltekit()],
   server: {
     port: 5173,
-    strictPort: true,
-    host: true,
-    // Ensure dev server matches production base path
-    origin: 'http://localhost:5173',
+    strictPort: false,
   },
-  build: {
-    outDir: 'dist',
-    // Ensure production build matches deployment
-    assetsDir: 'assets',
-    sourcemap: false,
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './'),
-    },
-  },
-  // Ensure CSS is processed the same way in dev and production
-  css: {
-    postcss: './postcss.config.cjs',
-  },
-})
-
-
+  preview: {
+    port: 4173,
+    strictPort: false,
+  }
+});

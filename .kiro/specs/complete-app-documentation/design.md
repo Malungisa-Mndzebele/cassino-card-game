@@ -40,18 +40,27 @@ The Casino Card Game Application is a full-stack real-time multiplayer web appli
 │  │  │ Endpoints    │  │  Manager     │  │ Engine       │ │ │
 │  │  └──────────────┘  └──────────────┘  └──────────────┘ │ │
 │  │  ┌────────────────────────────────────────────────────┐ │ │
+│  │  │  Session Manager │ State Recovery │ Action Logger │ │ │
+│  │  └────────────────────────────────────────────────────┘ │ │
+│  │  ┌────────────────────────────────────────────────────┐ │ │
+│  │  │    Cache Manager │ Background Tasks │ Services    │ │ │
+│  │  └────────────────────────────────────────────────────┘ │ │
+│  │  ┌────────────────────────────────────────────────────┐ │ │
 │  │  │         SQLAlchemy ORM + Database Layer            │ │ │
 │  │  └────────────────────────────────────────────────────┘ │ │
 │  └────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Database (SQLite / PostgreSQL)                  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │  Rooms   │  │ Players  │  │ Sessions │  │  Actions │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
-└─────────────────────────────────────────────────────────────┘
+                    │                    │
+                    ▼                    ▼
+┌──────────────────────────────┐  ┌──────────────────────────┐
+│  Database (SQLite/PostgreSQL)│  │    Redis Cache Store     │
+│  ┌────────┐  ┌────────┐     │  │  ┌────────┐  ┌────────┐ │
+│  │ Rooms  │  │Players │     │  │  │Sessions│  │ States │ │
+│  └────────┘  └────────┘     │  │  └────────┘  └────────┘ │
+│  ┌────────┐  ┌────────┐     │  │  ┌────────┐  ┌────────┐ │
+│  │Sessions│  │ Actions│     │  │  │ Players│  │ Rooms  │ │
+│  └────────┘  └────────┘     │  │  └────────┘  └────────┘ │
+└──────────────────────────────┘  └──────────────────────────┘
 ```
 
 
@@ -71,10 +80,12 @@ The Casino Card Game Application is a full-stack real-time multiplayer web appli
 - Uvicorn ASGI server
 - Alembic for database migrations
 - Pydantic for data validation
+- Redis for session caching and state management
 
 **Database:**
 - SQLite (development)
 - PostgreSQL (production on Fly.io)
+- Redis for session storage and caching
 
 **Deployment:**
 - Backend: Fly.io with managed PostgreSQL
@@ -155,6 +166,87 @@ The application uses a hook-based architecture for state management and side eff
 **useGameStatistics** - Player statistics
 - Manages: gamesPlayed, gamesWon, gamesLost, totalScore, bestScore, winStreaks
 - Responsibility: Track and persist player performance metrics
+
+### Backend Services Architecture
+
+The backend follows a layered service architecture with specialized services for different concerns:
+
+**Core Services:**
+
+**SessionManager** (`session_manager.py`) - Session lifecycle management
+- Manages: Session creation, validation, heartbeat tracking, cleanup
+- Uses: Redis for high-performance session storage with automatic expiration
+- Methods: 
+  - `create_session()` - Generate unique session tokens
+  - `validate_session()` - Verify session validity and freshness
+  - `update_heartbeat()` - Track active connections
+  - `cleanup_expired_sessions()` - Remove stale sessions
+- Responsibility: Player session persistence across disconnections
+
+**StateRecoveryService** (`state_recovery.py`) - Game state recovery
+- Manages: State retrieval and missed actions for reconnecting players
+- Methods:
+  - `get_recovery_state()` - Retrieve complete game state for reconnection
+  - `get_missed_actions()` - Fetch actions that occurred during disconnect
+  - `calculate_disconnect_duration()` - Track time player was offline
+- Responsibility: Seamless reconnection experience with full state restoration
+
+**ActionLogger** (`action_logger.py`) - Game action audit trail
+- Manages: Logging all game actions for replay and deduplication
+- Methods:
+  - `log_game_action()` - Record action with unique ID
+  - `get_actions_since()` - Retrieve actions after specific sequence
+  - `deduplicate_action()` - Prevent duplicate action processing
+- Responsibility: Complete audit trail and action replay capability
+
+**CacheManager** (`cache_manager.py`) - Performance optimization
+- Manages: Redis-based caching for frequently accessed data
+- Caches: Game states, player data, room information, session data
+- Methods:
+  - `cache_game_state()` - Store game state with TTL
+  - `get_cached_game_state()` - Retrieve cached state
+  - `invalidate_cache()` - Clear stale cache entries
+  - `cache_player_data()` - Store player information
+- Responsibility: Reduce database load and improve response times
+
+**BackgroundTaskManager** (`background_tasks.py`) - Periodic maintenance
+- Manages: Asynchronous background tasks for system health
+- Tasks:
+  - `heartbeat_monitor()` - Check for stale connections every 30s
+  - `session_cleanup()` - Remove expired sessions every 5 minutes
+  - `abandoned_game_checker()` - Clean up inactive games every 10 minutes
+- Responsibility: Automatic cleanup and monitoring without blocking requests
+
+**WebSocketManager** (`websocket_manager.py`) - Real-time communication
+- Manages: WebSocket connection lifecycle and message broadcasting
+- Methods:
+  - `connect()` - Establish WebSocket connection
+  - `disconnect()` - Clean up connection resources
+  - `broadcast_to_room()` - Send updates to all room participants
+  - `send_to_player()` - Send targeted messages to specific player
+- Responsibility: Real-time bidirectional communication
+
+**Redis Architecture:**
+
+```
+Redis Key Structure:
+├── session:{token}          - Session metadata (30min TTL)
+├── game:state:{room_id}     - Cached game state (5min TTL)
+├── player:{player_id}       - Player data (30min TTL)
+├── room:{room_id}           - Room metadata (1hr TTL)
+└── rooms:active             - Set of active room IDs
+```
+
+**Service Interaction Flow:**
+
+```
+1. Player connects → SessionManager creates session → Redis stores token
+2. Player action → ActionLogger logs → Database persists
+3. State changes → CacheManager updates → Redis caches state
+4. Player disconnects → SessionManager marks inactive → Redis maintains session
+5. Player reconnects → StateRecoveryService retrieves → Missed actions replayed
+6. Background tasks → Cleanup expired → Redis + Database synchronized
+```
 
 ### Backend API Structure
 
@@ -1787,13 +1879,19 @@ function SoundSystem({ onSoundReady }) {
    - Chat functionality
    - Player profiles
 
-### Technical Debt
+### Technical Improvements
 
+**Completed:**
+- ✅ Redis for session caching and state management
+- ✅ Background tasks for session cleanup and monitoring
+- ✅ Action logging for audit trail and replay
+- ✅ State recovery service for reconnection handling
+
+**Planned:**
 - Migrate to TypeScript for backend
 - Implement comprehensive error tracking (Sentry)
-- Add Redis for session caching
 - Implement rate limiting per user
-- Add database query monitoring
+- Add database query monitoring and optimization
 - Optimize WebSocket message size
 - Implement progressive web app features
 - Add offline mode support

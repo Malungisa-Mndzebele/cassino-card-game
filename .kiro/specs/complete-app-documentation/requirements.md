@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Casino Card Game Application is a real-time multiplayer web-based implementation of the classic Casino card game. The System enables two players to compete head-to-head in capturing cards, building combinations, and scoring points through a WebSocket-enabled interface. The Application provides room management, game state synchronization, comprehensive scoring, and a responsive user interface for desktop and mobile browsers.
+The Casino Card Game Application is a real-time multiplayer web-based implementation of the classic Casino card game. The System enables two players to compete head-to-head in capturing cards, building combinations, and scoring points through a WebSocket-enabled interface. The Application provides room management, game state synchronization, comprehensive scoring, session persistence with automatic reconnection, Redis-based caching for performance optimization, complete action logging for audit trails, and a responsive user interface for desktop and mobile browsers.
 
 ## Glossary
 
@@ -19,6 +19,9 @@ The Casino Card Game Application is a real-time multiplayer web-based implementa
 - **Round**: A game segment where players play through their dealt hands
 - **Phase**: A distinct stage of gameplay (waiting, dealer, cardSelection, dealing, round1, round2, finished)
 - **Session Token**: A unique identifier for maintaining player session continuity
+- **Redis**: In-memory data store used for caching and session management
+- **TTL**: Time-To-Live, the duration for which cached data remains valid
+- **Background Task**: Automated periodic process running independently of user requests
 
 ## Requirements
 
@@ -213,6 +216,30 @@ The Casino Card Game Application is a real-time multiplayer web-based implementa
 3. THE Backend SHALL assign unique action IDs to prevent duplicate action processing
 4. THE Backend SHALL store action logs in the database for at least 30 days
 5. WHEN investigating issues, THE System SHALL provide queryable action history by Room or Player
+
+### Requirement 16A: Caching and Performance Optimization
+
+**User Story:** As a system administrator, I want frequently accessed data cached, so that the system responds quickly under load.
+
+#### Acceptance Criteria
+
+1. THE Backend SHALL use Redis for caching session data with automatic expiration
+2. WHEN Game State is accessed frequently, THE Backend SHALL cache the state in Redis with 5-minute TTL
+3. WHEN Player data is requested, THE Backend SHALL cache player information in Redis with 30-minute TTL
+4. THE Backend SHALL invalidate cached data when the underlying data changes
+5. WHEN Redis is unavailable, THE Backend SHALL fall back to database queries without service interruption
+
+### Requirement 16B: Background Task Management
+
+**User Story:** As a system administrator, I want automated cleanup tasks, so that the system maintains itself without manual intervention.
+
+#### Acceptance Criteria
+
+1. THE Backend SHALL run a heartbeat monitor task every 30 seconds to detect stale connections
+2. THE Backend SHALL run a session cleanup task every 5 minutes to remove expired sessions
+3. THE Backend SHALL run an abandoned game checker every 10 minutes to clean up inactive games
+4. WHEN a background task fails, THE Backend SHALL log the error and continue running other tasks
+5. THE Backend SHALL provide graceful shutdown for background tasks during deployment
 
 ### Requirement 17: Connection Status Monitoring
 

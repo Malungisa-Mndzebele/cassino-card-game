@@ -8,8 +8,7 @@ import os
 import json
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
 # Add the backend directory to the path
@@ -19,41 +18,51 @@ from main import app
 from database import Base, get_db
 from models import Room, Player
 
-# Create in-memory SQLite database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+# Create in-memory async SQLite database for testing
+SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-engine = create_engine(
+async_engine = create_async_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
+    echo=False,
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingAsyncSessionLocal = async_sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
 
-def override_get_db():
-    """Override database dependency for tests"""
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def override_get_db():
+    """Override database dependency for tests with async session"""
+    async with TestingAsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
 
 # Override the database dependency
 app.dependency_overrides[get_db] = override_get_db
+
+@pytest.fixture(scope="class", autouse=True)
+async def setup_database_for_class():
+    """Set up database tables once for the test class"""
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # Cleanup after class
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
 class TestComprehensiveAPI:
     """Comprehensive test suite for all API endpoints"""
     
     def setup_method(self):
         """Set up test fixtures before each test method"""
-        Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
         self.room_id = None
         self.player1_id = None
         self.player2_id = None
-    
-    def teardown_method(self):
-        """Clean up after each test"""
-        Base.metadata.drop_all(bind=engine)
     
     # ==========================================
     # HEALTH AND ROOT ENDPOINTS

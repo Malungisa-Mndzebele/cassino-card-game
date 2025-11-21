@@ -36,7 +36,7 @@ jobs:
 
   test-frontend:
     runs-on: ubuntu-latest
-    name: Test Frontend
+    name: Test Frontend (SvelteKit)
     
     steps:
       - name: Checkout code
@@ -51,8 +51,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Type check
-        run: npm run type-check
+      - name: Type check (SvelteKit)
+        run: npm run check
 
       - name: Lint
         run: npm run lint || echo "Linting completed with warnings"

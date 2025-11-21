@@ -1,14 +1,15 @@
 """
-Simple unit tests for Casino Card Game API endpoints (no pytest required)
+Simple unit tests for Casino Card Game API endpoints
 Tests all API endpoints: room creation, joining, player ready, game start, and card play
 """
 
 import sys
 import os
 import json
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import pytest
+import asyncio
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
 # Add the backend directory to the path so we can import main
@@ -18,56 +19,66 @@ from main import app
 from database import Base, get_db
 from models import Room, Player
 
-# Create in-memory SQLite database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+# Create in-memory async SQLite database for testing
+SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-engine = create_engine(
+async_engine = create_async_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
+    echo=False,
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingAsyncSessionLocal = async_sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
 
-def override_get_db():
-    """Override database dependency for tests"""
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def override_get_db():
+    """Override database dependency for tests with async session"""
+    async with TestingAsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
 
 # Override the database dependency
 app.dependency_overrides[get_db] = override_get_db
 
+@pytest.fixture(scope="function", autouse=True)
+async def setup_database():
+    """Set up database tables before each test"""
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # Cleanup
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+@pytest.mark.asyncio
 class TestCasinoAPI:
     """Test suite for Casino game API endpoints"""
     
-    def setup_method(self):
-        """Set up test fixtures before each test method"""
-        # Create tables
-        Base.metadata.create_all(bind=engine)
-        
-        self.client = TestClient(app)
+    @pytest.fixture(autouse=True)
+    def setup_test(self, client):
+        """Set up test instance with client"""
+        self.client = client
         self.room_id = None
         self.player1_id = None
         self.player2_id = None
     
-    def teardown_method(self):
-        """Clean up after each test"""
-        # Drop all tables
-        Base.metadata.drop_all(bind=engine)
-    
-    def test_health_check(self):
+    async def test_health_check(self):
         """Test health check endpoint"""
-        response = self.client.get("/health")
+        response = await self.client.get("/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert "message" in data
+        assert "database" in data
+        assert "redis" in data
     
-    def test_create_room(self):
+    async def test_create_room(self):
         """Test room creation"""
-        response = self.client.post("/rooms/create", json={
+        response = await self.client.post("/rooms/create", json={
             "player_name": "test_player1",
             "ip_address": "127.0.0.1"
         })
@@ -81,13 +92,13 @@ class TestCasinoAPI:
         self.room_id = data["room_id"]
         self.player1_id = data["player_id"]
     
-    def test_join_room(self):
+    async def test_join_room(self):
         """Test joining a room"""
         # First create a room
-        self.test_create_room()
+        await self.test_create_room()
         
         # Then join it
-        response = self.client.post("/rooms/join", json={
+        response = await self.client.post("/rooms/join", json={
             "room_id": self.room_id,
             "player_name": "test_player2",
             "ip_address": "127.0.0.2"
@@ -100,25 +111,25 @@ class TestCasinoAPI:
         # Save player2 ID
         self.player2_id = data["player_id"]
     
-    def test_get_game_state(self):
+    async def test_get_game_state(self):
         """Test getting game state"""
         # First create a room and join it
-        self.test_join_room()
+        await self.test_join_room()
         
         # Then get state
-        response = self.client.get(f"/rooms/{self.room_id}/state")
+        response = await self.client.get(f"/rooms/{self.room_id}/state")
         assert response.status_code == 200
         data = response.json()
         assert data["room_id"] == self.room_id
         assert len(data["players"]) == 2
     
-    def test_set_player_ready(self):
+    async def test_set_player_ready(self):
         """Test setting player ready status"""
         # First create a room and join it
-        self.test_join_room()
+        await self.test_join_room()
         
         # Set player1 ready
-        response = self.client.post("/rooms/player-ready", json={
+        response = await self.client.post("/rooms/player-ready", json={
             "room_id": self.room_id,
             "player_id": self.player1_id,
             "is_ready": True
@@ -129,7 +140,7 @@ class TestCasinoAPI:
         assert data["game_state"]["player1_ready"] == True
         
         # Set player2 ready
-        response = self.client.post("/rooms/player-ready", json={
+        response = await self.client.post("/rooms/player-ready", json={
             "room_id": self.room_id,
             "player_id": self.player2_id,
             "is_ready": True
@@ -140,13 +151,13 @@ class TestCasinoAPI:
         assert data["game_state"]["player2_ready"] == True
         assert data["game_state"]["phase"] == "dealer"  # Should auto-transition
     
-    def test_start_shuffle(self):
+    async def test_start_shuffle(self):
         """Test starting shuffle phase"""
         # First get both players ready
-        self.test_set_player_ready()
+        await self.test_set_player_ready()
         
         # Start shuffle
-        response = self.client.post("/game/start-shuffle", json={
+        response = await self.client.post("/game/start-shuffle", json={
             "room_id": self.room_id,
             "player_id": self.player1_id
         })
@@ -155,13 +166,13 @@ class TestCasinoAPI:
         assert data["success"] == True
         assert data["game_state"]["shuffle_complete"] == True
     
-    def test_select_face_up_cards(self):
+    async def test_select_face_up_cards(self):
         """Test selecting face-up cards and starting game"""
         # First complete shuffle
-        self.test_start_shuffle()
+        await self.test_start_shuffle()
         
         # Select face-up cards (start game)
-        response = self.client.post("/game/select-face-up-cards", json={
+        response = await self.client.post("/game/select-face-up-cards", json={
             "room_id": self.room_id,
             "player_id": self.player1_id,
             "card_ids": []
@@ -178,18 +189,18 @@ class TestCasinoAPI:
         assert len(data["game_state"]["player1_hand"]) == 4
         assert len(data["game_state"]["player2_hand"]) == 4
     
-    def test_play_card_trail(self):
+    async def test_play_card_trail(self):
         """Test playing a card (trail action)"""
         # First start the game
-        self.test_select_face_up_cards()
+        await self.test_select_face_up_cards()
         
         # Get game state to find a card to play
-        response = self.client.get(f"/rooms/{self.room_id}/state")
+        response = await self.client.get(f"/rooms/{self.room_id}/state")
         data = response.json()
         player1_card = data["player1_hand"][0]
         
         # Play the card (trail)
-        response = self.client.post("/game/play-card", json={
+        response = await self.client.post("/game/play-card", json={
             "room_id": self.room_id,
             "player_id": self.player1_id,
             "card_id": player1_card["id"],
@@ -206,13 +217,13 @@ class TestCasinoAPI:
         assert any(card["id"] == player1_card["id"] for card in data["game_state"]["table_cards"])
         assert not any(card["id"] == player1_card["id"] for card in data["game_state"]["player1_hand"])
     
-    def test_reset_game(self):
+    async def test_reset_game(self):
         """Test resetting the game"""
         # First play a card
-        self.test_play_card_trail()
+        await self.test_play_card_trail()
         
         # Reset game
-        response = self.client.post("/game/reset", params={"room_id": self.room_id})
+        response = await self.client.post("/game/reset", params={"room_id": self.room_id})
         assert response.status_code == 200
         data = response.json()
         assert data["success"] == True
@@ -230,44 +241,45 @@ class TestCasinoAPI:
         assert game_state["player1_ready"] == False
         assert game_state["player2_ready"] == False
 
-    def test_join_nonexistent_room(self):
-        response = self.client.post("/rooms/join", json={
+    async def test_join_nonexistent_room(self):
+        response = await self.client.post("/rooms/join", json={
             "room_id": "ZZZZZZ",
             "player_name": "ghost",
             "ip_address": "127.0.0.9"
         })
         assert response.status_code == 404
 
-    def test_join_room_full(self):
+    async def test_join_room_full(self):
         # Create room and add two players
-        self.test_join_room()
+        await self.test_join_room()
         # Try to add third player
-        response = self.client.post("/rooms/join", json={
+        response = await self.client.post("/rooms/join", json={
             "room_id": self.room_id,
             "player_name": "third",
             "ip_address": "127.0.0.3"
         })
         assert response.status_code == 400
 
-    def test_set_ready_invalid_player(self):
-        self.test_join_room()
-        response = self.client.post("/rooms/player-ready", json={
+    async def test_set_ready_invalid_player(self):
+        await self.test_join_room()
+        response = await self.client.post("/rooms/player-ready", json={
             "room_id": self.room_id,
             "player_id": 999999,
             "is_ready": True
         })
         assert response.status_code == 404
 
-    def test_play_wrong_turn(self):
+    async def test_play_wrong_turn(self):
         # start game to round1
-        self.test_select_face_up_cards()
+        await self.test_select_face_up_cards()
         # Get state
-        state = self.client.get(f"/rooms/{self.room_id}/state").json()
+        response = await self.client.get(f"/rooms/{self.room_id}/state")
+        state = response.json()
         p1 = state["players"][0]["id"]
         p2 = state["players"][1]["id"]
         # Player 2 tries to play first
         card = state["player2_hand"][0]
-        response = self.client.post("/game/play-card", json={
+        response = await self.client.post("/game/play-card", json={
             "room_id": self.room_id,
             "player_id": p2,
             "card_id": card["id"],
@@ -277,12 +289,13 @@ class TestCasinoAPI:
         })
         assert response.status_code == 400
 
-    def test_play_invalid_action(self):
-        self.test_select_face_up_cards()
-        state = self.client.get(f"/rooms/{self.room_id}/state").json()
+    async def test_play_invalid_action(self):
+        await self.test_select_face_up_cards()
+        response = await self.client.get(f"/rooms/{self.room_id}/state")
+        state = response.json()
         p1 = state["players"][0]["id"]
         card = state["player1_hand"][0]
-        response = self.client.post("/game/play-card", json={
+        response = await self.client.post("/game/play-card", json={
             "room_id": self.room_id,
             "player_id": p1,
             "card_id": card["id"],
@@ -292,13 +305,14 @@ class TestCasinoAPI:
         })
         assert response.status_code == 400
 
-    def test_build_invalid_same_value(self):
-        self.test_select_face_up_cards()
-        state = self.client.get(f"/rooms/{self.room_id}/state").json()
+    async def test_build_invalid_same_value(self):
+        await self.test_select_face_up_cards()
+        response = await self.client.get(f"/rooms/{self.room_id}/state")
+        state = response.json()
         p1 = state["players"][0]["id"]
         card = state["player1_hand"][0]
         # Attempt to build with build_value equal to hand card (logic rejects)
-        response = self.client.post("/game/play-card", json={
+        response = await self.client.post("/game/play-card", json={
             "room_id": self.room_id,
             "player_id": p1,
             "card_id": card["id"],
@@ -308,11 +322,11 @@ class TestCasinoAPI:
         })
         assert response.status_code == 400
 
-    def test_websocket_broadcast(self):
+    async def test_websocket_broadcast(self):
         # Create room → join second player to open ws on a room id
-        self.test_join_room()
-        with self.client.websocket_connect(f"/ws/{self.room_id}") as websocket:
+        await self.test_join_room()
+        async with self.client.websocket_connect(f"/ws/{self.room_id}") as websocket:
             test_msg = "state_update_test"
-            websocket.send_text(test_msg)
-            received = websocket.receive_text()
+            await websocket.send_text(test_msg)
+            received = await websocket.receive_text()
             assert received == test_msg

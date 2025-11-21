@@ -1,7 +1,7 @@
 """
 Pydantic Schemas for Request/Response Validation
 
-This module defines all Pydantic models used for API request validation and response
+This module defines all Pydantic v2 models used for API request validation and response
 serialization. These schemas ensure type safety and automatic validation of all API
 endpoints.
 
@@ -9,7 +9,7 @@ Request schemas validate incoming data from clients.
 Response schemas structure outgoing data to clients.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -21,30 +21,50 @@ class CreateRoomRequest(BaseModel):
     Request schema for creating a new game room.
     
     Attributes:
-        player_name (str): Display name for the creating player
-        ip_address (str, optional): Client IP address (auto-detected if not provided)
-    
-    Example:
-        >>> request = CreateRoomRequest(player_name="Alice")
+        player_name: Display name for the creating player (1-50 chars)
+        ip_address: Client IP address (auto-detected if not provided)
     """
-    player_name: str
-    ip_address: Optional[str] = None
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    player_name: str = Field(..., min_length=1, max_length=50)
+    ip_address: Optional[str] = Field(None, max_length=45)
+    
+    @field_validator('player_name')
+    @classmethod
+    def validate_player_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Player name cannot be empty')
+        return v.strip()
+
 
 class JoinRoomRequest(BaseModel):
     """
     Request schema for joining an existing room.
     
     Attributes:
-        room_id (str): 6-character room code to join
-        player_name (str): Display name for the joining player
-        ip_address (str, optional): Client IP address
-    
-    Example:
-        >>> request = JoinRoomRequest(room_id="ABC123", player_name="Bob")
+        room_id: 6-character room code to join
+        player_name: Display name for the joining player
+        ip_address: Client IP address
     """
-    room_id: str
-    player_name: str
-    ip_address: Optional[str] = None
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    room_id: str = Field(..., min_length=6, max_length=6)
+    player_name: str = Field(..., min_length=1, max_length=50)
+    ip_address: Optional[str] = Field(None, max_length=45)
+    
+    @field_validator('room_id')
+    @classmethod
+    def validate_room_id(cls, v: str) -> str:
+        if not v or len(v) != 6:
+            raise ValueError('Room ID must be exactly 6 characters')
+        return v.upper()
+    
+    @field_validator('player_name')
+    @classmethod
+    def validate_player_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Player name cannot be empty')
+        return v.strip()
 
 
 class JoinRandomRoomRequest(BaseModel):
@@ -52,14 +72,20 @@ class JoinRandomRoomRequest(BaseModel):
     Request schema for joining a random available room.
     
     Attributes:
-        player_name (str): Display name for the player
-        ip_address (str, optional): Client IP address
-    
-    Example:
-        >>> request = JoinRandomRoomRequest(player_name="Charlie")
+        player_name: Display name for the player
+        ip_address: Client IP address
     """
-    player_name: str
-    ip_address: Optional[str] = None
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    player_name: str = Field(..., min_length=1, max_length=50)
+    ip_address: Optional[str] = Field(None, max_length=45)
+    
+    @field_validator('player_name')
+    @classmethod
+    def validate_player_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Player name cannot be empty')
+        return v.strip()
 
 
 class SetPlayerReadyRequest(BaseModel):
@@ -67,15 +93,12 @@ class SetPlayerReadyRequest(BaseModel):
     Request schema for setting player ready status.
     
     Attributes:
-        room_id (str): Room identifier
-        player_id (int): Player identifier
-        is_ready (bool): Ready status to set
-    
-    Example:
-        >>> request = SetPlayerReadyRequest(room_id="ABC123", player_id=1, is_ready=True)
+        room_id: Room identifier
+        player_id: Player identifier
+        is_ready: Ready status to set
     """
-    room_id: str
-    player_id: int
+    room_id: str = Field(..., min_length=6, max_length=6)
+    player_id: int = Field(..., ge=1)
     is_ready: bool
 
 
@@ -84,38 +107,26 @@ class PlayCardRequest(BaseModel):
     Request schema for playing a card action.
     
     Attributes:
-        room_id (str): Room identifier
-        player_id (int): Player identifier
-        card_id (str): Card being played (format: "rank_suit")
-        action (str): Action type (capture, build, or trail)
-        target_cards (list, optional): Target card IDs for capture/build
-        build_value (int, optional): Build value for build action
-    
-    Example:
-        >>> # Capture action
-        >>> request = PlayCardRequest(
-        ...     room_id="ABC123",
-        ...     player_id=1,
-        ...     card_id="8_hearts",
-        ...     action="capture",
-        ...     target_cards=["3_spades", "5_diamonds"]
-        ... )
-        >>> # Build action
-        >>> request = PlayCardRequest(
-        ...     room_id="ABC123",
-        ...     player_id=1,
-        ...     card_id="5_hearts",
-        ...     action="build",
-        ...     target_cards=["3_spades"],
-        ...     build_value=8
-        ... )
+        room_id: Room identifier
+        player_id: Player identifier
+        card_id: Card being played (format: "rank_suit")
+        action: Action type (capture, build, or trail)
+        target_cards: Target card IDs for capture/build
+        build_value: Build value for build action
     """
-    room_id: str
-    player_id: int
-    card_id: str
-    action: str  # capture, build, trail
+    room_id: str = Field(..., min_length=6, max_length=6)
+    player_id: int = Field(..., ge=1)
+    card_id: str = Field(..., min_length=1)
+    action: str = Field(..., pattern="^(capture|build|trail)$")
     target_cards: Optional[List[str]] = None
-    build_value: Optional[int] = None
+    build_value: Optional[int] = Field(None, ge=1, le=14)
+    
+    @field_validator('action')
+    @classmethod
+    def validate_action(cls, v: str) -> str:
+        if v not in ['capture', 'build', 'trail']:
+            raise ValueError('Action must be capture, build, or trail')
+        return v
 
 
 class StartShuffleRequest(BaseModel):
@@ -123,14 +134,11 @@ class StartShuffleRequest(BaseModel):
     Request schema for starting the shuffle phase.
     
     Attributes:
-        room_id (str): Room identifier
-        player_id (int): Player identifier (must be Player 1)
-    
-    Example:
-        >>> request = StartShuffleRequest(room_id="ABC123", player_id=1)
+        room_id: Room identifier
+        player_id: Player identifier (must be Player 1)
     """
-    room_id: str
-    player_id: int
+    room_id: str = Field(..., min_length=6, max_length=6)
+    player_id: int = Field(..., ge=1)
 
 
 class SelectFaceUpCardsRequest(BaseModel):
@@ -138,20 +146,13 @@ class SelectFaceUpCardsRequest(BaseModel):
     Request schema for selecting initial face-up cards.
     
     Attributes:
-        room_id (str): Room identifier
-        player_id (int): Player identifier (must be Player 1)
-        card_ids (list): List of card IDs to place face-up
-    
-    Example:
-        >>> request = SelectFaceUpCardsRequest(
-        ...     room_id="ABC123",
-        ...     player_id=1,
-        ...     card_ids=["A_hearts", "K_spades", "Q_diamonds", "J_clubs"]
-        ... )
+        room_id: Room identifier
+        player_id: Player identifier (must be Player 1)
+        card_ids: List of card IDs to place face-up (exactly 4 cards)
     """
-    room_id: str
-    player_id: int
-    card_ids: List[str]
+    room_id: str = Field(..., min_length=6, max_length=6)
+    player_id: int = Field(..., ge=1)
+    card_ids: List[str] = Field(..., min_length=4, max_length=4)
 
 
 # Response schemas
@@ -161,20 +162,20 @@ class PlayerResponse(BaseModel):
     Response schema for player information.
     
     Attributes:
-        id (int): Player identifier
-        name (str): Player display name
-        ready (bool): Player ready status
-        joined_at (datetime, optional): When player joined
-        ip_address (str, optional): Player IP address
-    
-    Example:
-        >>> player = PlayerResponse(id=1, name="Alice", ready=True, joined_at=datetime.now())
+        id: Player identifier
+        name: Player display name
+        ready: Player ready status
+        joined_at: When player joined
+        ip_address: Player IP address
     """
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     name: str
     ready: bool
-    joined_at: Optional[datetime]
+    joined_at: Optional[datetime] = None
     ip_address: Optional[str] = None
+
 
 class GameStateResponse(BaseModel):
     """
@@ -182,36 +183,9 @@ class GameStateResponse(BaseModel):
     
     Contains all information about the current game state including cards, scores,
     phase, and player status. This is the primary response for most game endpoints.
-    
-    Attributes:
-        room_id (str): Room identifier
-        players (list): List of PlayerResponse objects
-        phase (str): Current game phase
-        round (int): Current round number (0, 1, or 2)
-        deck (list): Remaining deck cards as dicts
-        player1_hand (list): Player 1's hand cards
-        player2_hand (list): Player 2's hand cards
-        table_cards (list): Cards on the table
-        builds (list): Active builds
-        player1_captured (list): Player 1's captured cards
-        player2_captured (list): Player 2's captured cards
-        player1_score (int): Player 1's score
-        player2_score (int): Player 2's score
-        current_turn (int): Current player's turn (1 or 2)
-        card_selection_complete (bool): Whether card selection is done
-        shuffle_complete (bool): Whether shuffle is complete
-        countdown_start_time (datetime, optional): Countdown start time
-        game_started (bool): Whether game has started
-        last_play (dict, optional): Last action played
-        last_action (str, optional): Type of last action
-        last_update (datetime, optional): Last update timestamp
-        game_completed (bool): Whether game is finished
-        winner (int, optional): Winning player (1, 2, or None)
-        dealing_complete (bool): Whether dealing is complete
-        player1_ready (bool): Player 1 ready status
-        player2_ready (bool): Player 2 ready status
-        countdown_remaining (int, optional): Countdown seconds remaining
     """
+    model_config = ConfigDict(from_attributes=True)
+    
     room_id: str
     players: List[PlayerResponse]
     phase: str
@@ -228,17 +202,17 @@ class GameStateResponse(BaseModel):
     current_turn: int
     card_selection_complete: bool
     shuffle_complete: bool
-    countdown_start_time: Optional[datetime]
+    countdown_start_time: Optional[datetime] = None
     game_started: bool
-    last_play: Optional[Dict[str, Any]]
-    last_action: Optional[str]
-    last_update: Optional[datetime]
+    last_play: Optional[Dict[str, Any]] = None
+    last_action: Optional[str] = None
+    last_update: Optional[datetime] = None
     game_completed: bool
-    winner: Optional[int]
+    winner: Optional[int] = None
     dealing_complete: bool
     player1_ready: bool
     player2_ready: bool
-    countdown_remaining: Optional[int]
+    countdown_remaining: Optional[int] = None
 
 
 class CreateRoomResponse(BaseModel):
@@ -246,16 +220,9 @@ class CreateRoomResponse(BaseModel):
     Response schema for room creation.
     
     Attributes:
-        room_id (str): Created room identifier
-        player_id (int): Creating player's ID
-        game_state (GameStateResponse): Initial game state
-    
-    Example:
-        >>> response = CreateRoomResponse(
-        ...     room_id="ABC123",
-        ...     player_id=1,
-        ...     game_state=game_state
-        ... )
+        room_id: Created room identifier
+        player_id: Creating player's ID
+        game_state: Initial game state
     """
     room_id: str
     player_id: int
@@ -267,11 +234,8 @@ class JoinRoomResponse(BaseModel):
     Response schema for joining a room.
     
     Attributes:
-        player_id (int): Joining player's ID
-        game_state (GameStateResponse): Current game state
-    
-    Example:
-        >>> response = JoinRoomResponse(player_id=2, game_state=game_state)
+        player_id: Joining player's ID
+        game_state: Current game state
     """
     player_id: int
     game_state: GameStateResponse
@@ -282,17 +246,38 @@ class StandardResponse(BaseModel):
     Standard response schema for most game actions.
     
     Attributes:
-        success (bool): Whether action succeeded
-        message (str): Human-readable message
-        game_state (GameStateResponse, optional): Updated game state
-    
-    Example:
-        >>> response = StandardResponse(
-        ...     success=True,
-        ...     message="Card played successfully",
-        ...     game_state=game_state
-        ... )
+        success: Whether action succeeded
+        message: Human-readable message
+        game_state: Updated game state
     """
     success: bool
     message: str
     game_state: Optional[GameStateResponse] = None
+
+
+class ErrorResponse(BaseModel):
+    """
+    Error response schema.
+    
+    Attributes:
+        detail: Error message
+        error_code: Optional error code for client handling
+    """
+    detail: str
+    error_code: Optional[str] = None
+
+
+class HealthCheckResponse(BaseModel):
+    """
+    Health check response schema.
+    
+    Attributes:
+        status: Service status (healthy, degraded, unhealthy)
+        database: Database connection status ("connected" or "disconnected")
+        redis: Redis connection status ("connected" or "disconnected")
+        timestamp: Check timestamp
+    """
+    status: str
+    database: str  # "connected" or "disconnected"
+    redis: str  # "connected" or "disconnected"
+    timestamp: datetime = Field(default_factory=datetime.utcnow)

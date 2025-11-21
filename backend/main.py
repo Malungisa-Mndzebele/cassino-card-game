@@ -43,13 +43,14 @@ from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconn
 import os
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Dict, Any
 import random
 import string
 import json
 from datetime import datetime
 
-from database import get_db, engine
+from database import get_db, async_engine
 from models import Base, Room, Player, GameSession
 from schemas import (
     CreateRoomRequest, JoinRoomRequest, JoinRandomRoomRequest, SetPlayerReadyRequest,
@@ -129,21 +130,31 @@ app.add_middleware(
 # Health check endpoint
 @app.get("/health")
 async def health_check():
-    """Health check that doesn't require database connection"""
-    # Try to check database connection without failing
+    """Health check with database and Redis status"""
+    from schemas import HealthCheckResponse
+    from redis_client import redis_client
+    from database import async_engine
+    
+    # Check database connection
     db_healthy = True
     try:
-        from database import engine
-        with engine.connect() as conn:
-            pass
+        from sqlalchemy import text
+        async with async_engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
     except Exception as e:
         db_healthy = False
     
-    return {
-        "status": "healthy" if db_healthy else "degraded",
-        "message": "Casino Card Game Backend is running",
-        "database": "connected" if db_healthy else "disconnected"
-    }
+    # Check Redis connection
+    redis_healthy = await redis_client.ping()
+    
+    # Overall status
+    overall_status = "healthy" if (db_healthy and redis_healthy) else "degraded"
+    
+    return HealthCheckResponse(
+        status=overall_status,
+        database="connected" if db_healthy else "disconnected",
+        redis="connected" if redis_healthy else "disconnected"
+    )
 
 # Root endpoint for API
 @app.get("/")
@@ -152,7 +163,7 @@ async def root():
 
 # Heartbeat monitoring endpoint
 @app.get("/api/heartbeat/{room_id}")
-async def get_heartbeat_status(room_id: str, db: Session = Depends(get_db)):
+async def get_heartbeat_status(room_id: str, db: AsyncSession = Depends(get_db)):
     """Get heartbeat status for all players in a room"""
     from session_manager import SessionManager
     
@@ -184,13 +195,13 @@ async def get_heartbeat_status(room_id: str, db: Session = Depends(get_db)):
 async def claim_victory(
     room_id: str,
     player_id: int,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Claim victory when opponent has abandoned the game"""
     from session_manager import SessionManager
     from datetime import timedelta
     
-    room = get_room_or_404(db, room_id)
+    room = await get_room_or_404(db, room_id)
     
     # Get all sessions in room
     session_manager = SessionManager(db)
@@ -220,7 +231,7 @@ async def claim_victory(
     room.game_completed = True
     room.winner = 1 if is_player1 else 2
     
-    db.commit()
+    await db.commit()
     
     # Broadcast game end
     await manager.broadcast_json_to_room({
@@ -241,7 +252,7 @@ async def claim_victory(
 async def get_recovery_state(
     room_id: str,
     player_id: int,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get recovery state for a reconnecting player"""
     from state_recovery import StateRecoveryService
@@ -284,23 +295,77 @@ async def options_handler(full_path: str):
     )
 
 # Import enhanced WebSocket manager and background tasks
-from websocket_manager import EnhancedConnectionManager
+from websocket_manager import WebSocketConnectionManager
 from background_tasks import background_task_manager
 
 # WebSocket connection manager
-manager = EnhancedConnectionManager()
+manager = WebSocketConnectionManager()
 
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    """Start background tasks on application startup"""
-    await background_task_manager.start()
+    """Initialize database and Redis connections on startup"""
+    from database import init_db
+    from redis_client import redis_client
+    import sys
+    
+    print("🚀 Starting Casino Card Game Backend...", file=sys.stderr)
+    
+    # Initialize database tables
+    try:
+        await init_db()
+        print("✅ Database initialized", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Database initialization warning: {e}", file=sys.stderr)
+    
+    # Check Redis connection
+    redis_available = await redis_client.ping()
+    if redis_available:
+        print("✅ Redis connected", file=sys.stderr)
+    else:
+        print("⚠️  Redis not available (sessions and caching disabled)", file=sys.stderr)
+    
+    # Start background tasks
+    try:
+        await background_task_manager.start()
+        print("✅ Background tasks started", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Background tasks warning: {e}", file=sys.stderr)
+    
+    print("✨ Backend ready!", file=sys.stderr)
 
 # Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Stop background tasks on application shutdown"""
-    await background_task_manager.stop()
+    """Cleanup on application shutdown"""
+    from database import close_db
+    from redis_client import redis_client
+    import sys
+    
+    print("🛑 Shutting down Casino Card Game Backend...", file=sys.stderr)
+    
+    # Stop background tasks
+    try:
+        await background_task_manager.stop()
+        print("✅ Background tasks stopped", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Background tasks cleanup warning: {e}", file=sys.stderr)
+    
+    # Close database connections
+    try:
+        await close_db()
+        print("✅ Database connections closed", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Database cleanup warning: {e}", file=sys.stderr)
+    
+    # Close Redis connections
+    try:
+        await redis_client.close()
+        print("✅ Redis connections closed", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Redis cleanup warning: {e}", file=sys.stderr)
+    
+    print("👋 Shutdown complete", file=sys.stderr)
 
 # Initialize game logic
 game_logic = CasinoGameLogic()
@@ -441,7 +506,7 @@ def game_state_to_response(room: Room) -> GameStateResponse:
 
 # Helper functions to reduce duplication across endpoints
 
-def get_room_or_404(db: Session, room_id: str) -> Room:
+async def get_room_or_404(db: AsyncSession, room_id: str) -> Room:
     """
     Fetch a room from database or raise 404 error.
     
@@ -458,7 +523,14 @@ def get_room_or_404(db: Session, room_id: str) -> Room:
     Example:
         >>> room = get_room_or_404(db, "ABC123")
     """
-    room = db.query(Room).filter(Room.id == room_id).first()
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(Room)
+        .where(Room.id == room_id)
+        .options(selectinload(Room.players))
+    )
+    room = result.scalar_one_or_none()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     return room
@@ -482,12 +554,12 @@ def get_sorted_players(room: Room) -> List[Player]:
     return sorted(room.players, key=lambda p: p.joined_at)
 
 
-def get_player_or_404(db: Session, room_id: str, player_id: int) -> Player:
+async def get_player_or_404(db: AsyncSession, room_id: str, player_id: int) -> Player:
     """
     Fetch a player in a specific room or raise 404 error.
     
     Args:
-        db (Session): Database session
+        db (AsyncSession): Database session
         room_id (str): Room identifier
         player_id (int): Player identifier
     
@@ -498,12 +570,16 @@ def get_player_or_404(db: Session, room_id: str, player_id: int) -> Player:
         HTTPException: 404 if player not found in room
     
     Example:
-        >>> player = get_player_or_404(db, "ABC123", 1)
+        >>> player = await get_player_or_404(db, "ABC123", 1)
     """
-    player = db.query(Player).filter(
-        Player.id == player_id,
-        Player.room_id == room_id,
-    ).first()
+    from sqlalchemy import select
+    result = await db.execute(
+        select(Player).where(
+            Player.id == player_id,
+            Player.room_id == room_id
+        )
+    )
+    player = result.scalar_one_or_none()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
     return player
@@ -532,19 +608,10 @@ def assert_players_turn(room: Room, player_id: int) -> None:
 
 # API Endpoints
 @app.post("/rooms/create", response_model=CreateRoomResponse)
-async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
+async def create_room(request: CreateRoomRequest, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Create a new game room"""
-    try:
-        # Generate unique room ID
-        room_id = generate_room_id()
-        # Check if room exists (may fail if tables don't exist - migrations needed)
-        while db.query(Room).filter(Room.id == room_id).first():
-            room_id = generate_room_id()
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Database error: {str(e)}. Please run migrations: flyctl ssh console -C 'cd /app && python -m alembic upgrade head'"
-        )
+    # Generate unique room ID (collision chance is negligible with 6 characters)
+    room_id = generate_room_id()
     
     # Create room
     room = Room(id=room_id)
@@ -564,8 +631,8 @@ async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db),
     room.round_number = 0
     room.current_turn = 1
     db.add(room)
-    db.commit()
-    db.refresh(room)
+    await db.commit()
+    await db.refresh(room)
     
     # Create first player with IP address
     player = Player(
@@ -574,8 +641,18 @@ async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db),
         ip_address=request.ip_address or client_ip
     )
     db.add(player)
-    db.commit()
-    db.refresh(player)
+    await db.commit()
+    await db.refresh(player)
+    
+    # Reload room with players eagerly loaded to avoid MissingGreenlet in game_state_to_response
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(Room)
+        .where(Room.id == room_id)
+        .options(selectinload(Room.players))
+    )
+    room = result.scalar_one()
     
     return CreateRoomResponse(
         room_id=room_id,
@@ -584,19 +661,32 @@ async def create_room(request: CreateRoomRequest, db: Session = Depends(get_db),
     )
 
 @app.post("/rooms/join", response_model=JoinRoomResponse)
-async def join_room(request: JoinRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
+async def join_room(request: JoinRoomRequest, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Join an existing game room"""
-    room = get_room_or_404(db, request.room_id)
+    # Load room with players eagerly to avoid MissingGreenlet errors
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(Room)
+        .where(Room.id == request.room_id)
+        .options(selectinload(Room.players))
+    )
+    room = result.scalar_one_or_none()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
     
     # Check if room is full
     if len(room.players) >= 2:
         raise HTTPException(status_code=400, detail="Room is full")
     
     # Check if player name already exists in room
-    existing_player = db.query(Player).filter(
-        Player.room_id == request.room_id,
-        Player.name == request.player_name
-    ).first()
+    result = await db.execute(
+        select(Player).where(
+            Player.room_id == request.room_id,
+            Player.name == request.player_name
+        )
+    )
+    existing_player = result.scalar_one_or_none()
     if existing_player:
         raise HTTPException(status_code=400, detail="Player name already taken")
     
@@ -607,8 +697,11 @@ async def join_room(request: JoinRoomRequest, db: Session = Depends(get_db), cli
         ip_address=request.ip_address or client_ip
     )
     db.add(player)
-    db.commit()
-    db.refresh(player)
+    await db.commit()
+    await db.refresh(player)
+    
+    # Refresh the room's players relationship to include the new player
+    await db.refresh(room, ["players"])
     
     return JoinRoomResponse(
         player_id=player.id,
@@ -616,21 +709,29 @@ async def join_room(request: JoinRoomRequest, db: Session = Depends(get_db), cli
     )
 
 @app.post("/rooms/join-random", response_model=JoinRoomResponse)
-async def join_random_room(request: JoinRandomRoomRequest, db: Session = Depends(get_db), client_ip: str = Depends(get_client_ip)):
+async def join_random_room(request: JoinRandomRoomRequest, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Join a random available game room"""
-    # Find rooms that are in waiting phase and have space (less than 2 players)
-    available_rooms = db.query(Room).filter(
-        Room.game_phase == "waiting"
-    ).all()
+    # Find rooms that are in waiting phase
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(Room)
+        .where(Room.game_phase == "waiting")
+        .options(selectinload(Room.players))
+    )
+    waiting_rooms = result.scalars().all()
     
-    # Filter rooms that have space (less than 2 players)
-    rooms_with_space = [room for room in available_rooms if len(room.players) < 2]
+    # Filter rooms that have exactly 1 player (space for one more)
+    rooms_with_space = [room for room in waiting_rooms if len(room.players) == 1]
     
     # If no rooms available, create a new one
     if not rooms_with_space:
         # Generate unique room ID
         room_id = generate_room_id()
-        while db.query(Room).filter(Room.id == room_id).first():
+        while True:
+            result = await db.execute(select(Room).where(Room.id == room_id))
+            if not result.scalar_one_or_none():
+                break
             room_id = generate_room_id()
         
         # Create new room
@@ -650,17 +751,20 @@ async def join_random_room(request: JoinRandomRoomRequest, db: Session = Depends
         room.round_number = 0
         room.current_turn = 1
         db.add(room)
-        db.commit()
-        db.refresh(room)
+        await db.commit()
+        await db.refresh(room)
     else:
         # Pick a random room from available rooms
         room = random.choice(rooms_with_space)
     
     # Check if player name already exists in room
-    existing_player = db.query(Player).filter(
-        Player.room_id == room.id,
-        Player.name == request.player_name
-    ).first()
+    result = await db.execute(
+        select(Player).where(
+            Player.room_id == room.id,
+            Player.name == request.player_name
+        )
+    )
+    existing_player = result.scalar_one_or_none()
     if existing_player:
         raise HTTPException(status_code=400, detail="Player name already taken in this room")
     
@@ -671,8 +775,16 @@ async def join_random_room(request: JoinRandomRoomRequest, db: Session = Depends
         ip_address=request.ip_address or client_ip
     )
     db.add(player)
-    db.commit()
-    db.refresh(player)
+    await db.commit()
+    await db.refresh(player)
+    
+    # Reload room with players eagerly loaded to avoid MissingGreenlet in game_state_to_response
+    result = await db.execute(
+        select(Room)
+        .where(Room.id == room.id)
+        .options(selectinload(Room.players))
+    )
+    room = result.scalar_one()
     
     return JoinRoomResponse(
         player_id=player.id,
@@ -680,20 +792,20 @@ async def join_random_room(request: JoinRandomRoomRequest, db: Session = Depends
     )
 
 @app.get("/rooms/{room_id}/state", response_model=GameStateResponse)
-async def get_game_state(room_id: str, db: Session = Depends(get_db)):
+async def get_game_state(room_id: str, db: AsyncSession = Depends(get_db)):
     """Get current game state"""
-    room = get_room_or_404(db, room_id)
+    room = await get_room_or_404(db, room_id)
     
     return game_state_to_response(room)
 
 @app.post("/rooms/player-ready", response_model=StandardResponse)
-async def set_player_ready(request: SetPlayerReadyRequest, db: Session = Depends(get_db)):
+async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = Depends(get_db)):
     """Set player ready status"""
-    room = get_room_or_404(db, request.room_id)
-    player = get_player_or_404(db, request.room_id, request.player_id)
+    room = await get_room_or_404(db, request.room_id)
+    player = await get_player_or_404(db, request.room_id, request.player_id)
     
     player.ready = request.is_ready
-    db.commit()
+    await db.commit()
     
     # Update room ready status based on player position in room
     players_in_room = get_sorted_players(room)
@@ -702,12 +814,12 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: Session = Depends
     elif len(players_in_room) >= 2 and player.id == players_in_room[1].id:
         room.player2_ready = request.is_ready
     
-    db.commit()
+    await db.commit()
     
     # Auto-transition to dealer phase when both players are ready
     if room.player1_ready and room.player2_ready and room.game_phase == "waiting":
         room.game_phase = "dealer"
-        db.commit()
+        await db.commit()
     
     # Broadcast game state update to all connected clients
     await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
@@ -719,13 +831,13 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: Session = Depends
     )
 
 @app.post("/game/start-shuffle", response_model=StandardResponse)
-async def start_shuffle(request: StartShuffleRequest, db: Session = Depends(get_db)):
+async def start_shuffle(request: StartShuffleRequest, db: AsyncSession = Depends(get_db)):
     """Start the shuffle phase"""
-    room = get_room_or_404(db, request.room_id)
+    room = await get_room_or_404(db, request.room_id)
     
     room.shuffle_complete = True
     room.game_phase = "dealer"
-    db.commit()
+    await db.commit()
     
     # Broadcast game state update to all connected clients
     await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
@@ -737,9 +849,9 @@ async def start_shuffle(request: StartShuffleRequest, db: Session = Depends(get_
     )
 
 @app.post("/game/select-face-up-cards", response_model=StandardResponse)
-async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: Session = Depends(get_db)):
+async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: AsyncSession = Depends(get_db)):
     """Select face-up cards for the game and deal initial cards"""
-    room = get_room_or_404(db, request.room_id)
+    room = await get_room_or_404(db, request.room_id)
     
     # Check if it's the right player's turn (Player 1 should select face-up cards)
     players_in_room = get_sorted_players(room)
@@ -763,7 +875,7 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: Session = 
     room.player2_hand = convert_game_cards_to_dict(player2_hand)
     room.dealing_complete = True
     
-    db.commit()
+    await db.commit()
     
     # Broadcast game state update to all connected clients
     await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
@@ -775,11 +887,11 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: Session = 
     )
 
 @app.post("/game/play-card", response_model=StandardResponse)
-async def play_card(request: PlayCardRequest, db: Session = Depends(get_db)):
+async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)):
     """Play a card (capture, build, or trail) with complete game logic"""
     from action_logger import ActionLogger
     
-    room = get_room_or_404(db, request.room_id)
+    room = await get_room_or_404(db, request.room_id)
     
     # Log the action
     action_logger = ActionLogger(db)
@@ -930,7 +1042,7 @@ async def play_card(request: PlayCardRequest, db: Session = Depends(get_db)):
         # Switch turns
         room.current_turn = 2 if room.current_turn == 1 else 1
     
-    db.commit()
+    await db.commit()
     
     # Broadcast game state update to all connected clients
     await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
@@ -942,9 +1054,9 @@ async def play_card(request: PlayCardRequest, db: Session = Depends(get_db)):
     )
 
 @app.post("/game/reset", response_model=StandardResponse)
-async def reset_game(room_id: str, db: Session = Depends(get_db)):
+async def reset_game(room_id: str, db: AsyncSession = Depends(get_db)):
     """Reset the game"""
-    room = get_room_or_404(db, room_id)
+    room = await get_room_or_404(db, room_id)
     
     # Reset game state
     room.game_phase = "waiting"
@@ -974,7 +1086,7 @@ async def reset_game(room_id: str, db: Session = Depends(get_db)):
     for player in room.players:
         player.ready = False
     
-    db.commit()
+    await db.commit()
     
     return StandardResponse(
         success=True,
@@ -988,7 +1100,7 @@ async def websocket_endpoint(
     websocket: WebSocket, 
     room_id: str,
     session_token: str = None,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     WebSocket endpoint with session support
