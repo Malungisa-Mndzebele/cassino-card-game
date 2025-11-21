@@ -34,6 +34,10 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
+          echo "🚀 Deploying to Fly.io..."
+          echo "⚠️  Ensure DATABASE_URL and REDIS_URL are set as Fly.io secrets"
+          echo "   Run: flyctl secrets set DATABASE_URL=<postgres-url>"
+          echo "   Run: flyctl secrets set REDIS_URL=<redis-url>"
           flyctl deploy --remote-only
         working-directory: .
 
