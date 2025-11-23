@@ -43,8 +43,6 @@ declare module '$env/static/private' {
 	export const PGADMIN_DEFAULT_EMAIL: string;
 	export const PGADMIN_DEFAULT_PASSWORD: string;
 	export const DEBUG: string;
-	export const VITE_API_URL: string;
-	export const VITE_WS_URL: string;
 	export const ALLUSERSPROFILE: string;
 	export const ANDROID_HOME: string;
 	export const APPDATA: string;
@@ -65,7 +63,6 @@ declare module '$env/static/private' {
 	export const HOMEPATH: string;
 	export const INIT_CWD: string;
 	export const JAVA_HOME: string;
-	export const KIRO_BACKGROUND_COMMAND: string;
 	export const LANG: string;
 	export const LOCALAPPDATA: string;
 	export const LOGONSERVER: string;
@@ -180,8 +177,6 @@ declare module '$env/dynamic/private' {
 		PGADMIN_DEFAULT_EMAIL: string;
 		PGADMIN_DEFAULT_PASSWORD: string;
 		DEBUG: string;
-		VITE_API_URL: string;
-		VITE_WS_URL: string;
 		ALLUSERSPROFILE: string;
 		ANDROID_HOME: string;
 		APPDATA: string;
@@ -202,7 +197,6 @@ declare module '$env/dynamic/private' {
 		HOMEPATH: string;
 		INIT_CWD: string;
 		JAVA_HOME: string;
-		KIRO_BACKGROUND_COMMAND: string;
 		LANG: string;
 		LOCALAPPDATA: string;
 		LOGONSERVER: string;

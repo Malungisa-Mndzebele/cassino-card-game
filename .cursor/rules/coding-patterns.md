@@ -17,14 +17,14 @@ alwaysApply: true
 - Mocking data is only needed for tests, never mock data for dev or prod
 - Never add stubbing or fake data patterns to code that affects the dev or prod environments
 
-## React/TypeScript specifics
-- Prefer useCallback/useMemo only when necessary; avoid premature memoization.
-- Keep hooks stable: put functions in useCallback or compute scalars with useMemo when used in deps.
-- Use functional state updates in effects to satisfy exhaustive-deps without extra re-renders.
-- Type props and function signatures; avoid `any` in exported APIs.
-- Gate debug logs behind dev checks; avoid noisy logs in production.
-- Build with Vite; set `base` to `/cassino/`; rely on `.htaccess` SPA fallback.
-- Prefer relative API paths via proxy; avoid hardcoding :8000.
+## Svelte/TypeScript specifics
+- Use Svelte 5 runes ($state, $derived, $effect) for reactivity
+- Keep components focused and single-purpose
+- Use Svelte stores for shared state management
+- Type props and function signatures; avoid `any` in exported APIs
+- Gate debug logs behind dev checks; avoid noisy logs in production
+- Build with Vite; set `base` to `/cassino/`; rely on `.htaccess` SPA fallback
+- Prefer relative API paths via proxy; avoid hardcoding :8000
 
 ## Backend (FastAPI)
 - Centralize common DB/entity lookups (e.g., get_room_or_404) to avoid duplication.

@@ -7,9 +7,9 @@ alwaysApply: false
 # Technical Stack
 
 - Backend: Python 3.11+ with FastAPI, SQLAlchemy, Alembic, WebSockets (Starlette)
-- Database: SQLite by default for local; MySQL via `DATABASE_URL` (mysql+pymysql://) for staging/prod
-- Frontend: React 18 + TypeScript + Vite + Tailwind CSS (base path `/cassino/`)
-- UI: Radix UI primitives (shadcn/ui style) and `lucide-react` icons
+- Database: SQLite for local dev; PostgreSQL for production (Fly.io)
+- Frontend: SvelteKit + Svelte 5 + TypeScript + Vite + Tailwind CSS (base path `/cassino/`)
+- UI: Custom components with Svelte 5 runes and `lucide-svelte` icons
 - Tooling: TypeScript, ESLint, Prettier, Node 18+
 - Realtime: WS endpoint `/ws/{room_id}`; on shared hosting default to HTTP polling (WebSockets may be unavailable)
 - Tests: Backend custom Python runners (no pytest); frontend test harness present (vitest config)

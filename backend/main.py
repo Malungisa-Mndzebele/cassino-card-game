@@ -49,6 +49,7 @@ import random
 import string
 import json
 from datetime import datetime
+from contextlib import asynccontextmanager
 
 from database import get_db, async_engine
 from models import Base, Room, Player, GameSession
@@ -94,9 +95,74 @@ def get_client_ip(request: Request) -> str:
     # Fallback to client host
     return request.client.host if request.client.host else "127.0.0.1"
 
+# Lifespan context manager for startup/shutdown events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for application startup and shutdown.
+    Replaces deprecated @app.on_event decorators.
+    """
+    from database import init_db, close_db
+    from redis_client import redis_client
+    import sys
+    
+    # Startup
+    print("🚀 Starting Casino Card Game Backend...", file=sys.stderr)
+    
+    # Initialize database tables
+    try:
+        await init_db()
+        print("✅ Database initialized", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Database initialization warning: {e}", file=sys.stderr)
+    
+    # Check Redis connection
+    redis_available = await redis_client.ping()
+    if redis_available:
+        print("✅ Redis connected", file=sys.stderr)
+    else:
+        print("⚠️  Redis not available (sessions and caching disabled)", file=sys.stderr)
+    
+    # Start background tasks
+    try:
+        await background_task_manager.start()
+        print("✅ Background tasks started", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Background tasks warning: {e}", file=sys.stderr)
+    
+    print("✨ Backend ready!", file=sys.stderr)
+    
+    yield
+    
+    # Shutdown
+    print("🛑 Shutting down Casino Card Game Backend...", file=sys.stderr)
+    
+    # Stop background tasks
+    try:
+        await background_task_manager.stop()
+        print("✅ Background tasks stopped", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Background tasks cleanup warning: {e}", file=sys.stderr)
+    
+    # Close database connections
+    try:
+        await close_db()
+        print("✅ Database connections closed", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Database cleanup warning: {e}", file=sys.stderr)
+    
+    # Close Redis connections
+    try:
+        await redis_client.close()
+        print("✅ Redis connections closed", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Redis cleanup warning: {e}", file=sys.stderr)
+    
+    print("👋 Shutdown complete", file=sys.stderr)
+
 # Support mounting behind a path prefix (e.g., /cassino-api on shared hosting)
 ROOT_PATH = os.getenv("ROOT_PATH", "")
-app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path=ROOT_PATH)
+app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path=ROOT_PATH, lifespan=lifespan)
 
 # Add CORS middleware
 cors_origins_str = os.getenv("CORS_ORIGINS", "*")
@@ -300,72 +366,6 @@ from background_tasks import background_task_manager
 
 # WebSocket connection manager
 manager = WebSocketConnectionManager()
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database and Redis connections on startup"""
-    from database import init_db
-    from redis_client import redis_client
-    import sys
-    
-    print("🚀 Starting Casino Card Game Backend...", file=sys.stderr)
-    
-    # Initialize database tables
-    try:
-        await init_db()
-        print("✅ Database initialized", file=sys.stderr)
-    except Exception as e:
-        print(f"⚠️  Database initialization warning: {e}", file=sys.stderr)
-    
-    # Check Redis connection
-    redis_available = await redis_client.ping()
-    if redis_available:
-        print("✅ Redis connected", file=sys.stderr)
-    else:
-        print("⚠️  Redis not available (sessions and caching disabled)", file=sys.stderr)
-    
-    # Start background tasks
-    try:
-        await background_task_manager.start()
-        print("✅ Background tasks started", file=sys.stderr)
-    except Exception as e:
-        print(f"⚠️  Background tasks warning: {e}", file=sys.stderr)
-    
-    print("✨ Backend ready!", file=sys.stderr)
-
-# Shutdown event
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on application shutdown"""
-    from database import close_db
-    from redis_client import redis_client
-    import sys
-    
-    print("🛑 Shutting down Casino Card Game Backend...", file=sys.stderr)
-    
-    # Stop background tasks
-    try:
-        await background_task_manager.stop()
-        print("✅ Background tasks stopped", file=sys.stderr)
-    except Exception as e:
-        print(f"⚠️  Background tasks cleanup warning: {e}", file=sys.stderr)
-    
-    # Close database connections
-    try:
-        await close_db()
-        print("✅ Database connections closed", file=sys.stderr)
-    except Exception as e:
-        print(f"⚠️  Database cleanup warning: {e}", file=sys.stderr)
-    
-    # Close Redis connections
-    try:
-        await redis_client.close()
-        print("✅ Redis connections closed", file=sys.stderr)
-    except Exception as e:
-        print(f"⚠️  Redis cleanup warning: {e}", file=sys.stderr)
-    
-    print("👋 Shutdown complete", file=sys.stderr)
 
 # Initialize game logic
 game_logic = CasinoGameLogic()

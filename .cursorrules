@@ -3,9 +3,9 @@
 ## Project Overview
 
 This is a real-time multiplayer Casino card game with:
-- **Frontend**: React 18 + TypeScript + Vite + TailwindCSS
+- **Frontend**: SvelteKit + Svelte 5 + TypeScript + Vite + TailwindCSS
 - **Backend**: FastAPI (Python 3.11+) with WebSocket support
-- **Database**: SQLite (local dev) / MySQL (production/staging)
+- **Database**: SQLite (local dev) / PostgreSQL (production)
 - **Session Management**: Redis
 - **Deployment**: Fly.io (backend) / FTP (frontend)
 - **Base Path**: `/cassino/` for production
@@ -13,11 +13,11 @@ This is a real-time multiplayer Casino card game with:
 ## Technology Stack
 
 ### Frontend
-- **Framework**: React 18 with TypeScript
+- **Framework**: SvelteKit with Svelte 5 (runes)
 - **Build Tool**: Vite (base path `/cassino/`)
 - **Styling**: TailwindCSS
-- **Icons**: Lucide React
-- **State Management**: Custom hooks (no Redux/Zustand)
+- **Icons**: Lucide Svelte
+- **State Management**: Svelte stores with runes
 - **Real-time**: Native WebSocket API
 - **Testing**: Vitest (unit), Playwright (E2E)
 
@@ -27,11 +27,11 @@ This is a real-time multiplayer Casino card game with:
 - **Migrations**: Alembic
 - **Validation**: Pydantic v2
 - **WebSocket**: Starlette WebSocket
-- **Session**: Redis (optional, graceful fallback)
+- **Session**: Redis with graceful fallback
 - **Testing**: Pytest
 - **Database Drivers**: 
   - SQLite: `aiosqlite` (local dev)
-  - MySQL: `pymysql` (production/staging)
+  - PostgreSQL: `asyncpg` (production)
 
 ### Infrastructure
 - **Backend Hosting**: Fly.io with managed PostgreSQL
