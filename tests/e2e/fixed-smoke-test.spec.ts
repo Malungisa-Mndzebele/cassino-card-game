@@ -9,14 +9,13 @@ test.describe('Fixed Smoke Tests', () => {
     // Navigate to the app
     await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 })
     
-    // Wait for React to hydrate and CSS to load
+    // Wait for SvelteKit to hydrate and CSS to load
     await page.waitForLoadState('domcontentloaded')
     await page.waitForLoadState('networkidle')
     
-    // Wait for the root element to have content (not just exist)
+    // Wait for SvelteKit body to have content
     await page.waitForFunction(() => {
-      const root = document.getElementById('root')
-      return root && root.children.length > 0
+      return document.body && document.body.children.length > 0
     }, { timeout: 15000 })
     
     // Additional wait for React components to render
@@ -56,10 +55,9 @@ test.describe('Fixed Smoke Tests', () => {
   test('Can interact with room creation', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 })
     
-    // Wait for React to fully load
+    // Wait for SvelteKit to fully load
     await page.waitForFunction(() => {
-      const root = document.getElementById('root')
-      return root && root.children.length > 0
+      return document.body && document.body.children.length > 0
     }, { timeout: 15000 })
     
     await page.waitForTimeout(2000)
@@ -100,8 +98,7 @@ test.describe('Fixed Smoke Tests', () => {
     
     // Wait for full page load
     await page.waitForFunction(() => {
-      const root = document.getElementById('root')
-      return root && root.children.length > 0
+      return document.body && document.body.children.length > 0
     }, { timeout: 15000 })
     
     await page.waitForTimeout(2000)

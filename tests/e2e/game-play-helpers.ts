@@ -212,38 +212,43 @@ export async function createRoom(page: Page, playerName: string): Promise<string
         throw new Error('Page was closed during React rendering wait')
       }
       
-      // Wait for root element to exist
-      await page.waitForSelector('#root', { timeout: 15000 }).catch(() => {
-        if (page.isClosed()) {
-          throw new Error('Page was closed while waiting for root element')
-        }
-        throw new Error('Root element not found')
-      })
-      
-      // Wait for React to render content
+      // Wait for SvelteKit body to have content
       await page.waitForFunction(
         () => {
-          const root = document.getElementById('root')
-          if (!root) return false
-          // Check if React has rendered - look for any content
-          return root.children.length > 0 || root.innerHTML.trim().length > 0
+          return document.body && document.body.children.length > 0
+        },
+        { timeout: 15000 }
+      ).catch(() => {
+        if (page.isClosed()) {
+          throw new Error('Page was closed while waiting for SvelteKit to load')
+        }
+        throw new Error('SvelteKit body not found or empty')
+      })
+      
+      // Wait for SvelteKit to render content
+      await page.waitForFunction(
+        () => {
+          const body = document.body
+          if (!body) return false
+          // Check if SvelteKit has rendered - look for any content
+          return body.children.length > 0 && body.innerHTML.trim().length > 0
         },
         { timeout: 20000 }
       ).catch(async (error) => {
         // Check if page closed during wait
         if (page.isClosed()) {
-          throw new Error('Page was closed while waiting for React to render')
+          throw new Error('Page was closed while waiting for SvelteKit to render')
         }
-        // If React hasn't rendered yet, wait a bit more
+        // If SvelteKit hasn't rendered yet, wait a bit more
         await new Promise(resolve => setTimeout(resolve, 3000))
         // Check if page closed during additional wait
         if (page.isClosed()) {
-          throw new Error('Page was closed during additional React rendering wait')
+          throw new Error('Page was closed during additional SvelteKit rendering wait')
         }
         // Check if there's at least some content now
-        const rootContent = await page.locator('#root').textContent().catch(() => '')
-        if (!rootContent || rootContent.trim().length === 0) {
-          throw new Error('React did not render - root element is empty')
+        const bodyContent = await page.locator('body').textContent().catch(() => '')
+        if (!bodyContent || bodyContent.trim().length === 0) {
+          throw new Error('SvelteKit did not render - body element is empty')
         }
       })
       
@@ -263,7 +268,7 @@ export async function createRoom(page: Page, playerName: string): Promise<string
       // Check if page loaded correctly
       const bodyText = await page.locator('body').textContent().catch(() => '')
       const htmlContent = await page.content().catch(() => '')
-      const rootContent = await page.locator('#root').textContent().catch(() => '')
+      const bodyContent = await page.locator('body').textContent().catch(() => '')
       
       // More lenient check - HTML should have content even if React hasn't rendered
       if (htmlContent.length < 500) {
@@ -299,7 +304,7 @@ export async function createRoom(page: Page, playerName: string): Promise<string
     
     if (hasCreateButton || hasJoinButton) {
       // Page loaded but test ID might be different - try to find by role
-      roomManager = page.locator('main, [role="main"], .room-manager, #root').first()
+      roomManager = page.locator('main, [role="main"], .room-manager, body').first()
       roomManagerVisible = true
     } else {
       // Last resort: check if any meaningful content exists
@@ -368,8 +373,10 @@ export async function createRoom(page: Page, playerName: string): Promise<string
 export async function joinRoom(page: Page, roomId: string, playerName: string): Promise<void> {
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 })
   
-  // Wait for React to render
-  await page.waitForSelector('#root', { timeout: 15000 }).catch(() => {})
+  // Wait for SvelteKit to render
+  await page.waitForFunction(() => {
+    return document.body && document.body.children.length > 0
+  }, { timeout: 15000 }).catch(() => {})
   await new Promise(resolve => setTimeout(resolve, 2000))
   
   await expect(page.getByTestId('room-manager')).toBeVisible({ timeout: 15000 })

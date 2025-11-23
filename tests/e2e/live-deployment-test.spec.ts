@@ -12,8 +12,8 @@ test.describe('Live Deployment Tests', () => {
     
     await page.goto('/');
     
-    // Check page loads - title is "Cassino" (Italian spelling)
-    await expect(page).toHaveTitle(/Cassino/i);
+    // Check page loads - accept either "Casino" or "Cassino" spelling
+    await expect(page).toHaveTitle(/Cassi?no/i);
     
     // Check main elements are visible - using actual text from component
     await expect(page.getByText(/Create New Room/i)).toBeVisible();

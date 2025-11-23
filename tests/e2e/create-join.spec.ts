@@ -6,10 +6,12 @@ test('landing renders and shows actions', async ({ page }) => {
   
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15000 })
   
-  // Wait for React to render
-  await page.waitForSelector('#root', { timeout: 15000 })
+  // Wait for SvelteKit to render
+  await page.waitForFunction(() => {
+    return document.body && document.body.children.length > 0
+  }, { timeout: 15000 })
   
-  // Wait a bit for React to hydrate
+  // Wait a bit for SvelteKit to hydrate
   await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
   await new Promise(resolve => setTimeout(resolve, 1000))
   
