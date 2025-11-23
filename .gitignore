@@ -207,8 +207,7 @@ backup_*
 # Kubernetes secrets
 k8s-secrets/
 *.yaml.secret
-# Test ou
-tput files
+# Test output files
 test-results/
 test-results.json
 test-results.txt
@@ -218,3 +217,11 @@ final-test-run.txt
 complete-final-results.txt
 *.png
 playwright-report/
+
+# SvelteKit
+.svelte-kit/
+!.svelte-kit/ambient.d.ts
+!.svelte-kit/generated/
+!.svelte-kit/tsconfig.json
+!.svelte-kit/types/
+.svelte-kit/output/
