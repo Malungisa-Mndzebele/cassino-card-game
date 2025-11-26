@@ -16,17 +16,14 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
-  // Start frontend preview server
+  // Start frontend dev server (or reuse existing)
   webServer: {
-    command: 'npm run preview',
+    command: 'npm run dev',
     port: 5173,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true, // Reuse existing dev server
     timeout: 120_000,
     stdout: 'pipe',
     stderr: 'pipe',
-    env: {
-      NODE_ENV: 'production'
-    }
   },
   // Note: Backend should be started separately before running E2E tests
   // Run: npm run start:backend (in another terminal)

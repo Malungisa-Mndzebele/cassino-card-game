@@ -8,10 +8,10 @@ import uvicorn
 os.environ["ENVIRONMENT"] = "development"
 
 if __name__ == "__main__":
-    print("🚀 Starting backend in development mode with SQLite...")
+    print("Starting backend in development mode with SQLite...")
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8000,
         reload=True,
         log_level="info"

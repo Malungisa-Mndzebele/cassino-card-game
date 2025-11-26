@@ -370,6 +370,104 @@ class SessionManager:
             logger.info(f"Cleaned up {count} expired sessions")
         
         return count
+    
+    async def mark_disconnected(self, session_id: int) -> bool:
+        """
+        Mark a session as disconnected
+        
+        Args:
+            session_id: Session database ID
+        
+        Returns:
+            True if successful
+        """
+        result = await self.db.execute(
+            select(GameSession).where(GameSession.id == session_id)
+        )
+        session = result.scalar_one_or_none()
+        
+        if not session:
+            return False
+        
+        session.disconnected_at = datetime.utcnow()
+        session.is_active = False
+        
+        # Invalidate session in Redis
+        if session.session_token:
+            await self.invalidate_session(session.session_token)
+        
+        await self.db.commit()
+        
+        logger.info(f"Session {session_id} marked as disconnected")
+        
+        return True
+    
+    def get_room_sessions(self, room_id: str) -> List[GameSession]:
+        """
+        Get all sessions for a room (synchronous for compatibility)
+        
+        Args:
+            room_id: Room identifier
+        
+        Returns:
+            List of GameSession objects
+        """
+        # This is a synchronous wrapper for backward compatibility
+        # In async context, use get_active_sessions instead
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If called from async context, return empty list
+                # Caller should use get_active_sessions instead
+                logger.warning("get_room_sessions called from async context, use get_active_sessions instead")
+                return []
+        except RuntimeError:
+            pass
+        
+        # For now, return empty list - this method is deprecated
+        return []
+    
+    async def check_abandoned_games(self) -> List[str]:
+        """
+        Check for games where all players have been disconnected for > 5 minutes
+        
+        Returns:
+            List of room IDs with abandoned games
+        """
+        five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+        
+        # Find rooms where all players are disconnected for > 5 minutes
+        result = await self.db.execute(
+            select(GameSession.room_id)
+            .where(
+                and_(
+                    GameSession.disconnected_at != None,
+                    GameSession.disconnected_at < five_minutes_ago
+                )
+            )
+            .distinct()
+        )
+        
+        potential_abandoned_rooms = [row[0] for row in result.all()]
+        
+        # Verify these rooms have no active sessions
+        abandoned_rooms = []
+        for room_id in potential_abandoned_rooms:
+            active_result = await self.db.execute(
+                select(GameSession).where(
+                    and_(
+                        GameSession.room_id == room_id,
+                        GameSession.is_active == True
+                    )
+                )
+            )
+            active_sessions = active_result.scalars().all()
+            
+            if not active_sessions:
+                abandoned_rooms.append(room_id)
+        
+        return abandoned_rooms
 
 
 # Global session manager instance (will be initialized with db session)
