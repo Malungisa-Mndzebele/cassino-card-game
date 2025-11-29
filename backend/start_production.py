@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
 Production startup script for Casino Card Game Backend
+Includes automatic database migrations
 Run this with: python start_production.py
 """
 
 import os
 import sys
+import subprocess
 import uvicorn
 from pathlib import Path
 from dotenv import load_dotenv
@@ -13,6 +15,30 @@ from dotenv import load_dotenv
 # Add the backend directory to Python path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
+
+def run_migrations():
+    """Run database migrations before starting server"""
+    print("🔄 Running database migrations...", file=sys.stderr)
+    try:
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            cwd=backend_dir,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        print("✅ Migrations completed successfully", file=sys.stderr)
+        if result.stdout:
+            print(result.stdout, file=sys.stderr)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Migration failed: {e}", file=sys.stderr)
+        print(f"stdout: {e.stdout}", file=sys.stderr)
+        print(f"stderr: {e.stderr}", file=sys.stderr)
+        return False
+    except FileNotFoundError:
+        print("❌ Alembic not found. Make sure it's installed.", file=sys.stderr)
+        return False
 
 def main():
     """Start the production server"""
@@ -60,6 +86,11 @@ def main():
         except Exception as db_error:
             print(f"❌ Database connection failed: {db_error}", file=sys.stderr)
             print("   Make sure DATABASE_URL is correct and database is accessible", file=sys.stderr)
+            sys.exit(1)
+        
+        # Run database migrations before starting server
+        if not run_migrations():
+            print("❌ Cannot start server due to migration failure", file=sys.stderr)
             sys.exit(1)
         
         # Test importing main app

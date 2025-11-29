@@ -1,5 +1,6 @@
 from logging.config import fileConfig
 import os
+import sys
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
@@ -32,7 +33,8 @@ def get_url():
     # Convert aiosqlite to sqlite for synchronous Alembic migrations
     if url and 'sqlite+aiosqlite' in url:
         url = url.replace('sqlite+aiosqlite', 'sqlite')
-        print(f"ℹ️  Updated SQLite URL for Alembic: {url}")
+        # Use ASCII-safe output for Windows compatibility
+        print(f"INFO: Updated SQLite URL for Alembic: {url}", file=sys.stderr)
     return url
 
 def run_migrations_offline() -> None:

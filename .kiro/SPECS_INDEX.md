@@ -112,7 +112,7 @@ Random join exists but lacks proper matchmaking. This spec adds:
 ### 🟢 5. Spectator Mode
 **Status:** Planned  
 **Directory:** `.kiro/specs/spectator-mode/`  
-**Priority:** Low
+**Priority:** Medium
 
 No way for additional users to watch ongoing games. This spec adds:
 - Read-only game viewing
@@ -121,6 +121,27 @@ No way for additional users to watch ongoing games. This spec adds:
 - Share game links
 
 **Business Value:** Enables learning, streaming, and community building.
+
+---
+
+### 🔴 6. Render Deployment Migration
+**Status:** ✅ Complete (Ready for Implementation)  
+**Directory:** `.kiro/specs/render-deployment-migration/`  
+**Priority:** High
+
+Migration from Fly.io to Render for backend deployment. This spec addresses:
+- Render configuration with PostgreSQL and Redis
+- Automated database migrations on deployment
+- Frontend environment variable updates
+- Deployment verification and testing
+- Documentation updates
+
+**Business Value:** Simplifies deployment process and reduces infrastructure complexity.
+
+**Deliverables:**
+- ✅ Requirements document (10 requirements, EARS compliant)
+- ✅ Design document (comprehensive migration architecture)
+- ✅ Implementation tasks (8 tasks, 20+ sub-tasks, all required)
 
 ---
 
@@ -134,6 +155,7 @@ No way for additional users to watch ongoing games. This spec adds:
 | AI Opponent System | 📋 Not Started | 📋 Not Started | 📋 Not Started | 📋 Not Started |
 | Tournament & Matchmaking | 📋 Not Started | 📋 Not Started | 📋 Not Started | 📋 Not Started |
 | Spectator Mode | 📋 Not Started | 📋 Not Started | 📋 Not Started | 📋 Not Started |
+| Render Deployment Migration | ✅ Complete | ✅ Complete | ✅ Complete | 📋 Ready to Start |
 
 ---
 
@@ -146,4 +168,4 @@ No way for additional users to watch ongoing games. This spec adds:
 
 ---
 
-**Last Updated:** November 18, 2025
+**Last Updated:** November 26, 2025

@@ -95,7 +95,7 @@ Score the most points by capturing cards from the table. First player to 11 poin
 - **97.2% test coverage** (70/72 tests passing)
 
 ### Deployment
-- **Backend**: Fly.io
+- **Backend**: Render (migrating from Fly.io)
 - **Frontend**: khasinogaming.com (FTP)
 - **CI/CD**: GitHub Actions
 
@@ -189,18 +189,111 @@ npx playwright test tests/e2e/production-smoke-test.spec.ts --config=playwright.
 
 ### Production URLs
 - **Frontend**: https://khasinogaming.com/cassino/
-- **Backend API**: https://cassino-game-backend.fly.dev
-- **Health Check**: https://cassino-game-backend.fly.dev/health
+- **Backend API (Render)**: https://cassino-game-backend.onrender.com
+- **Backend API (Fly.io - Legacy)**: https://cassino-game-backend.fly.dev
+- **Health Check**: https://cassino-game-backend.onrender.com/health
 
 ### Prerequisites
 - Node.js 18+ and npm
 - Python 3.11+
-- Fly.io CLI (for backend)
+- Render account (for backend deployment)
 - FTP credentials (for frontend)
 
 ---
 
-### Backend Deployment (Fly.io)
+### Backend Deployment (Render)
+
+#### Quick Start (3 Steps)
+
+**See [RENDER_QUICK_START.md](RENDER_QUICK_START.md) for detailed instructions**
+
+1. **Create Render Account** (5 min)
+   - Go to https://render.com
+   - Sign up with GitHub account
+
+2. **Deploy via Blueprint** (10-15 min)
+   - Click "New +" → "Blueprint"
+   - Select your repository
+   - Click "Apply"
+
+3. **Verify Deployment** (5 min)
+   ```bash
+   curl https://cassino-game-backend.onrender.com/health
+   ```
+
+#### What Gets Deployed
+
+The `render.yaml` blueprint automatically creates:
+- **Web Service**: FastAPI backend (Python 3.11, Port 10000)
+- **PostgreSQL**: Database instance (Free tier)
+- **Redis**: Cache instance (Free tier)
+
+All environment variables are automatically linked between services.
+
+#### Deployment Documentation
+
+- **[RENDER_QUICK_START.md](RENDER_QUICK_START.md)** - 3-step quick start guide
+- **[RENDER_DEPLOYMENT_GUIDE.md](RENDER_DEPLOYMENT_GUIDE.md)** - Comprehensive instructions
+- **[RENDER_DEPLOYMENT_CHECKLIST.md](RENDER_DEPLOYMENT_CHECKLIST.md)** - Verification checklist
+- **[RENDER_DEPLOYMENT_STATUS.md](RENDER_DEPLOYMENT_STATUS.md)** - Current status
+
+#### Manual Deployment Steps
+
+If Blueprint deployment doesn't work:
+
+1. **Create PostgreSQL Database**
+   - Dashboard → "New +" → "PostgreSQL"
+   - Name: `cassino-db`, Region: Oregon, Plan: Free
+
+2. **Create Redis Instance**
+   - Dashboard → "New +" → "Redis"
+   - Name: `cassino-redis`, Region: Oregon, Plan: Free
+
+3. **Create Web Service**
+   - Dashboard → "New +" → "Web Service"
+   - Connect to GitHub repository
+   - Build: `pip install -r backend/requirements.txt`
+   - Start: `python backend/start_production.py`
+   - Link DATABASE_URL and REDIS_URL from services above
+
+#### Environment Variables
+
+Automatically configured via `render.yaml`:
+- `PYTHON_VERSION`: 3.11.0
+- `DATABASE_URL`: Auto-injected from PostgreSQL
+- `REDIS_URL`: Auto-injected from Redis
+- `CORS_ORIGINS`: https://khasinogaming.com
+- `ENVIRONMENT`: production
+- `PORT`: 10000
+
+#### Database Migrations
+
+Migrations run automatically on deployment via `start_production.py`:
+```python
+# Automatic migration on startup
+🔄 Running database migrations...
+✅ Migrations completed successfully
+```
+
+#### Monitoring
+
+```bash
+# View logs in Render dashboard
+# Or use Render CLI
+render logs cassino-game-backend
+
+# Check health
+curl https://cassino-game-backend.onrender.com/health
+```
+
+---
+
+### Legacy Backend Deployment (Fly.io)
+
+**Note**: Migrating to Render. Fly.io deployment will be deprecated.
+
+<details>
+<summary>Click to expand Fly.io deployment instructions</summary>
 
 #### Initial Setup
 ```bash
@@ -239,6 +332,8 @@ Set in Fly.io dashboard or via CLI:
 flyctl secrets set DATABASE_URL="postgresql://..."
 flyctl secrets set CORS_ORIGINS="https://khasinogaming.com"
 ```
+
+</details>
 
 ---
 
@@ -292,9 +387,12 @@ export default defineConfig({
 # Run production smoke tests
 npm run test:production
 
-# Test specific endpoints
+# Test Render deployment
+curl https://cassino-game-backend.onrender.com/health
+curl https://cassino-game-backend.onrender.com/
+
+# Test legacy Fly.io deployment
 curl https://cassino-game-backend.fly.dev/health
-curl https://cassino-game-backend.fly.dev/
 ```
 
 #### Test Production Frontend
@@ -316,11 +414,12 @@ open https://khasinogaming.com/cassino/
 - [ ] Environment variables configured
 - [ ] Database migrations created (if needed)
 
-**Backend Deployment:**
-- [ ] `flyctl deploy` successful
-- [ ] Migrations run: `flyctl ssh console -C "cd /app && python -m alembic upgrade head"`
-- [ ] Health check passes: `curl https://cassino-game-backend.fly.dev/health`
-- [ ] Logs show no errors: `flyctl logs`
+**Backend Deployment (Render):**
+- [ ] Blueprint deployment successful
+- [ ] All services running (PostgreSQL, Redis, Web Service)
+- [ ] Migrations run automatically on startup
+- [ ] Health check passes: `curl https://cassino-game-backend.onrender.com/health`
+- [ ] Logs show no errors in Render dashboard
 
 **Frontend Deployment:**
 - [ ] Build successful: `npm run build`
@@ -333,13 +432,17 @@ open https://khasinogaming.com/cassino/
 
 ### Rollback Procedure
 
-#### Backend Rollback
+#### Backend Rollback (Render)
 ```bash
-# List recent deployments
-flyctl releases
+# Via Render Dashboard:
+# 1. Go to service → "Events" tab
+# 2. Find previous successful deployment
+# 3. Click "Rollback to this version"
 
-# Rollback to previous version
-flyctl releases rollback <version>
+# Or redeploy previous commit:
+git revert HEAD
+git push origin main
+# Render auto-deploys from main branch
 ```
 
 #### Frontend Rollback
@@ -356,16 +459,19 @@ npm run deploy:ftp
 
 ### Monitoring
 
-#### Backend Monitoring
+#### Backend Monitoring (Render)
 ```bash
-# View real-time logs
-flyctl logs
+# View logs in Render Dashboard
+# Service → "Logs" tab
 
 # Check metrics
-flyctl dashboard
+# Service → "Metrics" tab (CPU, Memory, Requests)
 
-# SSH into container
-flyctl ssh console
+# Access shell
+# Service → "Shell" tab
+
+# Or use Render CLI
+render logs cassino-game-backend
 ```
 
 #### Frontend Monitoring
@@ -383,24 +489,29 @@ flyctl ssh console
 ```bash
 # Database
 DATABASE_URL=sqlite:///./test_casino_game.db  # Dev
-# DATABASE_URL=postgresql://...               # Production
+# DATABASE_URL=postgresql://...               # Production (auto-injected on Render)
+
+# Redis (optional for dev)
+REDIS_URL=redis://localhost:6379              # Dev
+# REDIS_URL=redis://...                       # Production (auto-injected on Render)
 
 # Server
 HOST=0.0.0.0
-PORT=8000
+PORT=8000                                      # Dev
+# PORT=10000                                   # Production (Render)
 
-# CORS (optional)
-ALLOWED_ORIGINS=http://localhost:5173,https://khasinogaming.com
+# CORS
+CORS_ORIGINS=http://localhost:5173,https://khasinogaming.com
 ```
 
 #### Frontend (`.env`)
 ```bash
 # API URLs (auto-configured in production build)
-VITE_API_URL=http://localhost:8000                    # Dev
-# VITE_API_URL=https://cassino-game-backend.fly.dev  # Production
+VITE_API_URL=http://localhost:8000                          # Dev
+# VITE_API_URL=https://cassino-game-backend.onrender.com   # Production (Render)
 
-VITE_WS_URL=ws://localhost:8000                       # Dev
-# VITE_WS_URL=wss://cassino-game-backend.fly.dev     # Production
+VITE_WS_URL=ws://localhost:8000                             # Dev
+# VITE_WS_URL=wss://cassino-game-backend.onrender.com      # Production (Render)
 ```
 
 ### Vite Configuration (`vite.config.ts`)
@@ -539,6 +650,13 @@ npm run test:e2e:debug
 
 ## 📚 Documentation
 
+### Deployment Guides
+- **[RENDER_QUICK_START.md](RENDER_QUICK_START.md)** - Quick 3-step Render deployment
+- **[RENDER_DEPLOYMENT_GUIDE.md](RENDER_DEPLOYMENT_GUIDE.md)** - Comprehensive Render guide
+- **[RENDER_DEPLOYMENT_CHECKLIST.md](RENDER_DEPLOYMENT_CHECKLIST.md)** - Deployment checklist
+- **[RENDER_DEPLOYMENT_STATUS.md](RENDER_DEPLOYMENT_STATUS.md)** - Current deployment status
+
+### Testing & Configuration
 - **[Deployment Fix Summary](DEPLOYMENT_FIX_SUMMARY.md)** - Path configuration guide
 - **[Production Test Results](PRODUCTION_TEST_RESULTS_FIXED.md)** - Test coverage report
 - **[Deployment Status](DEPLOYMENT_STATUS.md)** - Current deployment info
@@ -593,8 +711,10 @@ MIT License - feel free to use and modify!
 ## 📞 Support
 
 - **Live Site**: https://khasinogaming.com/cassino/
-- **Backend API**: https://cassino-game-backend.fly.dev
+- **Backend API (Render)**: https://cassino-game-backend.onrender.com
+- **Backend API (Fly.io - Legacy)**: https://cassino-game-backend.fly.dev
 - **Issues**: [GitHub Issues](https://github.com/Malungisa-Mndzebele/cassino-card-game/issues)
+- **Render Docs**: https://render.com/docs
 
 ---
 

@@ -40,15 +40,15 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_URL: https://cassino-game-backend.fly.dev
-          VITE_WS_URL: wss://cassino-game-backend.fly.dev
+          VITE_API_URL: https://cassino-game-backend.onrender.com
+          VITE_WS_URL: wss://cassino-game-backend.onrender.com
         run: |
           echo "Building with API URL: $VITE_API_URL"
           echo "Building with WebSocket URL: $VITE_WS_URL"
           npm run build
           echo "✅ Build complete"
           # Verify API URL is in the build
-          if grep -r "cassino-game-backend.fly.dev" build/ > /dev/null 2>&1; then
+          if grep -r "cassino-game-backend.onrender.com" build/ > /dev/null 2>&1; then
             echo "✅ API URL found in build"
           else
             echo "⚠️ Warning: API URL not found in build - will use default"
@@ -74,5 +74,5 @@ jobs:
       - name: Verify deployment
         run: |
           echo "✅ Frontend deployed to https://khasinogaming.com/cassino/"
-          echo "🔗 Backend URL: https://cassino-game-backend.fly.dev"
+          echo "🔗 Backend URL: https://cassino-game-backend.onrender.com"
 
