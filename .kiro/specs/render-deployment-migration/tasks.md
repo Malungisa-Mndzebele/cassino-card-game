@@ -73,6 +73,8 @@
 
 
 
+
+
   - Create Render account and connect to GitHub repository
   - Create PostgreSQL database instance on Render
   - Create Redis instance on Render
