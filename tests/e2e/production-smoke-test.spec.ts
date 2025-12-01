@@ -1,62 +1,62 @@
 import { test, expect } from '@playwright/test';
 
 const PRODUCTION_URL = 'https://khasinogaming.com/cassino';
-const BACKEND_URL = 'https://cassino-game-backend.fly.dev';
+const BACKEND_URL = 'https://cassino-game-backend.onrender.com';
 
 test.describe('Production Smoke Tests', () => {
   test('should load production site successfully', async ({ page }) => {
     await page.goto(PRODUCTION_URL);
-    
+
     // Wait for the app to load
     await page.waitForLoadState('networkidle');
-    
+
     // Check for main app elements
     await expect(page.locator('text=Casino Card Game')).toBeVisible({ timeout: 10000 });
-    
+
     console.log('✅ Production site loaded successfully');
   });
 
   test('should verify backend health endpoint', async ({ request }) => {
     const response = await request.get(`${BACKEND_URL}/health`);
-    
+
     expect(response.ok()).toBeTruthy();
     expect(response.status()).toBe(200);
-    
+
     const data = await response.json();
     expect(data.status).toBe('healthy');
     expect(data.database).toBe('connected');
-    
+
     console.log('✅ Backend health check passed:', data);
   });
 
   test('should display room creation form', async ({ page }) => {
     await page.goto(PRODUCTION_URL);
     await page.waitForLoadState('networkidle');
-    
+
     // Look for create room heading and button
     const createHeading = page.getByRole('heading', { name: /create new room/i });
     await expect(createHeading).toBeVisible({ timeout: 10000 });
-    
+
     const createButton = page.getByRole('button', { name: /create/i }).first();
     await expect(createButton).toBeVisible({ timeout: 10000 });
-    
+
     console.log('✅ Room creation UI is visible');
   });
 
   test('should be able to create a room', async ({ page }) => {
     await page.goto(PRODUCTION_URL);
     await page.waitForLoadState('networkidle');
-    
+
     // Wait for main title to ensure app is loaded
     await expect(page.locator('text=Casino Card Game')).toBeVisible({ timeout: 10000 });
-    
+
     // First, click the "Create Room" button to show the form
     const showCreateButton = page.locator('[data-testid="show-create-form-button"]').or(
       page.getByRole('button', { name: /create room/i }).first()
     );
     await expect(showCreateButton).toBeVisible({ timeout: 10000 });
     await showCreateButton.click();
-    
+
     // Wait for form to appear by checking for the input field
     const nameInput = page.locator('[data-testid="player-name-input-create-test"]').or(
       page.locator('input[id="create-player-name"]').or(
@@ -65,7 +65,7 @@ test.describe('Production Smoke Tests', () => {
     );
     await expect(nameInput).toBeVisible({ timeout: 10000 });
     await nameInput.fill('ProductionTestPlayer');
-    
+
     // Click the actual create room button (not the show form button)
     const createButton = page.locator('[data-testid="create-room-test"]').or(
       page.getByRole('button', { name: /^create room$/i }).first()
@@ -73,12 +73,12 @@ test.describe('Production Smoke Tests', () => {
     await expect(createButton).toBeVisible({ timeout: 5000 });
     await expect(createButton).toBeEnabled({ timeout: 5000 });
     await createButton.click();
-    
+
     // Wait for room to be created - look for room-specific elements
     // This will wait for one of these elements to appear, which is faster than fixed timeout
     const roomIndicator = page.locator('text=/Room Code|Waiting for players|Game|Casino Room|Ready/i').first();
     const inRoom = await roomIndicator.waitFor({ state: 'visible', timeout: 15000 }).then(() => true).catch(() => false);
-    
+
     if (inRoom) {
       console.log('✅ Room created successfully');
     } else {
@@ -91,7 +91,7 @@ test.describe('Production Smoke Tests', () => {
       const bodyText = await page.locator('body').textContent();
       console.log('   Page content preview:', bodyText?.substring(0, 200));
     }
-    
+
     // Don't fail if room creation has issues, just report
     expect(inRoom).toBeTruthy();
   });
@@ -99,7 +99,7 @@ test.describe('Production Smoke Tests', () => {
   test('should verify WebSocket connection capability', async ({ page }) => {
     const errors: string[] = [];
     const wsMessages: string[] = [];
-    
+
     // Listen for console messages
     page.on('console', msg => {
       const text = msg.text();
@@ -110,50 +110,50 @@ test.describe('Production Smoke Tests', () => {
         wsMessages.push(text);
       }
     });
-    
+
     // Set a maximum execution time for this test
     const testTimeout = 30000; // 30 seconds max
-    
+
     try {
       await Promise.race([
         (async () => {
           await page.goto(PRODUCTION_URL);
           await page.waitForLoadState('networkidle');
-          
+
           // Wait for main title to ensure app is loaded
           await expect(page.locator('text=Casino Card Game')).toBeVisible({ timeout: 10000 });
-          
+
           // First, click the "Create Room" button to show the form
           const showCreateButton = page.locator('[data-testid="show-create-form-button"]').or(
             page.getByRole('button', { name: /create room/i }).first()
           );
-          
+
           const buttonVisible = await showCreateButton.isVisible({ timeout: 5000 }).catch(() => false);
-          
+
           if (buttonVisible) {
             await showCreateButton.click();
-            
+
             // Wait for form to appear
             const nameInput = page.locator('[data-testid="player-name-input-create-test"]').or(
               page.locator('input[id="create-player-name"]').or(
                 page.locator('input[type="text"]').first()
               )
             );
-            
+
             const inputVisible = await nameInput.isVisible({ timeout: 5000 }).catch(() => false);
-            
+
             if (inputVisible) {
               await nameInput.fill('WSTestPlayer');
-              
+
               const createButton = page.locator('[data-testid="create-room-test"]').or(
                 page.getByRole('button', { name: /^create room$/i }).first()
               );
-              
+
               const createButtonVisible = await createButton.isVisible({ timeout: 5000 }).catch(() => false);
-              
+
               if (createButtonVisible) {
                 await createButton.click();
-                
+
                 // Wait briefly for WebSocket connection attempt
                 // Don't wait too long - we just want to check for errors
                 await page.waitForTimeout(2000);
@@ -161,7 +161,7 @@ test.describe('Production Smoke Tests', () => {
             }
           }
         })(),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Test timeout')), testTimeout)
         )
       ]);
@@ -169,14 +169,14 @@ test.describe('Production Smoke Tests', () => {
       // If test times out or errors, just check what we have so far
       console.log('⚠️ Test completed early, checking collected errors...');
     }
-    
+
     // Check for WebSocket errors
-    const wsErrors = errors.filter(e => 
-      e.toLowerCase().includes('websocket') || 
+    const wsErrors = errors.filter(e =>
+      e.toLowerCase().includes('websocket') ||
       e.toLowerCase().includes('ws') ||
       (e.toLowerCase().includes('connection') && e.toLowerCase().includes('error'))
     );
-    
+
     if (wsErrors.length === 0) {
       console.log('✅ No WebSocket errors detected');
       if (wsMessages.length > 0) {
@@ -188,7 +188,7 @@ test.describe('Production Smoke Tests', () => {
       console.log('⚠️ WebSocket errors found:', wsErrors.slice(0, 3));
       console.log('⚠️ WebSocket messages:', wsMessages.slice(0, 3));
     }
-    
+
     // Don't fail on WebSocket errors, just report - allow up to 5 errors
     expect(wsErrors.length).toBeLessThan(5);
   });
@@ -198,18 +198,18 @@ test.describe('Production Smoke Tests', () => {
     const healthResponse = await request.get(`${BACKEND_URL}/health`);
     expect(healthResponse.ok()).toBeTruthy();
     expect(healthResponse.status()).toBe(200);
-    
+
     console.log('✅ Health endpoint is accessible');
-    
+
     // Test root endpoint
     const rootResponse = await request.get(`${BACKEND_URL}/`);
     expect(rootResponse.ok()).toBeTruthy();
-    
+
     const rootData = await rootResponse.json();
     expect(rootData.message).toContain('Casino Card Game');
-    
+
     console.log('✅ Root API endpoint is accessible');
-    
+
     // Test room creation endpoint with POST
     const createRoomResponse = await request.post(`${BACKEND_URL}/rooms/create`, {
       data: {
@@ -217,11 +217,11 @@ test.describe('Production Smoke Tests', () => {
         max_players: 2
       }
     });
-    
+
     // Accept either 200 (success) or 400/422 (validation error) as valid responses
     const validStatuses = [200, 201, 400, 422];
     expect(validStatuses).toContain(createRoomResponse.status());
-    
+
     if (createRoomResponse.ok()) {
       const room = await createRoomResponse.json();
       console.log('✅ Room creation endpoint is accessible');
@@ -240,42 +240,42 @@ test.describe('Production Smoke Tests', () => {
         'Access-Control-Request-Method': 'GET'
       }
     });
-    
+
     const headers = optionsResponse.headers();
-    
+
     // Check if CORS headers exist (may be lowercase)
-    const hasCors = 
+    const hasCors =
       headers['access-control-allow-origin'] !== undefined ||
       headers['Access-Control-Allow-Origin'] !== undefined;
-    
+
     if (hasCors) {
       console.log('✅ CORS headers are configured');
     } else {
       console.log('⚠️ CORS headers not found - may need configuration');
       // Don't fail the test, just warn
     }
-    
+
     // At minimum, the endpoint should respond
     expect([200, 204]).toContain(optionsResponse.status());
   });
 
   test('should load without JavaScript errors', async ({ page }) => {
     const errors: string[] = [];
-    
+
     page.on('pageerror', error => {
       errors.push(error.message);
     });
-    
+
     await page.goto(PRODUCTION_URL);
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
-    
+
     if (errors.length === 0) {
       console.log('✅ No JavaScript errors on page load');
     } else {
       console.log('⚠️ JavaScript errors found:', errors);
     }
-    
+
     // Don't fail the test, just report
     expect(errors.length).toBeLessThan(5);
   });
@@ -285,18 +285,18 @@ test.describe('Production Smoke Tests', () => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto(PRODUCTION_URL);
     await page.waitForLoadState('networkidle');
-    
+
     let title = await page.locator('text=Casino Card Game').count();
     expect(title).toBeGreaterThan(0);
-    
+
     // Test mobile
     await page.setViewportSize({ width: 375, height: 667 });
     await page.reload();
     await page.waitForLoadState('networkidle');
-    
+
     title = await page.locator('text=Casino Card Game').count();
     expect(title).toBeGreaterThan(0);
-    
+
     console.log('✅ Responsive design working on desktop and mobile');
   });
 });

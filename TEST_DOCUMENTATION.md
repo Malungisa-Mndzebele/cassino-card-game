@@ -67,7 +67,7 @@ python -m pytest test_quick_wins.py test_session_manager_full.py test_cache_mana
 - CORS configuration (backend timeout) ❌
 
 **Known Issues:**
-1. Production backend not responding (Fly.io possibly sleeping)
+1. Production backend not responding (Render possibly sleeping)
 2. UI selectors need updating for production build
 
 **Run Commands:**
@@ -116,14 +116,8 @@ npm run start:redis
 
 ### Production Backend Timeout
 ```bash
-# Check Fly.io status
-flyctl status -a cassino-game-backend
-
-# View logs
-flyctl logs -a cassino-game-backend
-
-# Wake up app
-curl https://cassino-game-backend.fly.dev/health
+# Check Render status
+curl https://cassino-game-backend.onrender.com/health
 ```
 
 ---

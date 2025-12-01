@@ -31,7 +31,7 @@ npx playwright test tests/e2e/local.spec.ts
 ### 🌐 Live/Production Tests (`live.spec.ts`)
 **Purpose:** Test the actual production deployment  
 **URL:** `https://khasinogaming.com/cassino/`  
-**Backend:** `https://cassino-game-backend.fly.dev`  
+**Backend:** `https://cassino-game-backend.onrender.com`  
 **Requirements:** Production site must be deployed
 
 **Run with:**

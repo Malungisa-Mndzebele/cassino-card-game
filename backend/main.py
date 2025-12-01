@@ -48,6 +48,7 @@ from typing import List, Dict, Any
 import random
 import string
 import json
+import logging
 from datetime import datetime
 from contextlib import asynccontextmanager
 
@@ -56,13 +57,17 @@ from models import Base, Room, Player, GameSession
 from schemas import (
     CreateRoomRequest, JoinRoomRequest, JoinRandomRoomRequest, SetPlayerReadyRequest,
     PlayCardRequest, StartShuffleRequest, SelectFaceUpCardsRequest,
-    CreateRoomResponse, JoinRoomResponse, StandardResponse, GameStateResponse, PlayerResponse
+    CreateRoomResponse, JoinRoomResponse, StandardResponse, GameStateResponse, PlayerResponse,
+    SyncRequest
 )
 from fastapi import Request
 from game_logic import CasinoGameLogic, GameCard, Build
 
 # Note: Database tables are now managed by Alembic migrations
 # Run migrations with: alembic upgrade head
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 
 def get_client_ip(request: Request) -> str:
@@ -297,6 +302,11 @@ async def claim_victory(
     room.game_completed = True
     room.winner = 1 if is_player1 else 2
     
+    # Increment version and update metadata
+    room.version += 1
+    room.last_modified = func.now()
+    room.modified_by = player_id
+    
     await db.commit()
     
     # Broadcast game end
@@ -345,6 +355,56 @@ async def get_recovery_state(
         "opponent_status": recovery_state.opponent_status,
         "summary": recovery_state.missed_actions_summary
     }
+
+# State synchronization endpoint
+@app.post("/api/sync")
+async def sync_state(
+    sync_request: SyncRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Synchronize client state with server.
+    
+    This endpoint handles client synchronization by comparing the client's
+    version with the server's current version and returning either:
+    - Success message if versions match (client is in sync)
+    - Missing events for incremental sync (if gap is small)
+    - Full state for complete resync (if gap is large or events unavailable)
+    
+    The endpoint uses the StateSynchronizer service to coordinate the sync
+    operation and determine the appropriate sync strategy.
+    
+    Requirements: 8.1, 8.5
+    """
+    from state_synchronizer import StateSynchronizer
+    
+    try:
+        # Initialize State Synchronizer
+        synchronizer = StateSynchronizer(db=db)
+        
+        # Perform sync
+        sync_result = await synchronizer.sync_client(
+            room_id=sync_request.room_id,
+            client_version=sync_request.client_version
+        )
+        
+        # Return sync result
+        return {
+            "success": sync_result.success,
+            "current_version": sync_result.current_version,
+            "client_version": sync_result.client_version,
+            "state": sync_result.state,
+            "missing_events": sync_result.missing_events,
+            "requires_full_sync": sync_result.requires_full_sync,
+            "message": sync_result.message
+        }
+        
+    except Exception as e:
+        logger.error(f"Sync endpoint error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to sync state: {str(e)}"
+        )
 
 # Add explicit CORS preflight handler
 @app.options("/{full_path:path}")
@@ -467,7 +527,18 @@ def convert_dict_to_builds(builds_dict: List[Dict[str, Any]]) -> List[Build]:
     return [Build(id=build["id"], cards=convert_dict_to_game_cards(build["cards"]), value=build["value"], owner=build["owner"]) for build in builds_dict]
 
 def game_state_to_response(room: Room) -> GameStateResponse:
-    """Convert room model to game state response"""
+    """
+    Convert room model to game state response.
+    
+    Computes checksum before returning state to ensure integrity verification.
+    
+    Requirements: 4.4
+    """
+    from state_checksum import compute_checksum
+    
+    # Compute checksum before returning state
+    checksum = compute_checksum(room)
+    
     return GameStateResponse(
         room_id=room.id,
         players=[PlayerResponse(
@@ -501,7 +572,9 @@ def game_state_to_response(room: Room) -> GameStateResponse:
         dealing_complete=bool(room.dealing_complete),
         player1_ready=bool(room.player1_ready),
         player2_ready=bool(room.player2_ready),
-        countdown_remaining=None  # TODO: Implement countdown
+        countdown_remaining=None,  # TODO: Implement countdown
+        version=int(room.version or 0),
+        checksum=checksum
     )
 
 # Helper functions to reduce duplication across endpoints
@@ -801,8 +874,25 @@ async def get_game_state(room_id: str, db: AsyncSession = Depends(get_db)):
 @app.post("/rooms/player-ready", response_model=StandardResponse)
 async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = Depends(get_db)):
     """Set player ready status"""
+    from version_validator import validate_version
+    
     room = await get_room_or_404(db, request.room_id)
     player = await get_player_or_404(db, request.room_id, request.player_id)
+    
+    # Version conflict handling (Requirement 1.3)
+    if request.client_version is not None:
+        validation = validate_version(request.client_version, room.version)
+        if not validation.valid:
+            raise HTTPException(
+                status_code=409,  # Conflict status code
+                detail={
+                    "error": "version_conflict",
+                    "message": validation.message,
+                    "client_version": request.client_version,
+                    "server_version": room.version,
+                    "requires_sync": validation.requires_sync
+                }
+            )
     
     player.ready = request.is_ready
     await db.commit()
@@ -814,11 +904,20 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
     elif len(players_in_room) >= 2 and player.id == players_in_room[1].id:
         room.player2_ready = request.is_ready
     
+    # Increment version and update metadata
+    room.version += 1
+    room.last_modified = func.now()
+    room.modified_by = request.player_id
+    
     await db.commit()
     
     # Auto-transition to dealer phase when both players are ready
     if room.player1_ready and room.player2_ready and room.game_phase == "waiting":
         room.game_phase = "dealer"
+        # Increment version for phase change
+        room.version += 1
+        room.last_modified = func.now()
+        room.modified_by = request.player_id
         await db.commit()
     
     # Broadcast game state update to all connected clients
@@ -837,6 +936,12 @@ async def start_shuffle(request: StartShuffleRequest, db: AsyncSession = Depends
     
     room.shuffle_complete = True
     room.game_phase = "dealer"
+    
+    # Increment version and update metadata
+    room.version += 1
+    room.last_modified = func.now()
+    room.modified_by = request.player_id
+    
     await db.commit()
     
     # Broadcast game state update to all connected clients
@@ -875,6 +980,11 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: AsyncSessi
     room.player2_hand = convert_game_cards_to_dict(player2_hand)
     room.dealing_complete = True
     
+    # Increment version and update metadata
+    room.version += 1
+    room.last_modified = func.now()
+    room.modified_by = request.player_id
+    
     await db.commit()
     
     # Broadcast game state update to all connected clients
@@ -890,8 +1000,26 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: AsyncSessi
 async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)):
     """Play a card (capture, build, or trail) with complete game logic"""
     from action_logger import ActionLogger
+    from version_validator import validate_version
     
     room = await get_room_or_404(db, request.room_id)
+    
+    # Version conflict handling (Requirement 1.3)
+    if request.client_version is not None:
+        validation = validate_version(request.client_version, room.version)
+        if not validation.valid:
+            raise HTTPException(
+                status_code=409,  # Conflict status code
+                detail={
+                    "error": "version_conflict",
+                    "message": validation.message,
+                    "client_version": request.client_version,
+                    "server_version": room.version,
+                    "requires_sync": validation.requires_sync,
+                    "has_gap": validation.has_gap,
+                    "gap_size": validation.gap_size
+                }
+            )
     
     # Log the action
     action_logger = ActionLogger(db)
@@ -1042,6 +1170,11 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
         # Switch turns
         room.current_turn = 2 if room.current_turn == 1 else 1
     
+    # Increment version and update metadata
+    room.version += 1
+    room.last_modified = func.now()
+    room.modified_by = request.player_id
+    
     await db.commit()
     
     # Broadcast game state update to all connected clients
@@ -1085,6 +1218,11 @@ async def reset_game(room_id: str, db: AsyncSession = Depends(get_db)):
     # Reset player ready status
     for player in room.players:
         player.ready = False
+    
+    # Increment version and update metadata (reset is a state change)
+    room.version += 1
+    room.last_modified = func.now()
+    room.modified_by = None  # Reset doesn't have a specific player
     
     await db.commit()
     

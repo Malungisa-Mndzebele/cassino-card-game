@@ -31,7 +31,7 @@ function createConnectionStore() {
         const apiUrl =
             typeof window !== 'undefined' && window.location.hostname === 'localhost'
                 ? 'ws://localhost:8000'
-                : 'wss://cassino-game-backend.fly.dev';
+                : 'wss://cassino-game-backend.onrender.com';
 
         const wsUrl = `${apiUrl}/ws/${roomId}`;
 

@@ -5,7 +5,7 @@ A real-time multiplayer implementation of the classic Casino card game. Play hea
 **Live Demo:** https://khasinogaming.com/cassino/
 
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/Malungisa-Mndzebele/cassino-card-game)
-[![Backend](https://img.shields.io/badge/backend-fly.io-blueviolet)](https://cassino-game-backend.fly.dev)
+[![Backend](https://img.shields.io/badge/backend-render-blueviolet)](https://cassino-game-backend.onrender.com)
 [![Frontend](https://img.shields.io/badge/frontend-live-success)](https://khasinogaming.com/cassino/)
 
 ---
@@ -95,7 +95,7 @@ Score the most points by capturing cards from the table. First player to 11 poin
 - **97.2% test coverage** (70/72 tests passing)
 
 ### Deployment
-- **Backend**: Render (migrating from Fly.io)
+- **Backend**: Render
 - **Frontend**: khasinogaming.com (FTP)
 - **CI/CD**: GitHub Actions
 
@@ -190,7 +190,7 @@ npx playwright test tests/e2e/production-smoke-test.spec.ts --config=playwright.
 ### Production URLs
 - **Frontend**: https://khasinogaming.com/cassino/
 - **Backend API (Render)**: https://cassino-game-backend.onrender.com
-- **Backend API (Fly.io - Legacy)**: https://cassino-game-backend.fly.dev
+- **Backend API (Render)**: https://cassino-game-backend.onrender.com
 - **Health Check**: https://cassino-game-backend.onrender.com/health
 
 ### Prerequisites
@@ -288,54 +288,7 @@ curl https://cassino-game-backend.onrender.com/health
 
 ---
 
-### Legacy Backend Deployment (Fly.io)
 
-**Note**: Migrating to Render. Fly.io deployment will be deprecated.
-
-<details>
-<summary>Click to expand Fly.io deployment instructions</summary>
-
-#### Initial Setup
-```bash
-# Install Fly.io CLI
-# Windows: iwr https://fly.io/install.ps1 -useb | iex
-# Mac/Linux: curl -L https://fly.io/install.sh | sh
-
-# Login to Fly.io
-flyctl auth login
-
-# Create app (first time only)
-flyctl launch
-```
-
-#### Deploy Backend
-```bash
-# Deploy to Fly.io
-flyctl deploy
-
-# Run database migrations
-flyctl ssh console -C "cd /app && python -m alembic upgrade head"
-
-# Check deployment status
-flyctl status
-
-# View logs
-flyctl logs
-
-# Check health
-curl https://cassino-game-backend.fly.dev/health
-```
-
-#### Backend Environment Variables
-Set in Fly.io dashboard or via CLI:
-```bash
-flyctl secrets set DATABASE_URL="postgresql://..."
-flyctl secrets set CORS_ORIGINS="https://khasinogaming.com"
-```
-
-</details>
-
----
 
 ### Frontend Deployment (FTP)
 
@@ -391,8 +344,7 @@ npm run test:production
 curl https://cassino-game-backend.onrender.com/health
 curl https://cassino-game-backend.onrender.com/
 
-# Test legacy Fly.io deployment
-curl https://cassino-game-backend.fly.dev/health
+
 ```
 
 #### Test Production Frontend
@@ -704,7 +656,7 @@ MIT License - feel free to use and modify!
 - Classic Casino card game rules
 - FastAPI framework
 - Svelte and SvelteKit communities
-- Fly.io for backend hosting
+- Render for backend hosting
 
 ---
 
@@ -712,7 +664,7 @@ MIT License - feel free to use and modify!
 
 - **Live Site**: https://khasinogaming.com/cassino/
 - **Backend API (Render)**: https://cassino-game-backend.onrender.com
-- **Backend API (Fly.io - Legacy)**: https://cassino-game-backend.fly.dev
+
 - **Issues**: [GitHub Issues](https://github.com/Malungisa-Mndzebele/cassino-card-game/issues)
 - **Render Docs**: https://render.com/docs
 

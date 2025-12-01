@@ -96,10 +96,12 @@ class SetPlayerReadyRequest(BaseModel):
         room_id: Room identifier
         player_id: Player identifier
         is_ready: Ready status to set
+        client_version: Optional client version for conflict detection
     """
     room_id: str = Field(..., min_length=6, max_length=6)
     player_id: int = Field(..., ge=1)
     is_ready: bool
+    client_version: Optional[int] = Field(None, ge=0)
 
 
 class PlayCardRequest(BaseModel):
@@ -113,6 +115,7 @@ class PlayCardRequest(BaseModel):
         action: Action type (capture, build, or trail)
         target_cards: Target card IDs for capture/build
         build_value: Build value for build action
+        client_version: Optional client version for conflict detection
     """
     room_id: str = Field(..., min_length=6, max_length=6)
     player_id: int = Field(..., ge=1)
@@ -120,6 +123,7 @@ class PlayCardRequest(BaseModel):
     action: str = Field(..., pattern="^(capture|build|trail)$")
     target_cards: Optional[List[str]] = None
     build_value: Optional[int] = Field(None, ge=1, le=14)
+    client_version: Optional[int] = Field(None, ge=0)
     
     @field_validator('action')
     @classmethod
@@ -153,6 +157,23 @@ class SelectFaceUpCardsRequest(BaseModel):
     room_id: str = Field(..., min_length=6, max_length=6)
     player_id: int = Field(..., ge=1)
     card_ids: List[str] = Field(..., min_length=4, max_length=4)
+
+
+class SyncRequest(BaseModel):
+    """
+    Request schema for client state synchronization.
+    
+    Used when a client reconnects or detects desynchronization and needs
+    to sync with the server's authoritative state.
+    
+    Attributes:
+        room_id: Room identifier
+        client_version: Client's current state version number
+    
+    Requirements: 8.1, 8.5
+    """
+    room_id: str = Field(..., min_length=6, max_length=6)
+    client_version: int = Field(..., ge=0)
 
 
 # Response schemas
@@ -213,6 +234,8 @@ class GameStateResponse(BaseModel):
     player1_ready: bool
     player2_ready: bool
     countdown_remaining: Optional[int] = None
+    version: int = 0
+    checksum: Optional[str] = None
 
 
 class CreateRoomResponse(BaseModel):
@@ -281,3 +304,49 @@ class HealthCheckResponse(BaseModel):
     database: str  # "connected" or "disconnected"
     redis: str  # "connected" or "disconnected"
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ConflictNotificationResponse(BaseModel):
+    """
+    Response schema for conflict notifications sent to clients.
+    
+    This notification is sent when a player's action is rejected due to
+    a conflict with another player's action. It provides details about
+    what happened and why the action was rejected.
+    
+    Attributes:
+        type: Message type (always "action_rejected")
+        subtype: Notification subtype (always "conflict")
+        message: Human-readable explanation of the conflict
+        rejected_action: Details of the action that was rejected
+        conflicting_action: Details of the action that caused the conflict
+        time_difference_ms: Time difference between the two actions in milliseconds
+        timestamp: When the notification was created
+    
+    Requirements: 3.4, 6.3
+    """
+    type: str = Field(default="action_rejected", description="Message type")
+    subtype: str = Field(default="conflict", description="Notification subtype")
+    message: str = Field(..., description="Human-readable explanation")
+    rejected_action: Dict[str, Any] = Field(..., description="Rejected action details")
+    conflicting_action: Dict[str, Any] = Field(..., description="Conflicting action details")
+    time_difference_ms: int = Field(..., description="Time difference in milliseconds")
+    timestamp: str = Field(..., description="Notification timestamp")
+
+
+class ActionRejectionDetails(BaseModel):
+    """
+    Details about an action in a conflict notification.
+    
+    Attributes:
+        id: Unique action identifier
+        action_type: Type of action (capture, build, trail, etc.)
+        card_id: ID of card being played (if applicable)
+        target_cards: List of target card IDs (if applicable)
+        timestamp: When the action was received by server
+    """
+    id: str
+    action_type: str
+    card_id: Optional[str] = None
+    target_cards: Optional[List[str]] = None
+    timestamp: int

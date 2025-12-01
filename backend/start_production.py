@@ -44,14 +44,15 @@ def main():
     """Start the production server"""
     try:
         # Load environment from backend/.env (allow overrides)
-        # Skip if file doesn't exist or has encoding issues (Fly.io uses secrets)
+        # Load environment from backend/.env (allow overrides)
+        # Skip if file doesn't exist or has encoding issues
         env_file = backend_dir / ".env"
         try:
             if env_file.exists():
                 load_dotenv(dotenv_path=env_file, override=True)
         except (UnicodeDecodeError, Exception) as e:
-            # Ignore .env file errors - Fly.io uses secrets instead
-            print(f"⚠️  Warning: Could not load .env file (using Fly.io secrets instead): {e}", file=sys.stderr)
+            # Ignore .env file errors
+            print(f"⚠️  Warning: Could not load .env file: {e}", file=sys.stderr)
         
         os.environ.setdefault("ENVIRONMENT", "production")
         
@@ -59,7 +60,7 @@ def main():
         database_url = os.getenv("DATABASE_URL")
         if not database_url or not database_url.strip():
             print("❌ ERROR: DATABASE_URL is not set", file=sys.stderr)
-            print("   Set it with: flyctl secrets set DATABASE_URL=<your-database-url>", file=sys.stderr)
+            print("   Set it in your environment variables", file=sys.stderr)
             sys.exit(1)
         
         # Production configuration

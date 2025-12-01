@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
  */
 
 const PRODUCTION_URL = 'https://khasinogaming.com/cassino/';
-const BACKEND_URL = 'https://cassino-game-backend.fly.dev';
+const BACKEND_URL = 'https://cassino-game-backend.onrender.com';
 
 test.describe('Live/Production E2E Tests', () => {
 

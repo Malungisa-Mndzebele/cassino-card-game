@@ -35,6 +35,12 @@ def get_url():
         url = url.replace('sqlite+aiosqlite', 'sqlite')
         # Use ASCII-safe output for Windows compatibility
         print(f"INFO: Updated SQLite URL for Alembic: {url}", file=sys.stderr)
+    
+    # Convert asyncpg to psycopg2 for synchronous Alembic migrations
+    if url and 'postgresql+asyncpg' in url:
+        url = url.replace('postgresql+asyncpg', 'postgresql')
+        print(f"INFO: Updated PostgreSQL URL for Alembic: {url}", file=sys.stderr)
+        
     return url
 
 def run_migrations_offline() -> None:

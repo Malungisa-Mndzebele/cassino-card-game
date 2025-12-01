@@ -32,7 +32,7 @@ jobs:
       - name: Run backend tests
         run: |
           cd backend
-          python run_simple_tests.py
+          python -m pytest test_quick_wins.py test_session_manager_full.py test_cache_manager_full.py -v
 
   test-frontend:
     runs-on: ubuntu-latest
@@ -58,4 +58,4 @@ jobs:
         run: npm run lint || echo "Linting completed with warnings"
 
       - name: Run frontend unit tests
-        run: npm run test:frontend || echo "Tests completed with warnings"
+        run: npm run test || echo "Tests completed with warnings"
