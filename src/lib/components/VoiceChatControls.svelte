@@ -32,6 +32,21 @@
 	function toggleVolumeSlider() {
 		showVolumeSlider = !showVolumeSlider;
 	}
+
+	// Action to set srcObject on audio element
+	function setSrcObject(node: HTMLAudioElement, stream: MediaStream | null) {
+		if (stream) {
+			node.srcObject = stream;
+		}
+		return {
+			update(newStream: MediaStream | null) {
+				node.srcObject = newStream;
+			},
+			destroy() {
+				node.srcObject = null;
+			}
+		};
+	}
 </script>
 
 <div
@@ -158,7 +173,7 @@
 		data-voice-chat
 		autoplay
 		playsinline
-		srcObject={voiceChat.remoteStream}
+		use:setSrcObject={voiceChat.remoteStream}
 		class="hidden"
 	></audio>
 {/if}
