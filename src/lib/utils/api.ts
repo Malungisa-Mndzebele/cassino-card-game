@@ -47,47 +47,113 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
 }
 
 export async function createRoom(playerName: string): Promise<CreateRoomResponse> {
-    return fetchAPI<CreateRoomResponse>('/rooms/create', {
+    const response = await fetchAPI<any>('/rooms/create', {
         method: 'POST',
         body: JSON.stringify({
             player_name: playerName,
             max_players: 2
         })
     });
+    
+    return {
+        room_id: response.room_id,
+        player_id: response.player_id,
+        player_name: playerName,
+        game_state: transformGameState(response.game_state)
+    };
 }
 
 export async function joinRoom(roomCode: string, playerName: string): Promise<JoinRoomResponse> {
-    return fetchAPI<JoinRoomResponse>('/rooms/join', {
+    const response = await fetchAPI<any>('/rooms/join', {
         method: 'POST',
         body: JSON.stringify({
             room_id: roomCode,
             player_name: playerName
         })
     });
+    
+    return {
+        room_id: roomCode,
+        player_id: response.player_id,
+        player_name: playerName,
+        game_state: transformGameState(response.game_state)
+    };
 }
 
 export async function joinRandomRoom(playerName: string): Promise<JoinRoomResponse> {
-    return fetchAPI<JoinRoomResponse>('/rooms/join-random', {
+    const response = await fetchAPI<any>('/rooms/join-random', {
         method: 'POST',
         body: JSON.stringify({
             player_name: playerName
         })
     });
+    
+    return {
+        room_id: response.game_state?.room_id || '',
+        player_id: response.player_id,
+        player_name: playerName,
+        game_state: transformGameState(response.game_state)
+    };
+}
+
+// Transform backend snake_case to frontend camelCase
+function transformGameState(backendState: any): any {
+    if (!backendState) return null;
+    
+    return {
+        roomId: backendState.room_id,
+        phase: backendState.phase,
+        round: backendState.round,
+        players: backendState.players || [],
+        tableCards: backendState.table_cards || [],
+        currentPlayer: backendState.current_turn === 1 
+            ? backendState.players?.[0]?.id 
+            : backendState.players?.[1]?.id,
+        deck: backendState.deck || [],
+        player1Hand: backendState.player1_hand || [],
+        player2Hand: backendState.player2_hand || [],
+        player1Captured: backendState.player1_captured || [],
+        player2Captured: backendState.player2_captured || [],
+        player1Score: backendState.player1_score || 0,
+        player2Score: backendState.player2_score || 0,
+        player1Ready: backendState.player1_ready || false,
+        player2Ready: backendState.player2_ready || false,
+        winner: backendState.winner,
+        lastAction: backendState.last_action,
+        lastUpdate: backendState.last_update,
+        builds: backendState.builds || [],
+        shuffleComplete: backendState.shuffle_complete || false,
+        cardSelectionComplete: backendState.card_selection_complete || false,
+        currentTurn: backendState.current_turn || 1,
+        gameStarted: backendState.game_started || false,
+        gameCompleted: backendState.game_completed || false,
+        version: backendState.version || 0,
+        checksum: backendState.checksum
+    };
 }
 
 export async function getGameState(roomId: string): Promise<GameStateResponse> {
-    return fetchAPI<GameStateResponse>(`/rooms/${roomId}/state`);
+    const response = await fetchAPI<any>(`/rooms/${roomId}/state`);
+    return {
+        game_state: transformGameState(response)
+    };
 }
 
 export async function setPlayerReady(roomId: string, playerId: string, ready: boolean) {
-    return fetchAPI('/rooms/player-ready', {
+    const response = await fetchAPI<any>('/rooms/player-ready', {
         method: 'POST',
         body: JSON.stringify({
             room_id: roomId,
             player_id: playerId,
-            ready
+            is_ready: ready
         })
     });
+    
+    return {
+        success: response.success,
+        message: response.message,
+        game_state: transformGameState(response.game_state)
+    };
 }
 
 export async function startShuffle(roomId: string, playerId: string) {

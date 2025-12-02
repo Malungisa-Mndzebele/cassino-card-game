@@ -1363,7 +1363,7 @@ async def websocket_endpoint(
         pass
     finally:
         # Clean up on disconnect
-        manager.disconnect(websocket, room_id, session_id, db)
+        await manager.disconnect(websocket, room_id)
         
         # Broadcast updated connection status
         try:

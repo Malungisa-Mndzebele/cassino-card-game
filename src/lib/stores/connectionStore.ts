@@ -56,7 +56,19 @@ function createConnectionStore() {
 
                     // Handle different message types
                     if (data.type === 'game_state_update') {
-                        gameStore.setGameState(data.game_state);
+                        // Fetch the latest game state from the server
+                        console.log('Game state update received, fetching latest state...');
+                        try {
+                            const { getGameState } = await import('$lib/utils/api');
+                            const response = await getGameState(data.room_id);
+                            gameStore.setGameState(response.game_state);
+                        } catch (err) {
+                            console.error('Failed to fetch game state:', err);
+                            // If data includes game_state, use it as fallback
+                            if (data.game_state) {
+                                gameStore.setGameState(data.game_state);
+                            }
+                        }
                     } else if (data.type === 'player_joined') {
                         // Refresh game state when a player joins
                         console.log(`Player ${data.player_name} joined the room`);

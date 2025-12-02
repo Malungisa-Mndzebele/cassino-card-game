@@ -20,8 +20,20 @@ function createGameStore() {
         subscribe,
 
         // Setters
-        setRoomId: (roomId: string) => update((s) => ({ ...s, roomId })),
-        setPlayerId: (playerId: string) => update((s) => ({ ...s, playerId })),
+        setRoomId: (roomId: string) => {
+            update((s) => ({ ...s, roomId }));
+            // Persist to localStorage
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('cassino_room_id', roomId);
+            }
+        },
+        setPlayerId: (playerId: string) => {
+            update((s) => ({ ...s, playerId }));
+            // Persist to localStorage
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('cassino_player_id', playerId);
+            }
+        },
         setPlayerName: (name: string) => {
             update((s) => ({ ...s, playerName: name }));
             // Persist to localStorage
@@ -32,20 +44,36 @@ function createGameStore() {
         setGameState: (gameState: GameState) => update((s) => ({ ...s, gameState })),
 
         // Reset
-        reset: () =>
+        reset: () => {
             set({
                 roomId: '',
                 playerId: '',
                 playerName: get({ subscribe }).playerName, // Keep player name
                 gameState: null
-            }),
+            });
+            // Clear session from localStorage
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem('cassino_room_id');
+                localStorage.removeItem('cassino_player_id');
+            }
+        },
 
         // Initialize from localStorage
         initialize: () => {
             if (typeof localStorage !== 'undefined') {
                 const savedName = localStorage.getItem('cassino_player_name');
+                const savedRoomId = localStorage.getItem('cassino_room_id');
+                const savedPlayerId = localStorage.getItem('cassino_player_id');
+                
                 if (savedName) {
                     update((s) => ({ ...s, playerName: savedName }));
+                }
+                if (savedRoomId && savedPlayerId) {
+                    update((s) => ({ 
+                        ...s, 
+                        roomId: savedRoomId,
+                        playerId: savedPlayerId
+                    }));
                 }
             }
         }

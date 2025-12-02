@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { gameStore } from '$stores/gameStore';
   import { connectionStore } from '$stores/connectionStore';
   import { RoomManager, GameHeader, Card } from '$components';
@@ -8,6 +9,30 @@
   $: gameState = $gameStore.gameState;
   $: players = gameState?.players || [];
   $: hasOpponent = players.length >= 2;
+
+  // Initialize store and attempt reconnection on mount
+  onMount(async () => {
+    gameStore.initialize();
+    
+    // If we have a saved session, try to reconnect
+    if ($gameStore.roomId && $gameStore.playerId) {
+      console.log('Attempting to reconnect to room:', $gameStore.roomId);
+      
+      try {
+        // Fetch current game state
+        const { getGameState } = await import('$lib/utils/api');
+        const response = await getGameState($gameStore.roomId);
+        gameStore.setGameState(response.game_state);
+        
+        // Reconnect WebSocket
+        connectionStore.connect($gameStore.roomId);
+      } catch (err) {
+        console.error('Failed to reconnect:', err);
+        // Clear invalid session
+        gameStore.reset();
+      }
+    }
+  });
 </script>
 
 <svelte:head>
@@ -42,7 +67,17 @@
                 </p>
               </div>
 
-              <div class="animate-pulse text-6xl">🎴</div>
+              <div class="animate-pulse text-6xl mb-6">🎴</div>
+
+              <button
+                on:click={() => {
+                  connectionStore.disconnect();
+                  gameStore.reset();
+                }}
+                class="btn-primary bg-red-600 hover:bg-red-700"
+              >
+                Leave Room
+              </button>
             </div>
           </div>
         {:else if gameState?.phase === 'waiting'}
@@ -69,7 +104,41 @@
                 </div>
               </div>
 
-              <p class="text-gray-400 mt-6 text-sm">Game will start when both players are ready</p>
+              <p class="text-gray-400 mt-6 text-sm mb-6">
+                Game will start when both players are ready
+              </p>
+
+              <div class="flex gap-4 justify-center">
+                <button
+                  on:click={async () => {
+                    try {
+                      const { setPlayerReady } = await import('$lib/utils/api');
+                      const isPlayer1 = players[0]?.id === $gameStore.playerId;
+                      const currentReady = isPlayer1 ? gameState.player1Ready : gameState.player2Ready;
+                      await setPlayerReady($gameStore.roomId, $gameStore.playerId, !currentReady);
+                    } catch (err) {
+                      console.error('Failed to set ready status:', err);
+                    }
+                  }}
+                  class="btn-primary"
+                >
+                  {#if players[0]?.id === $gameStore.playerId}
+                    {gameState.player1Ready ? 'Not Ready' : 'Ready'}
+                  {:else}
+                    {gameState.player2Ready ? 'Not Ready' : 'Ready'}
+                  {/if}
+                </button>
+
+                <button
+                  on:click={() => {
+                    connectionStore.disconnect();
+                    gameStore.reset();
+                  }}
+                  class="btn-primary bg-red-600 hover:bg-red-700"
+                >
+                  Leave Room
+                </button>
+              </div>
             </div>
           </div>
         {:else}
