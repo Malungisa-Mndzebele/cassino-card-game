@@ -21,7 +21,7 @@
   let isCreating = false;
   let isJoining = false;
   let error = '';
-  let errorType = undefined;
+  let errorType: any = undefined;
   let errorTitle = '';
   let showRoomCode = false;
   let copied = false;

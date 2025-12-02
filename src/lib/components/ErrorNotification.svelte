@@ -96,7 +96,7 @@
 		}
 	}
 
-	$: styles = getTypeStyles(type);
+	let styles = $derived(getTypeStyles(type));
 </script>
 
 {#if error}
