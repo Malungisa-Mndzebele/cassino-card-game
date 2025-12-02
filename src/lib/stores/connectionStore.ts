@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { gameStore } from './gameStore';
+import { ErrorHandler } from '$lib/utils/errorHandler';
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -75,13 +76,14 @@ function createConnectionStore() {
                         update((s) => ({ ...s, error: data.message }));
                     }
                 } catch (err) {
-                    console.error('Failed to parse WebSocket message:', err);
+                    ErrorHandler.logError(err, 'WebSocket message parsing');
                 }
             };
 
             ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                update((s) => ({ ...s, status: 'error', error: 'Connection error' }));
+                ErrorHandler.logError(error, 'WebSocket');
+                const errorMessage = ErrorHandler.handleWebSocketError(error);
+                update((s) => ({ ...s, status: 'error', error: errorMessage }));
             };
 
             ws.onclose = () => {
@@ -106,8 +108,9 @@ function createConnectionStore() {
                 }
             };
         } catch (err) {
-            console.error('Failed to create WebSocket:', err);
-            update((s) => ({ ...s, status: 'error', error: 'Failed to connect' }));
+            ErrorHandler.logError(err, 'WebSocket creation');
+            const errorMessage = ErrorHandler.getUserMessage(err);
+            update((s) => ({ ...s, status: 'error', error: errorMessage }));
         }
     };
 

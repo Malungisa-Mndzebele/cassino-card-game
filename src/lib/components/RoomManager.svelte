@@ -11,6 +11,8 @@
     sanitizePlayerName,
     copyToClipboard,
   } from '$utils';
+  import { ErrorHandler, formatErrorForDisplay } from '$lib/utils/errorHandler';
+  import ErrorNotification from '$lib/components/ErrorNotification.svelte';
   import { onMount } from 'svelte';
 
   // Component state
@@ -19,6 +21,8 @@
   let isCreating = false;
   let isJoining = false;
   let error = '';
+  let errorType = undefined;
+  let errorTitle = '';
   let showRoomCode = false;
   let copied = false;
 
@@ -57,7 +61,11 @@
       // Connect WebSocket
       await connectionStore.connect(response.room_id);
     } catch (err: any) {
-      error = err.message || 'Failed to create room';
+      ErrorHandler.logError(err, 'handleCreateRoom');
+      const formatted = formatErrorForDisplay(err);
+      error = formatted.message;
+      errorType = formatted.type;
+      errorTitle = formatted.title;
     } finally {
       isCreating = false;
     }
@@ -98,7 +106,11 @@
         }
       }
     } catch (err: any) {
-      error = err.message || 'Failed to join room';
+      ErrorHandler.logError(err, 'handleJoinRoom');
+      const formatted = formatErrorForDisplay(err);
+      error = formatted.message;
+      errorType = formatted.type;
+      errorTitle = formatted.title;
     } finally {
       isJoining = false;
     }
@@ -137,7 +149,11 @@
         }
       }
     } catch (err: any) {
-      error = err.message || 'Failed to join random room';
+      ErrorHandler.logError(err, 'handleJoinRandom');
+      const formatted = formatErrorForDisplay(err);
+      error = formatted.message;
+      errorType = formatted.type;
+      errorTitle = formatted.title;
     } finally {
       isJoining = false;
     }
@@ -293,10 +309,14 @@
 
       <!-- Error Message -->
       {#if error}
-        <div class="mt-4 p-3 bg-red-900/50 border border-red-500 rounded-lg">
-          <p class="text-red-200 text-sm">
-            ⚠️ {error}
-          </p>
+        <div class="mt-4">
+          <ErrorNotification
+            bind:error
+            type={errorType}
+            title={errorTitle}
+            dismissible={true}
+            autoDismiss={true}
+          />
         </div>
       {/if}
     </div>
