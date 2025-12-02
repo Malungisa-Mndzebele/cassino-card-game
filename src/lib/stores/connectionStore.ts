@@ -49,13 +49,24 @@ function createConnectionStore() {
                 startHeartbeat();
             };
 
-            ws.onmessage = (event) => {
+            ws.onmessage = async (event) => {
                 try {
                     const data = JSON.parse(event.data);
 
                     // Handle different message types
                     if (data.type === 'game_state_update') {
                         gameStore.setGameState(data.game_state);
+                    } else if (data.type === 'player_joined') {
+                        // Refresh game state when a player joins
+                        console.log(`Player ${data.player_name} joined the room`);
+                        // Fetch updated game state from API
+                        try {
+                            const { getGameState } = await import('$lib/utils/api');
+                            const response = await getGameState(data.room_id);
+                            gameStore.setGameState(response.game_state);
+                        } catch (err) {
+                            console.error('Failed to refresh game state:', err);
+                        }
                     } else if (data.type === 'pong') {
                         // Calculate latency
                         const latency = Date.now() - data.timestamp;

@@ -776,6 +776,18 @@ async def join_room(request: JoinRoomRequest, db: AsyncSession = Depends(get_db)
     # Refresh the room's players relationship to include the new player
     await db.refresh(room, ["players"])
     
+    # Broadcast player joined event to all connected clients in the room
+    await manager.broadcast_to_room(
+        json.dumps({
+            "type": "player_joined",
+            "room_id": room.id,
+            "player_id": player.id,
+            "player_name": player.name,
+            "player_count": len(room.players)
+        }),
+        room.id
+    )
+    
     return JoinRoomResponse(
         player_id=player.id,
         game_state=game_state_to_response(room)
@@ -858,6 +870,18 @@ async def join_random_room(request: JoinRandomRoomRequest, db: AsyncSession = De
         .options(selectinload(Room.players))
     )
     room = result.scalar_one()
+    
+    # Broadcast player joined event to all connected clients in the room
+    await manager.broadcast_to_room(
+        json.dumps({
+            "type": "player_joined",
+            "room_id": room.id,
+            "player_id": player.id,
+            "player_name": player.name,
+            "player_count": len(room.players)
+        }),
+        room.id
+    )
     
     return JoinRoomResponse(
         player_id=player.id,
