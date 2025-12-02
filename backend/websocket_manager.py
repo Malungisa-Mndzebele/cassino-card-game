@@ -339,6 +339,51 @@ class WebSocketConnectionManager:
             "instance_id": self.instance_id,
             "timestamp": datetime.utcnow().isoformat()
         }
+    
+    async def send_to_room_except(
+        self,
+        room_id: str,
+        exclude_session_id: str,
+        message: dict
+    ) -> bool:
+        """
+        Send message to all players in room except one.
+        Used for voice signaling to relay messages to opponent only.
+        
+        Args:
+            room_id: Room identifier
+            exclude_session_id: Session ID to exclude from broadcast
+            message: Message data to send
+        
+        Returns:
+            True if sent to at least one recipient, False otherwise
+        """
+        if room_id not in self.active_connections:
+            return False
+        
+        sent_count = 0
+        disconnected = []
+        
+        for websocket in self.active_connections[room_id]:
+            # Get session ID for this websocket
+            ws_session_id = self.websocket_sessions.get(websocket)
+            
+            # Skip if this is the excluded session
+            if ws_session_id == exclude_session_id:
+                continue
+            
+            try:
+                await websocket.send_json(message)
+                sent_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send to WebSocket: {e}")
+                disconnected.append(websocket)
+        
+        # Remove disconnected WebSockets
+        for ws in disconnected:
+            await self.disconnect(ws, room_id)
+        
+        return sent_count > 0
 
 
 # Global connection manager instance

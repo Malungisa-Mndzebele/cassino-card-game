@@ -43,7 +43,10 @@ export default defineConfig({
       $stores: path.resolve('./src/lib/stores'),
       $utils: path.resolve('./src/lib/utils'),
       $types: path.resolve('./src/lib/types'),
-      $app: path.resolve('./.svelte-kit/runtime/app')
+      // Mock $app modules for testing
+      '$app/environment': path.resolve('./src/mocks/app-environment.ts'),
+      '$app/navigation': path.resolve('./src/mocks/app-navigation.ts'),
+      '$app/stores': path.resolve('./src/mocks/app-stores.ts')
     }
   }
 });

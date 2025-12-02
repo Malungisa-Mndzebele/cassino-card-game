@@ -145,6 +145,28 @@ Migration from Fly.io to Render for backend deployment. This spec addresses:
 
 ---
 
+### 🟡 7. Voice Chat System
+**Status:** 📋 Requirements Complete (Ready for Design)  
+**Directory:** `.kiro/specs/voice-chat/`  
+**Priority:** Medium
+
+Peer-to-peer voice communication between players during gameplay. This spec adds:
+- WebRTC-based voice chat with mute/unmute controls
+- Visual indicators for speaking and mute status
+- Volume controls and audio settings
+- Automatic connection when players join room
+- Integration with existing session management
+- Optional voice chat (can be disabled in settings)
+
+**Business Value:** Enhances social interaction and player engagement during games.
+
+**Deliverables:**
+- ✅ Requirements document (8 requirements, EARS compliant)
+- 📋 Design document (pending)
+- 📋 Implementation tasks (pending)
+
+---
+
 ## Implementation Status
 
 | Spec | Requirements | Design | Tasks | Implementation |
@@ -156,6 +178,7 @@ Migration from Fly.io to Render for backend deployment. This spec addresses:
 | Tournament & Matchmaking | 📋 Not Started | 📋 Not Started | 📋 Not Started | 📋 Not Started |
 | Spectator Mode | 📋 Not Started | 📋 Not Started | 📋 Not Started | 📋 Not Started |
 | Render Deployment Migration | ✅ Complete | ✅ Complete | ✅ Complete | 📋 Ready to Start |
+| Voice Chat System | ✅ Complete | 📋 Not Started | 📋 Not Started | 📋 Not Started |
 
 ---
 

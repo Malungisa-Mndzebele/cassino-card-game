@@ -1290,6 +1290,43 @@ async def websocket_endpoint(
                             "session_id": session_id
                         }, room_id)
                 
+                # Voice chat signaling messages
+                elif message_type in ["voice_offer", "voice_answer", "voice_ice_candidate", "voice_mute_status"]:
+                    # Validate session for voice signaling
+                    if not session_id:
+                        await websocket.send_json({
+                            "type": "error",
+                            "code": "no_session",
+                            "message": "Session required for voice signaling"
+                        })
+                        continue
+                    
+                    # Validate that session belongs to this room
+                    if game_session and game_session.get("room_id") != room_id:
+                        await websocket.send_json({
+                            "type": "error",
+                            "code": "wrong_room",
+                            "message": "Session does not belong to this room"
+                        })
+                        continue
+                    
+                    # Relay signaling message to opponent (all players except sender)
+                    relay_message = {
+                        "type": message_type,
+                        "data": message.get("data"),
+                        "from_player": session_id
+                    }
+                    
+                    # Send to all players in room except the sender
+                    sent = await manager.send_to_room_except(
+                        room_id=room_id,
+                        exclude_session_id=session_id,
+                        message=relay_message
+                    )
+                    
+                    if not sent:
+                        logger.warning(f"Voice signaling message not delivered: {message_type} from {session_id}")
+                
                 else:
                     # Default: broadcast to room
                     await manager.broadcast_to_room(data, room_id)
