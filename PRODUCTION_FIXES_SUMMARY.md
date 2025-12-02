@@ -51,6 +51,22 @@
 **Commit:**
 - `0903f0c` - Fix srcObject attribute in VoiceChatControls
 
+### 4. API Field Name Mismatch - Join Room 422 Error
+**Error:** `POST /rooms/join 422 (Unprocessable Content)`
+
+**Root Cause:**
+- Frontend was sending `room_code` field
+- Backend expects `room_id` field
+- Pydantic validation rejected the request
+
+**Solution:**
+- Updated `src/lib/utils/api.ts`
+- Changed from: `room_code: roomCode`
+- Changed to: `room_id: roomCode`
+
+**Commit:**
+- `3fbd957` - Fix API field name mismatch in join room request
+
 ## Deployment Status
 
 ### What Happens Next
@@ -67,6 +83,11 @@
 3. **CORS Fix Applied**
    - New CORS configuration will be active after redeploy
    - Frontend requests from khasinogaming.com will be allowed
+
+4. **Frontend Deployment**
+   - GitHub Actions automatically deploys frontend changes
+   - Triggered by changes to `src/lib/utils/api.ts`
+   - Builds and deploys to khasinogaming.com via FTP
 
 ### Verification Steps
 
@@ -112,6 +133,7 @@ Watch Render logs for:
 1. `backend/alembic/versions/0007_add_updated_at_column.py` - New migration
 2. `render.yaml` - Updated CORS_ORIGINS
 3. `src/lib/components/VoiceChatControls.svelte` - Fixed srcObject
+4. `src/lib/utils/api.ts` - Fixed field name mismatch
 
 ## Git Commits
 
@@ -120,6 +142,8 @@ Watch Render logs for:
 - `f1bcaf5` - Add migration for updated_at column in rooms table
 - `660c4d6` - Update CORS origins to include both HTTP and HTTPS
 - `86774a2` - Fix migration revision ID for updated_at column
+- `80bf17f` - Add production fixes summary documentation
+- `3fbd957` - Fix API field name mismatch in join room request
 
 ## Next Steps
 
