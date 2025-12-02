@@ -60,7 +60,7 @@ export async function joinRoom(roomCode: string, playerName: string): Promise<Jo
     return fetchAPI<JoinRoomResponse>('/rooms/join', {
         method: 'POST',
         body: JSON.stringify({
-            room_code: roomCode,
+            room_id: roomCode,
             player_name: playerName
         })
     });
