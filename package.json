@@ -20,6 +20,8 @@
     "test:quick": "powershell -ExecutionPolicy Bypass -File ./run-quick-tests.ps1",
     "test:all": "powershell -ExecutionPolicy Bypass -File ./run-all-tests.ps1",
     "test:production": "playwright test tests/e2e/production-smoke-test.spec.ts --config=playwright.production.config.ts",
+    "test:production:full": "playwright test tests/e2e/production-game-flow.spec.ts --config=playwright.production.config.ts",
+    "test:production:all": "playwright test --config=playwright.production.config.ts",
     "start:backend": "cd backend && python start_production.py",
     "start:redis": "docker-compose up redis -d",
     "start:postgres": "docker-compose up postgres -d",
