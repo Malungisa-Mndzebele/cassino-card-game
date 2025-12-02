@@ -1,7 +1,7 @@
 """Add updated_at column to rooms table
 
-Revision ID: 0007
-Revises: 0006
+Revision ID: 0007_add_updated_at_column
+Revises: 0006_add_state_snapshots
 Create Date: 2024-12-01 00:00:00.000000
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '0007'
-down_revision = '0006'
+revision = '0007_add_updated_at_column'
+down_revision = '0006_add_state_snapshots'
 branch_labels = None
 depends_on = None
 
