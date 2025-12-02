@@ -162,19 +162,19 @@ SESSION_SECRET_KEY=  # For session token signing
 ```bash
 # API URLs (auto-configured in production)
 VITE_API_URL=http://localhost:8000                    # Dev
-# VITE_API_URL=https://cassino-game-backend.fly.dev  # Production
+# VITE_API_URL=https://your-app.onrender.com         # Production
 
 VITE_WS_URL=ws://localhost:8000                       # Dev
-# VITE_WS_URL=wss://cassino-game-backend.fly.dev     # Production
+# VITE_WS_URL=wss://your-app.onrender.com            # Production
 ```
 
 ## Deployment
 
-### Backend (Fly.io)
-- Deploy: `flyctl deploy`
-- Run migrations: `flyctl ssh console -C "cd /app && python -m alembic upgrade head"`
-- Health check: `https://cassino-game-backend.fly.dev/health`
-- Set secrets: `flyctl secrets set DATABASE_URL="..."`
+### Backend (Render)
+- Deploy: Automatic via `git push origin main`
+- Run migrations: Automatic on deployment (configured in render.yaml)
+- Health check: `https://your-app.onrender.com/health`
+- Set environment variables: Render dashboard → Settings → Environment
 
 ### Frontend (FTP)
 - Build: `npm run build`

@@ -38,7 +38,7 @@
 
 ## Deployment
 
-- **Backend**: Fly.io with PostgreSQL and Redis managed instances
+- **Backend**: Render with PostgreSQL and Redis managed instances
 - **Frontend**: FTP deployment to khasinogaming.com
 - **CI/CD**: GitHub Actions for automated testing and deployment
 - **Base Path**: Frontend deployed at `/cassino/` subdirectory
@@ -101,8 +101,8 @@ cd backend && python start_production.py
 
 ### Deployment
 ```bash
-# Deploy backend to Fly.io
-flyctl deploy
+# Deploy backend to Render (automatic via git push)
+git push origin main
 
 # Deploy frontend via FTP
 npm run deploy:ftp

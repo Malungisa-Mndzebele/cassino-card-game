@@ -1,6 +1,9 @@
 import { writable } from 'svelte/store';
 import { gameStore } from './gameStore';
 import { ErrorHandler } from '$lib/utils/errorHandler';
+import { syncStateManager } from './syncState.svelte';
+import { applyDelta, parseStateUpdate } from '$lib/utils/deltaApplication';
+import { validateChecksum } from '$lib/utils/stateValidator';
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -41,10 +44,35 @@ function createConnectionStore() {
         try {
             ws = new WebSocket(wsUrl);
 
-            ws.onopen = () => {
+            ws.onopen = async () => {
                 console.log('WebSocket connected');
                 reconnectAttempts = 0;
                 update((s) => ({ ...s, status: 'connected', error: null }));
+
+                // Sync state on reconnection
+                if (reconnectAttempts > 0) {
+                    console.log('Reconnected, syncing state...');
+                    try {
+                        const currentState = gameStore.getConfirmedGameState();
+                        await syncStateManager.syncOnReconnect(
+                            roomId,
+                            currentState,
+                            async (roomId, clientVersion) => {
+                                const { getGameState } = await import('$lib/utils/api');
+                                const response = await getGameState(roomId);
+                                return {
+                                    success: true,
+                                    currentVersion: response.game_state.version || 0,
+                                    clientVersion: clientVersion || 0,
+                                    state: response.game_state,
+                                    requiresFullSync: false
+                                };
+                            }
+                        );
+                    } catch (err) {
+                        console.error('Failed to sync on reconnection:', err);
+                    }
+                }
 
                 // Start heartbeat
                 startHeartbeat();
@@ -54,29 +82,88 @@ function createConnectionStore() {
                 try {
                     const data = JSON.parse(event.data);
 
+                    // Parse state update type (delta or full)
+                    const updateInfo = parseStateUpdate(data);
+
                     // Handle different message types
-                    if (data.type === 'game_state_update') {
-                        // Fetch the latest game state from the server
-                        console.log('Game state update received, fetching latest state...');
-                        try {
-                            const { getGameState } = await import('$lib/utils/api');
-                            const response = await getGameState(data.room_id);
-                            gameStore.setGameState(response.game_state);
-                        } catch (err) {
-                            console.error('Failed to fetch game state:', err);
-                            // If data includes game_state, use it as fallback
-                            if (data.game_state) {
-                                gameStore.setGameState(data.game_state);
+                    if (data.type === 'game_state_update' || data.type === 'state_update') {
+                        // Full state update
+                        console.log('Full state update received');
+                        
+                        if (data.game_state || data.state) {
+                            const newState = data.game_state || data.state;
+                            
+                            // Validate checksum if provided
+                            if (newState.checksum) {
+                                const isValid = await validateChecksum(newState, newState.checksum);
+                                if (!isValid) {
+                                    console.warn('Checksum validation failed, requesting resync');
+                                    syncStateManager.recordChecksumMismatch();
+                                    
+                                    // Auto-resync if threshold reached
+                                    if (syncStateManager.shouldAutoResync) {
+                                        try {
+                                            const { getGameState } = await import('$lib/utils/api');
+                                            const response = await getGameState(data.room_id);
+                                            await gameStore.setGameState(response.game_state);
+                                        } catch (err) {
+                                            console.error('Auto-resync failed:', err);
+                                        }
+                                    }
+                                    return;
+                                }
+                            }
+                            
+                            await gameStore.setGameState(newState);
+                        } else {
+                            // Fallback: fetch from API
+                            try {
+                                const { getGameState } = await import('$lib/utils/api');
+                                const response = await getGameState(data.room_id);
+                                await gameStore.setGameState(response.game_state);
+                            } catch (err) {
+                                console.error('Failed to fetch game state:', err);
+                            }
+                        }
+                    } else if (data.type === 'state_delta') {
+                        // Delta update
+                        console.log('Delta update received');
+                        
+                        const currentState = gameStore.getConfirmedGameState();
+                        if (!currentState) {
+                            console.warn('No current state, requesting full state');
+                            try {
+                                const { getGameState } = await import('$lib/utils/api');
+                                const response = await getGameState(data.room_id);
+                                await gameStore.setGameState(response.game_state);
+                            } catch (err) {
+                                console.error('Failed to fetch game state:', err);
+                            }
+                            return;
+                        }
+                        
+                        // Apply delta
+                        const result = await applyDelta(currentState, data.delta);
+                        if (result.success && result.state) {
+                            await gameStore.setGameState(result.state);
+                        } else {
+                            console.warn('Delta application failed:', result.error);
+                            // Request full state
+                            try {
+                                const { getGameState } = await import('$lib/utils/api');
+                                const response = await getGameState(data.room_id);
+                                await gameStore.setGameState(response.game_state);
+                            } catch (err) {
+                                console.error('Failed to fetch game state:', err);
                             }
                         }
                     } else if (data.type === 'player_joined') {
                         // Refresh game state when a player joins
                         console.log(`Player ${data.player_name} joined the room`);
-                        // Fetch updated game state from API
                         try {
                             const { getGameState } = await import('$lib/utils/api');
                             const response = await getGameState(data.room_id);
-                            gameStore.setGameState(response.game_state);
+                            await gameStore.setGameState(response.game_state);
                         } catch (err) {
                             console.error('Failed to refresh game state:', err);
                         }

@@ -36,6 +36,9 @@ export interface GameState {
     builds?: any[];
     shuffleComplete?: boolean;
     cardSelectionComplete?: boolean;
+    // State synchronization fields
+    version?: number;
+    checksum?: string;
 }
 
 export type GamePhase =

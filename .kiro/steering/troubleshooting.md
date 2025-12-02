@@ -236,25 +236,22 @@ redis-cli config set maxmemory-policy allkeys-lru
 3. Fix TypeScript errors shown in output
 4. Verify all dependencies are in package.json
 
-#### Backend Won't Start on Fly.io
+#### Backend Won't Start on Render
 **Symptom**: Deployment succeeds but app crashes
 
 **Cause**: Missing environment variables or database connection
 
 **Solution**:
 ```bash
-# Check Fly.io logs
-flyctl logs
+# Check Render logs in dashboard
+# Or use Render CLI
+render logs
 
-# Verify secrets are set
-flyctl secrets list
-
-# Set missing secrets
-flyctl secrets set DATABASE_URL="postgresql://..."
-flyctl secrets set REDIS_URL="redis://..."
+# Verify environment variables are set in Render dashboard
+# Settings → Environment → Environment Variables
 
 # Check health endpoint
-curl https://your-app.fly.dev/health
+curl https://your-app.onrender.com/health
 ```
 
 #### Frontend Assets Not Loading
@@ -449,7 +446,7 @@ psql -c "SELECT count(*) FROM pg_stat_activity;"
 ## Getting More Help
 
 ### Log Locations
-- **Backend logs**: stdout (check terminal or Fly.io logs)
+- **Backend logs**: stdout (check terminal or Render dashboard logs)
 - **Frontend logs**: Browser DevTools Console
 - **Redis logs**: Redis server output
 - **Database logs**: SQLite/PostgreSQL logs

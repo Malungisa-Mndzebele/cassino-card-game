@@ -8,7 +8,7 @@ automatic fallback and connection pooling.
 Environment Variables:
     DATABASE_URL: Full database connection string
     ENVIRONMENT: "production" or other (determines SQLite fallback)
-    FLY_APP_NAME: Fly.io app name (indicates production environment)
+    RENDER: Set to "true" in Render environment (indicates production)
 
 Example:
     >>> from database import get_db, async_engine
@@ -26,11 +26,11 @@ import sys
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (if it exists)
-# In Fly.io, environment variables come from secrets, so .env is optional
+# In production (Render), environment variables come from dashboard settings
 try:
     load_dotenv()
 except (UnicodeDecodeError, Exception):
-    # Ignore .env file errors - Fly.io uses secrets instead
+    # Ignore .env file errors - production uses environment variables
     pass
 
 # Get DATABASE_URL - use SQLite for local development if not set

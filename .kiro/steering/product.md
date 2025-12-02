@@ -12,7 +12,7 @@ Casino Card Game is a real-time multiplayer implementation of the classic Casino
 - **Background Tasks**: Automated session cleanup and connection monitoring
 - **Game Mechanics**: Capture, build, and trail actions following traditional Casino rules
 - **Scoring System**: Points for aces, special cards (2♠, 10♦), most cards, and most spades
-- **Production Deployment**: Backend on Fly.io with PostgreSQL and Redis, frontend on khasinogaming.com
+- **Production Deployment**: Backend on Render with PostgreSQL and Redis, frontend on khasinogaming.com
 
 ## Game Rules
 

@@ -975,7 +975,7 @@ The backend infrastructure is **complete and tested**. The main work remaining i
 
 - [ ] 25.3 Deploy to production
   - Run database migrations (already done)
-  - Deploy backend to Fly.io
+  - Deploy backend to Render (automatic via git push)
   - Deploy frontend
   - Monitor for issues
   - _Requirements: All requirements_

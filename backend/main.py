@@ -173,7 +173,7 @@ app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path=ROOT_PATH
 cors_origins_str = os.getenv("CORS_ORIGINS", "*")
 if cors_origins_str == "*":
     # For local development, allow common localhost ports
-    if os.getenv("ENVIRONMENT") != "production" or os.getenv("FLY_APP_NAME") is None:
+    if os.getenv("ENVIRONMENT") != "production" or os.getenv("RENDER") is None:
         cors_origins = [
             "http://localhost:5173",
             "http://localhost:3000",

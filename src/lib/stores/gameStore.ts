@@ -1,5 +1,8 @@
 import { writable, derived, get } from 'svelte/store';
 import type { GameState, Player } from '$types/game';
+import { optimisticStateManager } from './optimisticState.svelte';
+import { syncStateManager } from './syncState.svelte';
+import { validateChecksum } from '$lib/utils/stateValidator';
 
 interface GameStoreState {
     roomId: string;
@@ -41,7 +44,45 @@ function createGameStore() {
                 localStorage.setItem('cassino_player_name', name);
             }
         },
-        setGameState: (gameState: GameState) => update((s) => ({ ...s, gameState })),
+        
+        /**
+         * Set game state with version tracking and checksum validation
+         */
+        setGameState: async (gameState: GameState) => {
+            // Validate checksum if provided
+            if (gameState.checksum) {
+                const isValid = await validateChecksum(gameState, gameState.checksum);
+                if (!isValid) {
+                    console.warn('Checksum validation failed for received state');
+                    syncStateManager.recordChecksumMismatch();
+                } else {
+                    syncStateManager.resetChecksumMismatches();
+                }
+            }
+
+            // Update optimistic state manager
+            optimisticStateManager.setState(gameState);
+
+            // Update store
+            update((s) => ({ ...s, gameState }));
+        },
+
+        /**
+         * Get current game state (may include optimistic updates)
+         */
+        getGameState: () => {
+            const state = get({ subscribe });
+            // Return optimistic state if available, otherwise regular state
+            return optimisticStateManager.localState || state.gameState;
+        },
+
+        /**
+         * Get confirmed game state (without optimistic updates)
+         */
+        getConfirmedGameState: () => {
+            const state = get({ subscribe });
+            return state.gameState;
+        },
 
         // Reset
         reset: () => {
@@ -56,6 +97,8 @@ function createGameStore() {
                 localStorage.removeItem('cassino_room_id');
                 localStorage.removeItem('cassino_player_id');
             }
+            // Clear optimistic state
+            optimisticStateManager.clearPending();
         },
 
         // Initialize from localStorage
