@@ -68,20 +68,35 @@
     isJoining = true;
 
     try {
-      const sanitized = sanitizePlayerName(playerName);
+      let sanitized = sanitizePlayerName(playerName);
       const formatted = formatRoomCode(roomCode);
 
       localStorage.setItem('cassino_player_name', sanitized);
 
-      const response = await joinRoom(formatted, sanitized);
+      // Try to join, if name is taken, append a number
+      let attempts = 0;
+      while (attempts < 5) {
+        try {
+          const response = await joinRoom(formatted, sanitized);
 
-      gameStore.setRoomId(formatted);
-      gameStore.setPlayerId(response.player_id);
-      gameStore.setPlayerName(sanitized);
-      gameStore.setGameState(response.game_state);
+          gameStore.setRoomId(formatted);
+          gameStore.setPlayerId(response.player_id);
+          gameStore.setPlayerName(sanitized);
+          gameStore.setGameState(response.game_state);
 
-      // Connect WebSocket
-      await connectionStore.connect(formatted);
+          // Connect WebSocket
+          await connectionStore.connect(formatted);
+          return;
+        } catch (err: any) {
+          if (err.message?.includes('Player name already taken') && attempts < 4) {
+            // Append a random number and try again
+            attempts++;
+            sanitized = `${sanitizePlayerName(playerName)}${Math.floor(Math.random() * 1000)}`;
+          } else {
+            throw err;
+          }
+        }
+      }
     } catch (err: any) {
       error = err.message || 'Failed to join room';
     } finally {
@@ -94,18 +109,33 @@
     isJoining = true;
 
     try {
-      const sanitized = sanitizePlayerName(playerName);
+      let sanitized = sanitizePlayerName(playerName);
       localStorage.setItem('cassino_player_name', sanitized);
 
-      const response = await joinRandomRoom(sanitized);
+      // Try to join, if name is taken, append a number
+      let attempts = 0;
+      while (attempts < 5) {
+        try {
+          const response = await joinRandomRoom(sanitized);
 
-      gameStore.setRoomId(response.game_state.roomId);
-      gameStore.setPlayerId(response.player_id);
-      gameStore.setPlayerName(sanitized);
-      gameStore.setGameState(response.game_state);
+          gameStore.setRoomId(response.game_state.roomId);
+          gameStore.setPlayerId(response.player_id);
+          gameStore.setPlayerName(sanitized);
+          gameStore.setGameState(response.game_state);
 
-      // Connect WebSocket
-      await connectionStore.connect(response.game_state.roomId);
+          // Connect WebSocket
+          await connectionStore.connect(response.game_state.roomId);
+          return;
+        } catch (err: any) {
+          if (err.message?.includes('Player name already taken') && attempts < 4) {
+            // Append a random number and try again
+            attempts++;
+            sanitized = `${sanitizePlayerName(playerName)}${Math.floor(Math.random() * 1000)}`;
+          } else {
+            throw err;
+          }
+        }
+      }
     } catch (err: any) {
       error = err.message || 'Failed to join random room';
     } finally {
