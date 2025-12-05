@@ -112,10 +112,25 @@
                 <button
                   on:click={async () => {
                     try {
+                      console.log('Ready button clicked');
                       const { setPlayerReady } = await import('$lib/utils/api');
                       const isPlayer1 = players[0]?.id === $gameStore.playerId;
                       const currentReady = isPlayer1 ? gameState.player1Ready : gameState.player2Ready;
-                      await setPlayerReady($gameStore.roomId, $gameStore.playerId, !currentReady);
+                      
+                      console.log('Setting ready state:', {
+                        roomId: $gameStore.roomId,
+                        playerId: $gameStore.playerId,
+                        newReady: !currentReady
+                      });
+                      
+                      const response = await setPlayerReady($gameStore.roomId, $gameStore.playerId, !currentReady);
+                      
+                      console.log('Ready state response:', response);
+                      
+                      // Update local state immediately
+                      if (response.success && response.game_state) {
+                        await gameStore.setGameState(response.game_state);
+                      }
                     } catch (err) {
                       console.error('Failed to set ready status:', err);
                     }

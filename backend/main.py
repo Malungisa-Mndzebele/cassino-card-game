@@ -944,8 +944,13 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
         room.modified_by = request.player_id
         await db.commit()
     
-    # Broadcast game state update to all connected clients
-    await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
+    # Broadcast game state update to all connected clients with full state
+    game_state_response = game_state_to_response(room)
+    await manager.broadcast_json_to_room({
+        "type": "game_state_update",
+        "room_id": room.id,
+        "game_state": game_state_response.model_dump()
+    }, room.id)
     
     return StandardResponse(
         success=True,

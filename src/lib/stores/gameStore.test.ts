@@ -70,6 +70,7 @@ describe('gameStore - Session Persistence', () => {
         it('should load room ID from localStorage when both roomId and playerId exist', () => {
             localStorage.setItem('cassino_room_id', 'XYZ789');
             localStorage.setItem('cassino_player_id', 'player-456');
+            localStorage.setItem('cassino_session_timestamp', Date.now().toString());
             gameStore.initialize();
             const state = get(gameStore);
             expect(state.roomId).toBe('XYZ789');
@@ -78,6 +79,7 @@ describe('gameStore - Session Persistence', () => {
         it('should load player ID from localStorage when both roomId and playerId exist', () => {
             localStorage.setItem('cassino_room_id', 'XYZ789');
             localStorage.setItem('cassino_player_id', 'player-456');
+            localStorage.setItem('cassino_session_timestamp', Date.now().toString());
             gameStore.initialize();
             const state = get(gameStore);
             expect(state.playerId).toBe('player-456');
@@ -87,6 +89,7 @@ describe('gameStore - Session Persistence', () => {
             localStorage.setItem('cassino_player_name', 'SavedPlayer');
             localStorage.setItem('cassino_room_id', 'XYZ789');
             localStorage.setItem('cassino_player_id', 'player-456');
+            localStorage.setItem('cassino_session_timestamp', Date.now().toString());
             
             gameStore.initialize();
             const state = get(gameStore);

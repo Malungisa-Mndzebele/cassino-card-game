@@ -88,7 +88,7 @@ function createConnectionStore() {
                     // Handle different message types
                     if (data.type === 'game_state_update' || data.type === 'state_update') {
                         // Full state update
-                        console.log('Full state update received');
+                        console.log('Full state update received:', data);
                         
                         if (data.game_state || data.state) {
                             const newState = data.game_state || data.state;
@@ -114,9 +114,11 @@ function createConnectionStore() {
                                 }
                             }
                             
+                            console.log('Updating game state from WebSocket:', newState);
                             await gameStore.setGameState(newState);
-                        } else {
-                            // Fallback: fetch from API
+                        } else if (data.room_id) {
+                            // No state in message, fetch from API
+                            console.log('No state in WebSocket message, fetching from API');
                             try {
                                 const { getGameState } = await import('$lib/utils/api');
                                 const response = await getGameState(data.room_id);
