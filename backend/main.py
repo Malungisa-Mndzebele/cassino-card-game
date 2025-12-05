@@ -135,12 +135,29 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️  Background tasks warning: {e}", file=sys.stderr)
     
+    # Start WebSocket Redis subscriber (only if Redis is available)
+    if redis_available:
+        try:
+            await manager.start_subscriber()
+            print("✅ WebSocket subscriber started", file=sys.stderr)
+        except Exception as e:
+            print(f"⚠️  WebSocket subscriber warning: {e}", file=sys.stderr)
+    else:
+        print("ℹ️  WebSocket using local-only mode (no Redis)", file=sys.stderr)
+    
     print("✨ Backend ready!", file=sys.stderr)
     
     yield
     
     # Shutdown
     print("🛑 Shutting down Casino Card Game Backend...", file=sys.stderr)
+    
+    # Stop WebSocket subscriber
+    try:
+        await manager.stop_subscriber()
+        print("✅ WebSocket subscriber stopped", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  WebSocket subscriber cleanup warning: {e}", file=sys.stderr)
     
     # Stop background tasks
     try:
@@ -974,7 +991,7 @@ async def start_shuffle(request: StartShuffleRequest, db: AsyncSession = Depends
     await db.commit()
     
     # Broadcast game state update to all connected clients
-    await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
+    await manager.broadcast_json_to_room({"type": "game_state_update", "room_id": room.id}, room.id)
     
     return StandardResponse(
         success=True,
@@ -1017,7 +1034,7 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: AsyncSessi
     await db.commit()
     
     # Broadcast game state update to all connected clients
-    await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
+    await manager.broadcast_json_to_room({"type": "game_state_update", "room_id": room.id}, room.id)
     
     return StandardResponse(
         success=True,
@@ -1207,7 +1224,7 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
     await db.commit()
     
     # Broadcast game state update to all connected clients
-    await manager.broadcast_to_room(json.dumps({"type": "game_state_update", "room_id": room.id}), room.id)
+    await manager.broadcast_json_to_room({"type": "game_state_update", "room_id": room.id}, room.id)
     
     return StandardResponse(
         success=True,

@@ -222,13 +222,31 @@ class WebSocketConnectionManager:
         Broadcast message to all connections in a room across all instances.
         
         Uses Redis pub/sub to ensure message reaches all server instances.
+        Falls back to local broadcast if Redis is unavailable.
         
         Args:
             data: Data to broadcast
             room_id: Room identifier
         """
-        # Publish to Redis (will be received by all instances including this one)
-        await redis_client.publish(f"room:{room_id}", data)
+        try:
+            # Try to publish to Redis (will be received by all instances including this one)
+            await redis_client.publish(f"room:{room_id}", data)
+        except Exception as e:
+            # Redis unavailable - fallback to local broadcast
+            logger.warning(f"Redis publish failed, using local broadcast: {e}")
+            await self._broadcast_to_local_connections(room_id, data)
+    
+    async def broadcast_json_to_room(self, data: dict, room_id: str):
+        """
+        Broadcast JSON message to all connections in a room.
+        
+        Convenience method that wraps broadcast_to_room.
+        
+        Args:
+            data: Data to broadcast (will be sent as JSON)
+            room_id: Room identifier
+        """
+        await self.broadcast_to_room(data, room_id)
     
     async def _broadcast_to_local_connections(self, room_id: str, data: dict):
         """
