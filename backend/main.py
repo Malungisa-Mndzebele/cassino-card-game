@@ -917,8 +917,12 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
     """Set player ready status"""
     from version_validator import validate_version
     
+    logger.info(f"Player ready request: room_id={request.room_id}, player_id={request.player_id}, is_ready={request.is_ready}")
+    
     room = await get_room_or_404(db, request.room_id)
     player = await get_player_or_404(db, request.room_id, request.player_id)
+    
+    logger.info(f"Found room {room.id} with {len(room.players)} players, phase={room.game_phase}")
     
     # Version conflict handling (Requirement 1.3)
     if request.client_version is not None:
@@ -954,12 +958,15 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
     
     # Auto-transition to dealer phase when both players are ready
     if room.player1_ready and room.player2_ready and room.game_phase == "waiting":
+        logger.info(f"Both players ready! Transitioning room {room.id} to dealer phase")
         room.game_phase = "dealer"
         # Increment version for phase change
         room.version += 1
         room.last_modified = func.now()
         room.modified_by = request.player_id
         await db.commit()
+    
+    logger.info(f"Room {room.id} ready status: player1={room.player1_ready}, player2={room.player2_ready}, phase={room.game_phase}")
     
     # Broadcast game state update to all connected clients with full state
     game_state_response = game_state_to_response(room)
@@ -968,6 +975,8 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
         "room_id": room.id,
         "game_state": game_state_response.model_dump()
     }, room.id)
+    
+    logger.info(f"Broadcasted game state update for room {room.id}")
     
     return StandardResponse(
         success=True,

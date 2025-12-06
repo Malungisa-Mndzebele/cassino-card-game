@@ -113,6 +113,18 @@
                   on:click={async () => {
                     try {
                       console.log('Ready button clicked');
+                      console.log('Current gameStore state:', {
+                        roomId: $gameStore.roomId,
+                        playerId: $gameStore.playerId,
+                        playerName: $gameStore.playerName
+                      });
+                      
+                      if (!$gameStore.roomId || !$gameStore.playerId) {
+                        console.error('Missing roomId or playerId!');
+                        alert('Error: Missing room or player information. Please refresh and try again.');
+                        return;
+                      }
+                      
                       const { setPlayerReady } = await import('$lib/utils/api');
                       const isPlayer1 = players[0]?.id === $gameStore.playerId;
                       const currentReady = isPlayer1 ? gameState.player1Ready : gameState.player2Ready;
@@ -120,7 +132,8 @@
                       console.log('Setting ready state:', {
                         roomId: $gameStore.roomId,
                         playerId: $gameStore.playerId,
-                        newReady: !currentReady
+                        newReady: !currentReady,
+                        isPlayer1
                       });
                       
                       const response = await setPlayerReady($gameStore.roomId, $gameStore.playerId, !currentReady);
@@ -129,10 +142,15 @@
                       
                       // Update local state immediately
                       if (response.success && response.game_state) {
+                        console.log('Updating game state with:', response.game_state);
                         await gameStore.setGameState(response.game_state);
+                      } else {
+                        console.error('Response missing success or game_state:', response);
+                        alert('Error: Server response was invalid');
                       }
-                    } catch (err) {
+                    } catch (err: any) {
                       console.error('Failed to set ready status:', err);
+                      alert(`Error: ${err.message || 'Failed to set ready status'}`);
                     }
                   }}
                   class="btn-primary"
