@@ -1,0 +1,44 @@
+# Casino Card Game Documentation
+
+This directory contains all project documentation organized by category.
+
+## 📁 Directory Structure
+
+### `/deployment`
+Documentation related to deploying the application to production environments.
+
+- **RENDER_QUICK_START.md** - Quick guide to deploying on Render
+- **RENDER_DEPLOYMENT_STATUS.md** - Current deployment status and configuration
+- **DEPLOYMENT_SUMMARY.md** - Overview of deployment architecture
+- **check-render-deployment.md** - Deployment verification checklist
+
+### `/development`
+Documentation for setting up and running the development environment.
+
+- **QUICK_START.md** - Get started with development quickly
+- **START_SERVERS.md** - How to start backend and frontend servers
+- **BACKEND_SETUP.md** - Backend setup and configuration guide
+- **CONFLICT_RESOLVER.md** - Conflict resolution system documentation
+- **SECURITY_VALIDATIONS.md** - Security validation implementation details
+
+### `/testing`
+Documentation about testing strategies, test results, and testing guides.
+
+- **TESTING_QUICK_GUIDE.md** - Quick reference for running tests
+- **TESTING_INSTRUCTIONS_FINAL.md** - Comprehensive testing instructions
+- **E2E_TEST_RESULTS.md** - End-to-end test results
+- **PRODUCTION_E2E_TEST_RESULTS.md** - Production environment test results
+
+## 🔗 Additional Resources
+
+- **Main README** - See [../README.md](../README.md) for project overview
+- **Specs** - See [../.kiro/specs/](../.kiro/specs/) for feature specifications
+- **Steering Rules** - See [../.kiro/steering/](../.kiro/steering/) for development guidelines
+
+## 📝 Contributing to Documentation
+
+When adding new documentation:
+1. Place it in the appropriate subdirectory
+2. Update this README with a link and description
+3. Use clear, descriptive filenames
+4. Follow markdown best practices

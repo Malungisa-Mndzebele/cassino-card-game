@@ -33,12 +33,15 @@ test.describe('Production Game Flow', () => {
 				await expect(createButton).toBeEnabled({ timeout: 10000 });
 				await createButton.click();
 
-				// Wait for room code to appear
-				await player1Page.waitForSelector('text=/[A-Z0-9]{6}/', { timeout: 20000 });
-
-				// Extract room code
+				// Wait for "Room Created!" heading to appear
+				await player1Page.waitForSelector('text=/Room Created/i', { timeout: 20000 });
+				
+				// Wait for the room code element to be visible
 				const roomCodeElement = player1Page.locator('.text-5xl.font-bold.tracking-widest');
-				roomCode = await roomCodeElement.textContent() || '';
+				await expect(roomCodeElement).toBeVisible({ timeout: 10000 });
+				
+				// Extract room code
+				roomCode = (await roomCodeElement.textContent() || '').trim();
 				expect(roomCode).toMatch(/^[A-Z0-9]{6}$/);
 
 				console.log(`Room created with code: ${roomCode}`);
@@ -295,6 +298,10 @@ test.describe('Production Game Flow', () => {
 				// Verify mobile layout is functional
 				const nameInput = mobilePage.locator('[data-testid="player-name-input-create-test"]');
 				await expect(nameInput).toBeVisible({ timeout: 10000 });
+				
+				// Fill in player name to enable the button
+				await nameInput.fill('MobilePlayer');
+				await mobilePage.waitForTimeout(500); // Wait for validation
 
 				// Check button is clickable (not hidden by mobile layout)
 				await expect(createButton).toBeEnabled({ timeout: 10000 });

@@ -17,31 +17,39 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add updated_at column to rooms table
-    op.add_column('rooms', 
-        sa.Column('updated_at', 
-                  sa.DateTime(timezone=True), 
-                  server_default=sa.text('CURRENT_TIMESTAMP'),
-                  nullable=False)
-    )
+    # Check if column already exists (for idempotency)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns('rooms')]
     
-    # Create trigger to automatically update updated_at on row updates (PostgreSQL)
-    op.execute("""
-        CREATE OR REPLACE FUNCTION update_updated_at_column()
-        RETURNS TRIGGER AS $$
-        BEGIN
-            NEW.updated_at = CURRENT_TIMESTAMP;
-            RETURN NEW;
-        END;
-        $$ language 'plpgsql';
-    """)
-    
-    op.execute("""
-        CREATE TRIGGER update_rooms_updated_at 
-        BEFORE UPDATE ON rooms
-        FOR EACH ROW
-        EXECUTE FUNCTION update_updated_at_column();
-    """)
+    if 'updated_at' not in columns:
+        # Add updated_at column to rooms table
+        op.add_column('rooms', 
+            sa.Column('updated_at', 
+                      sa.DateTime(timezone=True), 
+                      server_default=sa.text('CURRENT_TIMESTAMP'),
+                      nullable=False)
+        )
+        
+        # Create trigger to automatically update updated_at on row updates (PostgreSQL only)
+        # Skip for SQLite
+        if conn.dialect.name == 'postgresql':
+            op.execute("""
+                CREATE OR REPLACE FUNCTION update_updated_at_column()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    NEW.updated_at = CURRENT_TIMESTAMP;
+                    RETURN NEW;
+                END;
+                $$ language 'plpgsql';
+            """)
+            
+            op.execute("""
+                CREATE TRIGGER update_rooms_updated_at 
+                BEFORE UPDATE ON rooms
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+            """)
 
 
 def downgrade() -> None:

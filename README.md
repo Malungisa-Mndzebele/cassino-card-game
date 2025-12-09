@@ -205,7 +205,7 @@ npx playwright test tests/e2e/production-smoke-test.spec.ts --config=playwright.
 
 #### Quick Start (3 Steps)
 
-**See [RENDER_QUICK_START.md](RENDER_QUICK_START.md) for detailed instructions**
+**See [RENDER_QUICK_START.md](docs/deployment/RENDER_QUICK_START.md) for detailed instructions**
 
 1. **Create Render Account** (5 min)
    - Go to https://render.com
@@ -602,17 +602,27 @@ npm run test:e2e:debug
 
 ## 📚 Documentation
 
-### Deployment Guides
-- **[RENDER_QUICK_START.md](RENDER_QUICK_START.md)** - Quick 3-step Render deployment
-- **[RENDER_DEPLOYMENT_GUIDE.md](RENDER_DEPLOYMENT_GUIDE.md)** - Comprehensive Render guide
-- **[RENDER_DEPLOYMENT_CHECKLIST.md](RENDER_DEPLOYMENT_CHECKLIST.md)** - Deployment checklist
-- **[RENDER_DEPLOYMENT_STATUS.md](RENDER_DEPLOYMENT_STATUS.md)** - Current deployment status
+All documentation is organized in the [`docs/`](docs/) directory:
 
-### Testing & Configuration
-- **[Deployment Fix Summary](DEPLOYMENT_FIX_SUMMARY.md)** - Path configuration guide
-- **[Production Test Results](PRODUCTION_TEST_RESULTS_FIXED.md)** - Test coverage report
-- **[Deployment Status](DEPLOYMENT_STATUS.md)** - Current deployment info
-- **[GitHub Secrets Setup](.github/GITHUB_SECRETS_SETUP.md)** - CI/CD configuration
+### 🚀 [Deployment Documentation](docs/deployment/)
+- **[RENDER_QUICK_START.md](docs/deployment/RENDER_QUICK_START.md)** - Quick 3-step Render deployment
+- **[RENDER_DEPLOYMENT_STATUS.md](docs/deployment/RENDER_DEPLOYMENT_STATUS.md)** - Current deployment status
+- **[DEPLOYMENT_SUMMARY.md](docs/deployment/DEPLOYMENT_SUMMARY.md)** - Deployment architecture overview
+- **[check-render-deployment.md](docs/deployment/check-render-deployment.md)** - Deployment verification
+
+### 💻 [Development Documentation](docs/development/)
+- **[QUICK_START.md](docs/development/QUICK_START.md)** - Get started with development
+- **[START_SERVERS.md](docs/development/START_SERVERS.md)** - How to start backend and frontend
+
+### 🧪 [Testing Documentation](docs/testing/)
+- **[TESTING_QUICK_GUIDE.md](docs/testing/TESTING_QUICK_GUIDE.md)** - Quick testing reference
+- **[TESTING_INSTRUCTIONS_FINAL.md](docs/testing/TESTING_INSTRUCTIONS_FINAL.md)** - Comprehensive testing guide
+- **[E2E_TEST_RESULTS.md](docs/testing/E2E_TEST_RESULTS.md)** - End-to-end test results
+- **[PRODUCTION_E2E_TEST_RESULTS.md](docs/testing/PRODUCTION_E2E_TEST_RESULTS.md)** - Production test results
+
+### 📋 Additional Resources
+- **[Specs](.kiro/specs/)** - Feature specifications and design documents
+- **[Steering Rules](.kiro/steering/)** - Development guidelines and conventions
 
 ---
 

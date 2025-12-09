@@ -15,9 +15,10 @@ import hashlib
 import json
 import logging
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import desc, and_, select
 
 from models import GameEvent, StateSnapshot, Room
 from database import get_db
@@ -40,12 +41,12 @@ class EventStoreEngine:
         max_snapshots: Maximum number of snapshots to keep per room (default: 5)
     """
     
-    def __init__(self, db: Session, snapshot_interval: int = 10, max_snapshots: int = 5):
+    def __init__(self, db: Union[Session, AsyncSession], snapshot_interval: int = 10, max_snapshots: int = 5):
         """
         Initialize the Event Store Engine.
         
         Args:
-            db: SQLAlchemy database session
+            db: SQLAlchemy database session (sync or async)
             snapshot_interval: Number of events between snapshots (default: 10)
             max_snapshots: Maximum snapshots to keep per room (default: 5)
         """
@@ -107,7 +108,7 @@ class EventStoreEngine:
         # Compute SHA-256 hash
         return hashlib.sha256(canonical_json.encode('utf-8')).hexdigest()
     
-    def _get_next_sequence_number(self, room_id: str) -> int:
+    async def _get_next_sequence_number(self, room_id: str) -> int:
         """
         Get the next sequence number for a room.
         
@@ -117,9 +118,17 @@ class EventStoreEngine:
         Returns:
             Next sequence number (1-based)
         """
-        last_event = self.db.query(GameEvent).filter(
-            GameEvent.room_id == room_id
-        ).order_by(desc(GameEvent.sequence_number)).first()
+        # Check if using AsyncSession
+        if isinstance(self.db, AsyncSession):
+            stmt = select(GameEvent).filter(
+                GameEvent.room_id == room_id
+            ).order_by(desc(GameEvent.sequence_number)).limit(1)
+            result = await self.db.execute(stmt)
+            last_event = result.scalar_one_or_none()
+        else:
+            last_event = self.db.query(GameEvent).filter(
+                GameEvent.room_id == room_id
+            ).order_by(desc(GameEvent.sequence_number)).first()
         
         if last_event:
             return last_event.sequence_number + 1
@@ -157,7 +166,7 @@ class EventStoreEngine:
         """
         try:
             # Generate sequence number
-            sequence_number = self._get_next_sequence_number(room_id)
+            sequence_number = await self._get_next_sequence_number(room_id)
             
             # Compute checksum
             checksum = self._compute_event_checksum(action_data)
@@ -175,8 +184,12 @@ class EventStoreEngine:
             
             # Store in database
             self.db.add(event)
-            self.db.commit()
-            self.db.refresh(event)
+            if isinstance(self.db, AsyncSession):
+                await self.db.commit()
+                await self.db.refresh(event)
+            else:
+                self.db.commit()
+                self.db.refresh(event)
             
             logger.info(
                 f"Event stored: room={room_id}, seq={sequence_number}, "
@@ -186,7 +199,10 @@ class EventStoreEngine:
             return event
             
         except Exception as e:
-            self.db.rollback()
+            if isinstance(self.db, AsyncSession):
+                await self.db.rollback()
+            else:
+                self.db.rollback()
             logger.error(f"Failed to store event: {e}", exc_info=True)
             raise
     
@@ -211,15 +227,28 @@ class EventStoreEngine:
             List of GameEvent objects ordered by sequence_number
         """
         try:
-            query = self.db.query(GameEvent).filter(
-                GameEvent.room_id == room_id,
-                GameEvent.version >= from_version
-            )
-            
-            if to_version is not None:
-                query = query.filter(GameEvent.version <= to_version)
-            
-            events = query.order_by(GameEvent.sequence_number).all()
+            if isinstance(self.db, AsyncSession):
+                stmt = select(GameEvent).filter(
+                    GameEvent.room_id == room_id,
+                    GameEvent.version >= from_version
+                )
+                
+                if to_version is not None:
+                    stmt = stmt.filter(GameEvent.version <= to_version)
+                
+                stmt = stmt.order_by(GameEvent.sequence_number)
+                result = await self.db.execute(stmt)
+                events = result.scalars().all()
+            else:
+                query = self.db.query(GameEvent).filter(
+                    GameEvent.room_id == room_id,
+                    GameEvent.version >= from_version
+                )
+                
+                if to_version is not None:
+                    query = query.filter(GameEvent.version <= to_version)
+                
+                events = query.order_by(GameEvent.sequence_number).all()
             
             logger.debug(
                 f"Retrieved {len(events)} events for room={room_id}, "
@@ -267,7 +296,13 @@ class EventStoreEngine:
                 )
             else:
                 # Start from empty/initial state
-                room = self.db.query(Room).filter(Room.id == room_id).first()
+                if isinstance(self.db, AsyncSession):
+                    stmt = select(Room).filter(Room.id == room_id)
+                    result = await self.db.execute(stmt)
+                    room = result.scalar_one_or_none()
+                else:
+                    room = self.db.query(Room).filter(Room.id == room_id).first()
+                
                 if not room:
                     raise ValueError(f"Room {room_id} not found")
                 
@@ -358,8 +393,12 @@ class EventStoreEngine:
             
             # Store in database
             self.db.add(snapshot)
-            self.db.commit()
-            self.db.refresh(snapshot)
+            if isinstance(self.db, AsyncSession):
+                await self.db.commit()
+                await self.db.refresh(snapshot)
+            else:
+                self.db.commit()
+                self.db.refresh(snapshot)
             
             logger.info(
                 f"Snapshot created: room={room_id}, version={version}, "
@@ -369,7 +408,10 @@ class EventStoreEngine:
             return snapshot
             
         except Exception as e:
-            self.db.rollback()
+            if isinstance(self.db, AsyncSession):
+                await self.db.rollback()
+            else:
+                self.db.rollback()
             logger.error(f"Failed to create snapshot: {e}", exc_info=True)
             raise
     
@@ -400,10 +442,18 @@ class EventStoreEngine:
                 return None
             
             # Check if snapshot already exists for this version
-            existing = self.db.query(StateSnapshot).filter(
-                StateSnapshot.room_id == room_id,
-                StateSnapshot.version == current_version
-            ).first()
+            if isinstance(self.db, AsyncSession):
+                stmt = select(StateSnapshot).filter(
+                    StateSnapshot.room_id == room_id,
+                    StateSnapshot.version == current_version
+                )
+                result = await self.db.execute(stmt)
+                existing = result.scalar_one_or_none()
+            else:
+                existing = self.db.query(StateSnapshot).filter(
+                    StateSnapshot.room_id == room_id,
+                    StateSnapshot.version == current_version
+                ).first()
             
             if existing:
                 logger.debug(
@@ -433,25 +483,41 @@ class EventStoreEngine:
         """
         try:
             # Get all snapshots for room, ordered by version descending
-            snapshots = self.db.query(StateSnapshot).filter(
-                StateSnapshot.room_id == room_id
-            ).order_by(desc(StateSnapshot.version)).all()
+            if isinstance(self.db, AsyncSession):
+                stmt = select(StateSnapshot).filter(
+                    StateSnapshot.room_id == room_id
+                ).order_by(desc(StateSnapshot.version))
+                result = await self.db.execute(stmt)
+                snapshots = result.scalars().all()
+            else:
+                snapshots = self.db.query(StateSnapshot).filter(
+                    StateSnapshot.room_id == room_id
+                ).order_by(desc(StateSnapshot.version)).all()
             
             # Keep only max_snapshots most recent
             if len(snapshots) > self.max_snapshots:
                 snapshots_to_delete = snapshots[self.max_snapshots:]
                 
                 for snapshot in snapshots_to_delete:
-                    self.db.delete(snapshot)
+                    if isinstance(self.db, AsyncSession):
+                        await self.db.delete(snapshot)
+                    else:
+                        self.db.delete(snapshot)
                 
-                self.db.commit()
+                if isinstance(self.db, AsyncSession):
+                    await self.db.commit()
+                else:
+                    self.db.commit()
                 
                 logger.info(
                     f"Cleaned up {len(snapshots_to_delete)} old snapshots for room={room_id}"
                 )
                 
         except Exception as e:
-            self.db.rollback()
+            if isinstance(self.db, AsyncSession):
+                await self.db.rollback()
+            else:
+                self.db.rollback()
             logger.error(f"Failed to cleanup snapshots: {e}", exc_info=True)
     
     async def get_latest_snapshot(self, room_id: str) -> Optional[StateSnapshot]:
@@ -465,9 +531,16 @@ class EventStoreEngine:
             Latest StateSnapshot or None if no snapshots exist
         """
         try:
-            snapshot = self.db.query(StateSnapshot).filter(
-                StateSnapshot.room_id == room_id
-            ).order_by(desc(StateSnapshot.version)).first()
+            if isinstance(self.db, AsyncSession):
+                stmt = select(StateSnapshot).filter(
+                    StateSnapshot.room_id == room_id
+                ).order_by(desc(StateSnapshot.version)).limit(1)
+                result = await self.db.execute(stmt)
+                snapshot = result.scalar_one_or_none()
+            else:
+                snapshot = self.db.query(StateSnapshot).filter(
+                    StateSnapshot.room_id == room_id
+                ).order_by(desc(StateSnapshot.version)).first()
             
             if snapshot:
                 logger.debug(
