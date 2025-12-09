@@ -48,12 +48,13 @@ The most impactful next steps are:
   - Implement dependency injection (db, cache_manager, game_logic)
   - _Requirements: 1.1, 1.5_
 
-- [ ] 1.3 Write unit tests for RoomService
+- [x] 1.3 Write unit tests for RoomService
   - Test room creation with valid inputs
   - Test room joining with valid inputs
   - Test room state retrieval with caching
   - Test error cases (invalid names, full rooms)
   - _Requirements: 1.1_
+  - _Status: Tests created in test_room_service.py, need parameter adjustments (player_ip, user_agent)_
 
 - [ ] 1.4 Implement GameService class
   - Extract game action logic from main.py (play_card, start_shuffle, select_face_up_cards)
