@@ -50,7 +50,7 @@ import random
 import string
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 
 from database import get_db, async_engine
@@ -69,6 +69,9 @@ from game_logic import CasinoGameLogic, GameCard, Build
 
 # Initialize logger
 logger = logging.getLogger(__name__)
+
+# Import SessionToken for fallback session creation
+from session_manager import SessionToken
 
 
 def get_client_ip(request: Request) -> str:
@@ -692,67 +695,91 @@ def assert_players_turn(room: Room, player_id: int) -> None:
 @app.post("/rooms/create", response_model=CreateRoomResponse)
 async def create_room(request: CreateRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Create a new game room"""
-    # Generate unique room ID (collision chance is negligible with 6 characters)
-    room_id = generate_room_id()
-    
-    # Create room
-    room = Room(id=room_id)
-    # Ensure JSON fields are initialized for Python 3.6/Pydantic compatibility
-    room.deck = []
-    room.player1_hand = []
-    room.player2_hand = []
-    room.table_cards = []
-    room.builds = []
-    room.player1_captured = []
-    room.player2_captured = []
-    room.player1_score = 0
-    room.player2_score = 0
-    room.player1_ready = False
-    room.player2_ready = False
-    room.game_phase = "waiting"
-    room.round_number = 0
-    room.current_turn = 1
-    db.add(room)
-    await db.commit()
-    await db.refresh(room)
-    
-    # Create first player with IP address
-    player = Player(
-        room_id=room_id, 
-        name=request.player_name,
-        ip_address=request.ip_address or client_ip
-    )
-    db.add(player)
-    await db.commit()
-    await db.refresh(player)
-    
-    # Create session for the player
-    from session_manager import get_session_manager
-    session_manager = get_session_manager(db)
-    session_token = await session_manager.create_session(
-        room_id=room_id,
-        player_id=player.id,
-        player_name=player.name,
-        ip_address=client_ip,
-        user_agent=http_request.headers.get("user-agent")
-    )
-    
-    # Reload room with players eagerly loaded to avoid MissingGreenlet in game_state_to_response
-    from sqlalchemy import select
-    from sqlalchemy.orm import selectinload
-    result = await db.execute(
-        select(Room)
-        .where(Room.id == room_id)
-        .options(selectinload(Room.players))
-    )
-    room = result.scalar_one()
-    
-    return CreateRoomResponse(
-        room_id=room_id,
-        player_id=player.id,
-        session_token=session_token,
-        game_state=game_state_to_response(room)
-    )
+    try:
+        # Generate unique room ID (collision chance is negligible with 6 characters)
+        room_id = generate_room_id()
+        
+        # Create room
+        room = Room(id=room_id)
+        # Ensure JSON fields are initialized for Python 3.6/Pydantic compatibility
+        room.deck = []
+        room.player1_hand = []
+        room.player2_hand = []
+        room.table_cards = []
+        room.builds = []
+        room.player1_captured = []
+        room.player2_captured = []
+        room.player1_score = 0
+        room.player2_score = 0
+        room.player1_ready = False
+        room.player2_ready = False
+        room.game_phase = "waiting"
+        room.round_number = 0
+        room.current_turn = 1
+        db.add(room)
+        await db.commit()
+        await db.refresh(room)
+        
+        # Create first player with IP address
+        player = Player(
+            room_id=room_id, 
+            name=request.player_name,
+            ip_address=request.ip_address or client_ip
+        )
+        db.add(player)
+        await db.commit()
+        await db.refresh(player)
+        
+        # Create session for the player (with error handling)
+        session_token = None
+        try:
+            from session_manager import get_session_manager
+            session_manager = get_session_manager(db)
+            session_token = await session_manager.create_session(
+                room_id=room_id,
+                player_id=player.id,
+                player_name=player.name,
+                ip_address=client_ip,
+                user_agent=http_request.headers.get("user-agent")
+            )
+            logger.info(f"Session created successfully for player {player.id}")
+        except Exception as e:
+            logger.error(f"Failed to create session for player {player.id}: {e}")
+            # Continue without session - the game can still work
+            session_token = SessionToken(
+                token=f"fallback_{room_id}_{player.id}",
+                room_id=room_id,
+                player_id=player.id,
+                player_name=player.name,
+                created_at=datetime.utcnow(),
+                expires_at=datetime.utcnow() + timedelta(hours=1)
+            )
+        
+        # Reload room with players eagerly loaded to avoid MissingGreenlet in game_state_to_response
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+        result = await db.execute(
+            select(Room)
+            .where(Room.id == room_id)
+            .options(selectinload(Room.players))
+        )
+        room = result.scalar_one()
+        
+        return CreateRoomResponse(
+            room_id=room_id,
+            player_id=player.id,
+            session_token=session_token.to_string() if hasattr(session_token, 'to_string') else str(session_token),
+            game_state=game_state_to_response(room)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating room: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create room: {str(e)}"
+        )
 
 @app.post("/rooms/join", response_model=JoinRoomResponse)
 async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):

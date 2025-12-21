@@ -171,12 +171,16 @@ class SessionManager:
             "is_active": True
         }
         
-        # Store in Redis with TTL
-        await cache_manager.cache_session(
-            token.to_string(),
-            session_data,
-            ttl=self.SESSION_TTL
-        )
+        # Store in Redis with TTL (with error handling)
+        try:
+            await cache_manager.cache_session(
+                token.to_string(),
+                session_data,
+                ttl=self.SESSION_TTL
+            )
+            logger.info(f"Session cached in Redis for player {player_id}")
+        except Exception as e:
+            logger.warning(f"Failed to cache session in Redis: {e}. Continuing with database-only session.")
         
         # Also store in database for persistence
         existing_session = await self.db.execute(
@@ -238,16 +242,51 @@ class SessionManager:
         Returns:
             Session data dict if valid, None otherwise
         """
-        # Try to get from Redis first (fast path)
-        session_data = await cache_manager.get_session(token_str)
+        # Try to get from Redis first (fast path) with error handling
+        session_data = None
+        try:
+            session_data = await cache_manager.get_session(token_str)
+        except Exception as e:
+            logger.warning(f"Failed to get session from Redis: {e}. Falling back to database.")
         
         if not session_data:
-            logger.warning("Session not found in Redis")
-            return None
+            # Fallback to database if Redis fails or session not found
+            try:
+                db_session = await self.db.execute(
+                    select(GameSession).where(
+                        and_(
+                            GameSession.session_token == token_str,
+                            GameSession.is_active == True
+                        )
+                    )
+                )
+                db_session = db_session.scalar_one_or_none()
+                
+                if db_session:
+                    # Convert database session to session_data format
+                    session_data = {
+                        "token": db_session.session_token,
+                        "room_id": db_session.room_id,
+                        "player_id": db_session.player_id,
+                        "ip_address": db_session.ip_address,
+                        "user_agent": db_session.user_agent,
+                        "connected_at": db_session.connected_at.isoformat() if db_session.connected_at else None,
+                        "last_heartbeat": db_session.last_heartbeat.isoformat() if db_session.last_heartbeat else None,
+                        "connection_count": db_session.connection_count,
+                        "is_active": db_session.is_active
+                    }
+                    logger.info(f"Session retrieved from database for token {token_str[:10]}...")
+                else:
+                    logger.warning("Session not found in database either")
+                    return None
+            except Exception as e:
+                logger.error(f"Failed to get session from database: {e}")
+                return None
         
         # Check if session is active
         if not session_data.get("is_active", False):
             logger.warning("Session is not active")
+            return None
             return None
         
         # Validate fingerprint if provided

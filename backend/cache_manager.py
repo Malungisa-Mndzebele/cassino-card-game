@@ -225,11 +225,15 @@ class CacheManager:
         Returns:
             True if successful
         """
-        key = f"{self.SESSION_PREFIX}{session_id}"
-        success = await redis_client.set_json(key, data, expire=ttl)
-        if success:
-            logger.debug(f"Cached session {session_id}")
-        return success
+        try:
+            key = f"{self.SESSION_PREFIX}{session_id}"
+            success = await redis_client.set_json(key, data, expire=ttl)
+            if success:
+                logger.debug(f"Cached session {session_id}")
+            return success
+        except Exception as e:
+            logger.error(f"Failed to cache session {session_id}: {e}")
+            return False
 
     async def get_session(self, session_id: str) -> Optional[dict]:
         """
@@ -241,13 +245,17 @@ class CacheManager:
         Returns:
             Session data dictionary if found, None otherwise
         """
-        key = f"{self.SESSION_PREFIX}{session_id}"
-        data = await redis_client.get_json(key)
-        if data:
-            logger.debug(f"Cache hit for session: {session_id}")
-        else:
-            logger.debug(f"Cache miss for session: {session_id}")
-        return data
+        try:
+            key = f"{self.SESSION_PREFIX}{session_id}"
+            data = await redis_client.get_json(key)
+            if data:
+                logger.debug(f"Cache hit for session: {session_id}")
+            else:
+                logger.debug(f"Cache miss for session: {session_id}")
+            return data
+        except Exception as e:
+            logger.error(f"Failed to get session {session_id}: {e}")
+            return None
 
     async def invalidate_session(self, session_id: str) -> bool:
         """
