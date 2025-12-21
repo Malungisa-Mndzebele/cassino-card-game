@@ -185,36 +185,36 @@ async def lifespan(app: FastAPI):
 
 # Support mounting behind a path prefix (e.g., /cassino-api on shared hosting)
 ROOT_PATH = os.getenv("ROOT_PATH", "")
-app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path=ROOT_PATH, lifespan=lifespan)
+app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path=ROOT_PATH, lifespan=lifespan, debug=True)
 
 # Add CORS middleware
-cors_origins_str = os.getenv("CORS_ORIGINS", "*")
-if cors_origins_str == "*":
-    # For local development, allow common localhost ports
-    if os.getenv("ENVIRONMENT") != "production" or os.getenv("RENDER") is None:
-        cors_origins = [
-            "http://localhost:5173",
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:3001",
-            "http://localhost:5173/cassino",
-            "http://127.0.0.1:5173/cassino",
-        ]
-    else:
-        cors_origins = ["*"]
-else:
-    cors_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
+cors_origins_env = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+cors_origins = [origin.strip() for origin in cors_origins_env.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_credentials=False if "*" in cors_origins else True,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        import traceback
+        error_msg = traceback.format_exc()
+        logger.error(f"Global exception handler: {error_msg}")
+        with open("global_error.log", "w") as f:
+            f.write(error_msg)
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal Server Error", "error": str(e)}
+        )
 
 # Health check endpoint
 @app.get("/health")
@@ -425,18 +425,7 @@ async def sync_state(
         )
 
 # Add explicit CORS preflight handler
-@app.options("/{full_path:path}")
-async def options_handler(full_path: str):
-    from fastapi.responses import Response
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Max-Age": "86400",
-        }
-    )
+
 
 # Import enhanced WebSocket manager and background tasks
 from websocket_manager import WebSocketConnectionManager
@@ -642,7 +631,9 @@ def get_sorted_players(room: Room) -> List[Player]:
         >>> players[0]  # Player 1 (joined first)
         >>> players[1]  # Player 2 (joined second)
     """
-    return sorted(room.players, key=lambda p: p.joined_at)
+    if not room.players:
+        return []
+    return sorted(room.players, key=lambda p: p.joined_at or datetime.min)
 
 
 async def get_player_or_404(db: AsyncSession, room_id: str, player_id: int) -> Player:
@@ -699,7 +690,7 @@ def assert_players_turn(room: Room, player_id: int) -> None:
 
 # API Endpoints
 @app.post("/rooms/create", response_model=CreateRoomResponse)
-async def create_room(request: CreateRoomRequest, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
+async def create_room(request: CreateRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Create a new game room"""
     # Generate unique room ID (collision chance is negligible with 6 characters)
     room_id = generate_room_id()
@@ -735,6 +726,17 @@ async def create_room(request: CreateRoomRequest, db: AsyncSession = Depends(get
     await db.commit()
     await db.refresh(player)
     
+    # Create session for the player
+    from session_manager import get_session_manager
+    session_manager = get_session_manager(db)
+    session_token = await session_manager.create_session(
+        room_id=room_id,
+        player_id=player.id,
+        player_name=player.name,
+        ip_address=client_ip,
+        user_agent=http_request.headers.get("user-agent")
+    )
+    
     # Reload room with players eagerly loaded to avoid MissingGreenlet in game_state_to_response
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
@@ -748,11 +750,12 @@ async def create_room(request: CreateRoomRequest, db: AsyncSession = Depends(get
     return CreateRoomResponse(
         room_id=room_id,
         player_id=player.id,
+        session_token=session_token,
         game_state=game_state_to_response(room)
     )
 
 @app.post("/rooms/join", response_model=JoinRoomResponse)
-async def join_room(request: JoinRoomRequest, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
+async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Join an existing game room"""
     # Load room with players eagerly to avoid MissingGreenlet errors
     from sqlalchemy import select
@@ -791,6 +794,17 @@ async def join_room(request: JoinRoomRequest, db: AsyncSession = Depends(get_db)
     await db.commit()
     await db.refresh(player)
     
+    # Create session for the player
+    from session_manager import get_session_manager
+    session_manager = get_session_manager(db)
+    session_token = await session_manager.create_session(
+        room_id=request.room_id,
+        player_id=player.id,
+        player_name=player.name,
+        ip_address=client_ip,
+        user_agent=http_request.headers.get("user-agent")
+    )
+    
     # Refresh the room's players relationship to include the new player
     await db.refresh(room, ["players"])
     
@@ -808,6 +822,7 @@ async def join_room(request: JoinRoomRequest, db: AsyncSession = Depends(get_db)
     
     return JoinRoomResponse(
         player_id=player.id,
+        session_token=session_token,
         game_state=game_state_to_response(room)
     )
 
@@ -916,74 +931,90 @@ async def get_game_state(room_id: str, db: AsyncSession = Depends(get_db)):
 @app.post("/rooms/player-ready", response_model=StandardResponse)
 async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = Depends(get_db)):
     """Set player ready status"""
-    from version_validator import validate_version
-    
-    logger.info(f"Player ready request: room_id={request.room_id}, player_id={request.player_id}, is_ready={request.is_ready}")
-    
-    room = await get_room_or_404(db, request.room_id)
-    player = await get_player_or_404(db, request.room_id, request.player_id)
-    
-    logger.info(f"Found room {room.id} with {len(room.players)} players, phase={room.game_phase}")
-    
-    # Version conflict handling (Requirement 1.3)
-    if request.client_version is not None:
-        validation = validate_version(request.client_version, room.version)
-        if not validation.valid:
-            raise HTTPException(
-                status_code=409,  # Conflict status code
-                detail={
-                    "error": "version_conflict",
-                    "message": validation.message,
-                    "client_version": request.client_version,
-                    "server_version": room.version,
-                    "requires_sync": validation.requires_sync
-                }
-            )
-    
-    player.ready = request.is_ready
-    await db.commit()
-    
-    # Update room ready status based on player position in room
-    players_in_room = get_sorted_players(room)
-    if len(players_in_room) >= 1 and player.id == players_in_room[0].id:
-        room.player1_ready = request.is_ready
-    elif len(players_in_room) >= 2 and player.id == players_in_room[1].id:
-        room.player2_ready = request.is_ready
-    
-    # Increment version and update metadata
-    room.version += 1
-    room.last_modified = func.now()
-    room.modified_by = request.player_id
-    
-    await db.commit()
-    
-    # Auto-transition to dealer phase when both players are ready
-    if room.player1_ready and room.player2_ready and room.game_phase == "waiting":
-        logger.info(f"Both players ready! Transitioning room {room.id} to dealer phase")
-        room.game_phase = "dealer"
-        # Increment version for phase change
-        room.version += 1
-        room.last_modified = func.now()
-        room.modified_by = request.player_id
+    try:
+        from version_validator import validate_version
+        
+        logger.info(f"Player ready request: room_id={request.room_id}, player_id={request.player_id}, is_ready={request.is_ready}")
+        
+        room = await get_room_or_404(db, request.room_id)
+        player = await get_player_or_404(db, request.room_id, request.player_id)
+        
+        logger.info(f"Found room {room.id} with {len(room.players)} players, phase={room.game_phase}")
+        
+        # Version conflict handling (Requirement 1.3)
+        if request.client_version is not None:
+            validation = validate_version(request.client_version, room.version)
+            if not validation.valid:
+                raise HTTPException(
+                    status_code=409,  # Conflict status code
+                    detail={
+                        "error": "version_conflict",
+                        "message": validation.message,
+                        "client_version": request.client_version,
+                        "server_version": room.version,
+                        "requires_sync": validation.requires_sync
+                    }
+                )
+        
+        player.ready = request.is_ready
         await db.commit()
-    
-    logger.info(f"Room {room.id} ready status: player1={room.player1_ready}, player2={room.player2_ready}, phase={room.game_phase}")
-    
-    # Broadcast game state update to all connected clients with full state
-    game_state_response = game_state_to_response(room)
-    await manager.broadcast_json_to_room({
-        "type": "game_state_update",
-        "room_id": room.id,
-        "game_state": game_state_response.model_dump()
-    }, room.id)
-    
-    logger.info(f"Broadcasted game state update for room {room.id}")
-    
-    return StandardResponse(
-        success=True,
-        message="Player ready status updated",
-        game_state=game_state_to_response(room)
-    )
+        
+        # Update room ready status based on player position in room
+        players_in_room = get_sorted_players(room)
+        if len(players_in_room) >= 1 and player.id == players_in_room[0].id:
+            room.player1_ready = request.is_ready
+        elif len(players_in_room) >= 2 and player.id == players_in_room[1].id:
+            room.player2_ready = request.is_ready
+        
+        # Increment version and update metadata
+        from datetime import datetime
+        room.version += 1
+        room.last_modified = datetime.utcnow()
+        room.modified_by = request.player_id
+        
+        await db.commit()
+        
+        # Auto-transition to dealer phase when both players are ready
+        if room.player1_ready and room.player2_ready and room.game_phase == "waiting":
+            logger.info(f"Both players ready! Transitioning room {room.id} to dealer phase")
+            room.game_phase = "dealer"
+            # Increment version for phase change
+            room.version += 1
+            room.last_modified = datetime.utcnow()
+            room.modified_by = request.player_id
+            await db.commit()
+        
+        logger.info(f"Room {room.id} ready status: player1={room.player1_ready}, player2={room.player2_ready}, phase={room.game_phase}")
+        
+        # Broadcast game state update to all connected clients with full state
+        game_state_response = game_state_to_response(room)
+        # Verify response model structure before broadcast
+        state_dict = game_state_response.model_dump()
+        
+        # Wrap broadcast in try/except to catch connection issues
+        try:
+            await manager.broadcast_json_to_room({
+                "type": "game_state_update",
+                "room_id": room.id,
+                "game_state": state_dict
+            }, room.id)
+            logger.info(f"Broadcasted game state update for room {room.id}")
+        except Exception as e:
+            logger.error(f"Failed to broadcast game state: {e}")
+            # Continue execution, don't fail the request just because broadcast failed
+        
+        return StandardResponse(
+            success=True,
+            message="Player ready status updated",
+            game_state=game_state_to_response(room)
+        )
+    except Exception as e:
+        import traceback
+        error_msg = traceback.format_exc()
+        logger.error(f"Error in set_player_ready: {error_msg}")
+        with open("error_log.txt", "w") as f:
+            f.write(error_msg)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.post("/game/start-shuffle", response_model=StandardResponse)
 async def start_shuffle(request: StartShuffleRequest, db: AsyncSession = Depends(get_db)):

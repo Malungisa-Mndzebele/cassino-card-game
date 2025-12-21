@@ -54,7 +54,12 @@ export async function createRoom(playerName: string): Promise<CreateRoomResponse
             max_players: 2
         })
     });
-    
+
+    // Store session token if provided
+    if (response.session_token && typeof localStorage !== 'undefined') {
+        localStorage.setItem('session_token', response.session_token);
+    }
+
     return {
         room_id: response.room_id,
         player_id: response.player_id,
@@ -71,7 +76,12 @@ export async function joinRoom(roomCode: string, playerName: string): Promise<Jo
             player_name: playerName
         })
     });
-    
+
+    // Store session token if provided
+    if (response.session_token && typeof localStorage !== 'undefined') {
+        localStorage.setItem('session_token', response.session_token);
+    }
+
     return {
         room_id: roomCode,
         player_id: response.player_id,
@@ -87,7 +97,7 @@ export async function joinRandomRoom(playerName: string): Promise<JoinRoomRespon
             player_name: playerName
         })
     });
-    
+
     return {
         room_id: response.game_state?.room_id || '',
         player_id: response.player_id,
@@ -97,17 +107,17 @@ export async function joinRandomRoom(playerName: string): Promise<JoinRoomRespon
 }
 
 // Transform backend snake_case to frontend camelCase
-function transformGameState(backendState: any): any {
+export function transformGameState(backendState: any): any {
     if (!backendState) return null;
-    
+
     return {
         roomId: backendState.room_id,
         phase: backendState.phase,
         round: backendState.round,
         players: backendState.players || [],
         tableCards: backendState.table_cards || [],
-        currentPlayer: backendState.current_turn === 1 
-            ? backendState.players?.[0]?.id 
+        currentPlayer: backendState.current_turn === 1
+            ? backendState.players?.[0]?.id
             : backendState.players?.[1]?.id,
         deck: backendState.deck || [],
         player1Hand: backendState.player1_hand || [],
@@ -127,6 +137,7 @@ function transformGameState(backendState: any): any {
         currentTurn: backendState.current_turn || 1,
         gameStarted: backendState.game_started || false,
         gameCompleted: backendState.game_completed || false,
+        dealingComplete: backendState.dealing_complete || false,
         version: backendState.version || 0,
         checksum: backendState.checksum
     };
@@ -148,7 +159,7 @@ export async function setPlayerReady(roomId: string, playerId: string, ready: bo
             is_ready: ready
         })
     });
-    
+
     return {
         success: response.success,
         message: response.message,

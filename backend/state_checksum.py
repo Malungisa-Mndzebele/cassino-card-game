@@ -38,44 +38,52 @@ def compute_checksum(state: Room) -> str:
     
     Requirements: 4.4
     """
-    # Extract canonical state representation
-    canonical = {
-        "version": state.version,
-        "phase": state.game_phase,
-        "current_turn": state.current_turn,
-        "round_number": state.round_number,
-        "card_counts": {
-            "deck": len(state.deck) if state.deck else 0,
-            "player1_hand": len(state.player1_hand) if state.player1_hand else 0,
-            "player2_hand": len(state.player2_hand) if state.player2_hand else 0,
-            "table_cards": len(state.table_cards) if state.table_cards else 0,
-            "player1_captured": len(state.player1_captured) if state.player1_captured else 0,
-            "player2_captured": len(state.player2_captured) if state.player2_captured else 0,
-            "builds": len(state.builds) if state.builds else 0
-        },
-        "scores": {
-            "player1": state.player1_score,
-            "player2": state.player2_score
-        },
-        "flags": {
-            "shuffle_complete": state.shuffle_complete,
-            "card_selection_complete": state.card_selection_complete,
-            "dealing_complete": state.dealing_complete,
-            "game_started": state.game_started,
-            "game_completed": state.game_completed
+    try:
+        # Extract canonical state representation
+        canonical = {
+            "version": state.version,
+            "phase": state.game_phase,
+            "current_turn": state.current_turn,
+            "round_number": state.round_number,
+            "card_counts": {
+                "deck": len(state.deck) if state.deck else 0,
+                "player1_hand": len(state.player1_hand) if state.player1_hand else 0,
+                "player2_hand": len(state.player2_hand) if state.player2_hand else 0,
+                "table_cards": len(state.table_cards) if state.table_cards else 0,
+                "player1_captured": len(state.player1_captured) if state.player1_captured else 0,
+                "player2_captured": len(state.player2_captured) if state.player2_captured else 0,
+                "builds": len(state.builds) if state.builds else 0
+            },
+            "scores": {
+                "player1": state.player1_score,
+                "player2": state.player2_score
+            },
+            "flags": {
+                "shuffle_complete": bool(state.shuffle_complete),
+                "card_selection_complete": bool(state.card_selection_complete),
+                "dealing_complete": bool(state.dealing_complete),
+                "game_started": bool(state.game_started),
+                "game_completed": bool(state.game_completed)
+            }
         }
-    }
-    
-    # Serialize to deterministic JSON string
-    # sort_keys=True ensures consistent ordering
-    # separators removes whitespace for consistency
-    canonical_json = json.dumps(canonical, sort_keys=True, separators=(',', ':'))
-    
-    # Compute SHA-256 hash
-    hash_obj = hashlib.sha256(canonical_json.encode('utf-8'))
-    
-    # Return hex string
-    return hash_obj.hexdigest()
+        
+        # Serialize to deterministic JSON string
+        # sort_keys=True ensures consistent ordering
+        # separators removes whitespace for consistency
+        canonical_json = json.dumps(canonical, sort_keys=True, separators=(',', ':'))
+        
+        # Compute SHA-256 hash
+        hash_obj = hashlib.sha256(canonical_json.encode('utf-8'))
+        
+        # Return hex string
+        return hash_obj.hexdigest()
+    except Exception as e:
+        import traceback
+        error_msg = traceback.format_exc()
+        # Write to file
+        with open("checksum_error.log", "w") as f:
+            f.write(f"Error computing checksum: {str(e)}\nState object: {state}\nTraceback: {error_msg}")
+        raise e
 
 
 def validate_checksum(state: Room, expected_checksum: str) -> bool:

@@ -49,17 +49,20 @@ class TestCreateRoom:
         # Mock database operations
         db.add = Mock()
         db.commit = Mock()
+        db.flush = Mock()
         db.refresh = Mock()
         
         # Execute
-        result = service.create_room(request)
+        room, player = service.create_room(request, player_ip="127.0.0.1", user_agent="test-agent")
         
         # Verify
-        assert result["room_id"] is not None
-        assert len(result["room_id"]) == 6
-        assert result["player_id"] == 1
-        assert result["player_name"] == "Alice"
-        assert result["status"] == "waiting"
+        assert room.id is not None
+        assert len(room.id) == 6
+        assert room.status == "waiting"
+        assert player.player_number == 1
+        assert player.name == "Alice"
+        assert player.ip_address == "127.0.0.1"
+        assert player.user_agent == "test-agent"
         
         # Verify database operations
         db.add.assert_called()
@@ -67,28 +70,20 @@ class TestCreateRoom:
         db.refresh.assert_called()
     
     def test_create_room_with_empty_name(self):
-        """Test room creation with empty player name"""
-        db = Mock(spec=Session)
-        cache_manager = Mock()
-        game_logic = Mock()
-        service = RoomService(db, cache_manager, game_logic)
+        """Test room creation with empty player name - caught by Pydantic"""
+        from pydantic import ValidationError
         
-        request = CreateRoomRequest(player_name="")
-        
-        with pytest.raises(ValueError, match="Player name cannot be empty"):
-            service.create_room(request)
+        # Pydantic validation catches this before service layer
+        with pytest.raises(ValidationError):
+            request = CreateRoomRequest(player_name="")
     
     def test_create_room_with_whitespace_name(self):
-        """Test room creation with whitespace-only player name"""
-        db = Mock(spec=Session)
-        cache_manager = Mock()
-        game_logic = Mock()
-        service = RoomService(db, cache_manager, game_logic)
+        """Test room creation with whitespace-only player name - caught by Pydantic"""
+        from pydantic import ValidationError
         
-        request = CreateRoomRequest(player_name="   ")
-        
-        with pytest.raises(ValueError, match="Player name cannot be empty"):
-            service.create_room(request)
+        # Pydantic validation catches this before service layer
+        with pytest.raises(ValidationError):
+            request = CreateRoomRequest(player_name="   ")
     
     def test_create_room_generates_unique_id(self):
         """Test that room IDs are unique"""
@@ -99,15 +94,16 @@ class TestCreateRoom:
         
         db.add = Mock()
         db.commit = Mock()
+        db.flush = Mock()
         db.refresh = Mock()
         
         request1 = CreateRoomRequest(player_name="Alice")
         request2 = CreateRoomRequest(player_name="Bob")
         
-        result1 = service.create_room(request1)
-        result2 = service.create_room(request2)
+        room1, player1 = service.create_room(request1, player_ip="127.0.0.1", user_agent="test-agent")
+        room2, player2 = service.create_room(request2, player_ip="127.0.0.1", user_agent="test-agent")
         
-        assert result1["room_id"] != result2["room_id"]
+        assert room1.id != room2.id
 
 
 class TestJoinRoom:
@@ -118,37 +114,54 @@ class TestJoinRoom:
         # Setup
         db = Mock(spec=Session)
         cache_manager = Mock()
+        cache_manager.invalidate_game_state = Mock()
         game_logic = Mock()
         service = RoomService(db, cache_manager, game_logic)
         
-        request = JoinRoomRequest(room_id="ABC123", player_name="Bob")
+        request = JoinRoomRequest(room_code="ABC123", player_name="Bob")
         
         # Mock existing room
         mock_room = Mock(spec=Room)
         mock_room.id = "ABC123"
         mock_room.status = "waiting"
-        mock_room.players = [Mock(spec=Player)]  # One player already
+        mock_room.game_started = False
         
-        db.query = Mock(return_value=Mock(
-            filter=Mock(return_value=Mock(
-                first=Mock(return_value=mock_room)
-            ))
-        ))
+        # Mock query chain for room lookup
+        mock_query = Mock()
+        mock_filter = Mock()
+        mock_filter.first = Mock(return_value=mock_room)
+        mock_query.filter = Mock(return_value=mock_filter)
+        
+        # Mock query chain for player count (returns 1 player)
+        mock_count_query = Mock()
+        mock_count_filter = Mock()
+        mock_count_filter.count = Mock(return_value=1)
+        mock_count_query.filter = Mock(return_value=mock_count_filter)
+        
+        # db.query returns different mocks based on model
+        def query_side_effect(model):
+            if model == Room:
+                return mock_query
+            elif model == Player:
+                return mock_count_query
+        
+        db.query = Mock(side_effect=query_side_effect)
         db.add = Mock()
         db.commit = Mock()
         db.refresh = Mock()
         
         # Execute
-        result = service.join_room(request)
+        room, player = service.join_room(request, player_ip="127.0.0.1", user_agent="test-agent")
         
         # Verify
-        assert result["room_id"] == "ABC123"
-        assert result["player_id"] == 2
-        assert result["player_name"] == "Bob"
-        assert result["status"] == "waiting"
+        assert room.id == "ABC123"
+        assert player.player_number == 2
+        assert player.name == "Bob"
+        assert player.ip_address == "127.0.0.1"
         
         db.add.assert_called()
         db.commit.assert_called()
+        cache_manager.invalidate_game_state.assert_called_once_with("ABC123")
     
     def test_join_room_not_found(self):
         """Test joining non-existent room"""
@@ -157,7 +170,7 @@ class TestJoinRoom:
         game_logic = Mock()
         service = RoomService(db, cache_manager, game_logic)
         
-        request = JoinRoomRequest(room_id="NOTFOUND", player_name="Bob")
+        request = JoinRoomRequest(room_code="NOTFND", player_name="Bob")
         
         # Mock room not found
         db.query = Mock(return_value=Mock(
@@ -166,8 +179,8 @@ class TestJoinRoom:
             ))
         ))
         
-        with pytest.raises(ValueError, match="Room NOTFOUND not found"):
-            service.join_room(request)
+        with pytest.raises(ValueError, match="Room NOTFND not found"):
+            service.join_room(request, player_ip="127.0.0.1", user_agent="test-agent")
     
     def test_join_room_already_full(self):
         """Test joining a full room"""
@@ -176,22 +189,37 @@ class TestJoinRoom:
         game_logic = Mock()
         service = RoomService(db, cache_manager, game_logic)
         
-        request = JoinRoomRequest(room_id="ABC123", player_name="Charlie")
+        request = JoinRoomRequest(room_code="ABC123", player_name="Charlie")
         
         # Mock full room (2 players)
         mock_room = Mock(spec=Room)
         mock_room.id = "ABC123"
         mock_room.status = "waiting"
-        mock_room.players = [Mock(spec=Player), Mock(spec=Player)]
+        mock_room.game_started = False
         
-        db.query = Mock(return_value=Mock(
-            filter=Mock(return_value=Mock(
-                first=Mock(return_value=mock_room)
-            ))
-        ))
+        # Mock query chain for room lookup
+        mock_query = Mock()
+        mock_filter = Mock()
+        mock_filter.first = Mock(return_value=mock_room)
+        mock_query.filter = Mock(return_value=mock_filter)
         
-        with pytest.raises(ValueError, match="Room ABC123 is full"):
-            service.join_room(request)
+        # Mock query chain for player count (returns 2 players - full)
+        mock_count_query = Mock()
+        mock_count_filter = Mock()
+        mock_count_filter.count = Mock(return_value=2)
+        mock_count_query.filter = Mock(return_value=mock_count_filter)
+        
+        # db.query returns different mocks based on model
+        def query_side_effect(model):
+            if model == Room:
+                return mock_query
+            elif model == Player:
+                return mock_count_query
+        
+        db.query = Mock(side_effect=query_side_effect)
+        
+        with pytest.raises(ValueError, match="Room is full"):
+            service.join_room(request, player_ip="127.0.0.1", user_agent="test-agent")
     
     def test_join_room_already_playing(self):
         """Test joining a room that's already playing"""
@@ -200,34 +228,45 @@ class TestJoinRoom:
         game_logic = Mock()
         service = RoomService(db, cache_manager, game_logic)
         
-        request = JoinRoomRequest(room_id="ABC123", player_name="Bob")
+        request = JoinRoomRequest(room_code="ABC123", player_name="Bob")
         
         # Mock room already playing
         mock_room = Mock(spec=Room)
         mock_room.id = "ABC123"
         mock_room.status = "playing"
-        mock_room.players = [Mock(spec=Player)]
+        mock_room.game_started = True
         
-        db.query = Mock(return_value=Mock(
-            filter=Mock(return_value=Mock(
-                first=Mock(return_value=mock_room)
-            ))
-        ))
+        # Mock query chain for room lookup
+        mock_query = Mock()
+        mock_filter = Mock()
+        mock_filter.first = Mock(return_value=mock_room)
+        mock_query.filter = Mock(return_value=mock_filter)
         
-        with pytest.raises(ValueError, match="Room ABC123 is already playing"):
-            service.join_room(request)
+        # Mock query chain for player count (returns 1 player)
+        mock_count_query = Mock()
+        mock_count_filter = Mock()
+        mock_count_filter.count = Mock(return_value=1)
+        mock_count_query.filter = Mock(return_value=mock_count_filter)
+        
+        # db.query returns different mocks based on model
+        def query_side_effect(model):
+            if model == Room:
+                return mock_query
+            elif model == Player:
+                return mock_count_query
+        
+        db.query = Mock(side_effect=query_side_effect)
+        
+        with pytest.raises(ValueError, match="Game already in progress"):
+            service.join_room(request, player_ip="127.0.0.1", user_agent="test-agent")
     
     def test_join_room_with_empty_name(self):
-        """Test joining room with empty player name"""
-        db = Mock(spec=Session)
-        cache_manager = Mock()
-        game_logic = Mock()
-        service = RoomService(db, cache_manager, game_logic)
+        """Test joining room with empty player name - caught by Pydantic"""
+        from pydantic import ValidationError
         
-        request = JoinRoomRequest(room_id="ABC123", player_name="")
-        
-        with pytest.raises(ValueError, match="Player name cannot be empty"):
-            service.join_room(request)
+        # Pydantic validation catches this before service layer
+        with pytest.raises(ValidationError):
+            request = JoinRoomRequest(room_code="ABC123", player_name="")
 
 
 class TestGetRoomState:
@@ -296,13 +335,13 @@ class TestGetRoomState:
         # Execute
         result = service.get_room_state("ABC123")
         
-        # Verify
-        assert result["room_id"] == "ABC123"
-        assert result["status"] == "playing"
-        assert result["game_phase"] == "round1"
+        # Verify - result is the Room object itself
+        assert result.id == "ABC123"
+        assert result.status == "playing"
+        assert result.game_phase == "round1"
         
         # Verify cache was updated
-        cache_manager.cache_game_state.assert_called_once()
+        cache_manager.cache_game_state.assert_called_once_with("ABC123", mock_room)
     
     def test_get_room_state_not_found(self):
         """Test retrieving state for non-existent room"""
@@ -321,8 +360,11 @@ class TestGetRoomState:
             ))
         ))
         
-        with pytest.raises(ValueError, match="Room NOTFOUND not found"):
-            service.get_room_state("NOTFOUND")
+        # Execute - get_room_state returns None when room not found
+        result = service.get_room_state("NOTFOUND")
+        
+        # Verify
+        assert result is None
 
 
 if __name__ == "__main__":

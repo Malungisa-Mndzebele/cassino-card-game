@@ -31,25 +31,38 @@ export interface DesyncDetails {
  */
 export async function computeChecksum(state: GameState): Promise<string> {
 	// Create canonical representation (must match backend exactly)
+	// Python backend uses sort_keys=True, so we must order keys alphabetically here
+	const s = state as any;
+
 	const canonical = {
-		version: state.version || 0,
-		phase: state.phase,
-		currentTurn: state.currentPlayer,
-		cardCounts: {
-			deck: state.deck?.length || 0,
-			p1Hand: state.player1Hand?.length || 0,
-			p2Hand: state.player2Hand?.length || 0,
-			table: state.tableCards?.length || 0,
-			p1Captured: state.player1Captured?.length || 0,
-			p2Captured: state.player2Captured?.length || 0
+		card_counts: {
+			builds: s.builds?.length || 0,
+			deck: s.deck?.length || 0,
+			player1_captured: s.player1Captured?.length || 0,
+			player1_hand: s.player1Hand?.length || 0,
+			player2_captured: s.player2Captured?.length || 0,
+			player2_hand: s.player2Hand?.length || 0,
+			table_cards: s.tableCards?.length || 0
 		},
+		current_turn: s.currentTurn || 1,
+		flags: {
+			card_selection_complete: s.cardSelectionComplete || false,
+			dealing_complete: s.dealingComplete || false,
+			game_completed: s.gameCompleted || false,
+			game_started: s.gameStarted || false,
+			shuffle_complete: s.shuffleComplete || false
+		},
+		phase: s.phase,
+		round_number: s.round || 0,
 		scores: {
-			p1: state.player1Score || 0,
-			p2: state.player2Score || 0
-		}
+			player1: s.player1Score || 0,
+			player2: s.player2Score || 0
+		},
+		version: s.version || 0
 	};
 
 	// Serialize to deterministic JSON string
+	// Backend uses separators=(',', ':') which removes whitespace
 	const jsonString = JSON.stringify(canonical);
 
 	// Compute SHA-256 hash using Web Crypto API

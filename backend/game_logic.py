@@ -134,7 +134,7 @@ class CasinoGameLogic:
         """
         Deal initial cards for game start.
         
-        Deals 4 cards to the table, 4 cards to each player, and returns the
+        Deals 4 cards to the table, 12 cards to each player, and returns the
         remaining deck for round 2 dealing.
         
         Args:
@@ -143,33 +143,33 @@ class CasinoGameLogic:
         Returns:
             tuple: (table_cards, player1_hand, player2_hand, remaining_deck)
                 - table_cards: 4 cards placed on table
-                - player1_hand: 4 cards for player 1
-                - player2_hand: 4 cards for player 2
-                - remaining_deck: 40 remaining cards
+                - player1_hand: 12 cards for player 1
+                - player2_hand: 12 cards for player 2
+                - remaining_deck: 24 remaining cards for round 2
         
         Raises:
-            ValueError: If deck has fewer than 12 cards
+            ValueError: If deck has fewer than 28 cards
         
         Example:
             >>> logic = CasinoGameLogic()
             >>> deck = logic.create_deck()
             >>> table, p1, p2, remaining = logic.deal_initial_cards(deck)
             >>> len(table), len(p1), len(p2), len(remaining)
-            (4, 4, 4, 40)
+            (4, 12, 12, 24)
         """
-        if len(deck) < 12:
+        if len(deck) < 28:
             raise ValueError("Not enough cards in deck")
         
         table_cards = deck[:4]
-        player1_hand = deck[4:8]
-        player2_hand = deck[8:12]
-        remaining_deck = deck[12:]
+        player1_hand = deck[4:16]
+        player2_hand = deck[16:28]
+        remaining_deck = deck[28:]
         
         return table_cards, player1_hand, player2_hand, remaining_deck
     
     def deal_round_cards(self, deck: List[GameCard], player1_hand: List[GameCard], player2_hand: List[GameCard]) -> Tuple[List[GameCard], List[GameCard], List[GameCard]]:
-        """Deal 4 more cards to each player for round 2"""
-        if len(deck) < 8:
+        """Deal 12 more cards to each player for round 2"""
+        if len(deck) < 24:
             # Not enough cards for full deal, deal what we can
             cards_to_deal = len(deck)
             cards_per_player = cards_to_deal // 2
@@ -178,9 +178,9 @@ class CasinoGameLogic:
             new_p2_cards = deck[cards_per_player:cards_per_player*2]
             remaining_deck = deck[cards_per_player*2:]
         else:
-            new_p1_cards = deck[:4]
-            new_p2_cards = deck[4:8]
-            remaining_deck = deck[8:]
+            new_p1_cards = deck[:12]
+            new_p2_cards = deck[12:24]
+            remaining_deck = deck[24:]
         
         player1_hand.extend(new_p1_cards)
         player2_hand.extend(new_p2_cards)

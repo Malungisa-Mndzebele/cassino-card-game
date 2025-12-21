@@ -37,7 +37,14 @@ function createConnectionStore() {
                 ? 'ws://localhost:8000'
                 : 'wss://cassino-game-backend.onrender.com';
 
-        const wsUrl = `${apiUrl}/ws/${roomId}`;
+        // Get session token from localStorage for reconnection
+        const sessionToken = typeof window !== 'undefined' 
+            ? localStorage.getItem('session_token') 
+            : null;
+
+        const wsUrl = sessionToken 
+            ? `${apiUrl}/ws/${roomId}?session_token=${encodeURIComponent(sessionToken)}`
+            : `${apiUrl}/ws/${roomId}`;
 
         update((s) => ({ ...s, status: 'connecting', error: null }));
 
@@ -46,11 +53,12 @@ function createConnectionStore() {
 
             ws.onopen = async () => {
                 console.log('WebSocket connected');
+                const wasReconnecting = reconnectAttempts > 0;
                 reconnectAttempts = 0;
                 update((s) => ({ ...s, status: 'connected', error: null }));
 
                 // Sync state on reconnection
-                if (reconnectAttempts > 0) {
+                if (wasReconnecting) {
                     console.log('Reconnected, syncing state...');
                     try {
                         const currentState = gameStore.getConfirmedGameState();
@@ -89,17 +97,20 @@ function createConnectionStore() {
                     if (data.type === 'game_state_update' || data.type === 'state_update') {
                         // Full state update
                         console.log('Full state update received:', data);
-                        
+
                         if (data.game_state || data.state) {
-                            const newState = data.game_state || data.state;
-                            
+                            // Transform snake_case to camelCase
+                            const { transformGameState } = await import('$lib/utils/api');
+                            const rawState = data.game_state || data.state;
+                            const newState = transformGameState(rawState);
+
                             // Validate checksum if provided
                             if (newState.checksum) {
                                 const isValid = await validateChecksum(newState, newState.checksum);
                                 if (!isValid) {
                                     console.warn('Checksum validation failed, requesting resync');
                                     syncStateManager.recordChecksumMismatch();
-                                    
+
                                     // Auto-resync if threshold reached
                                     if (syncStateManager.shouldAutoResync) {
                                         try {
@@ -113,7 +124,7 @@ function createConnectionStore() {
                                     return;
                                 }
                             }
-                            
+
                             console.log('Updating game state from WebSocket:', newState);
                             await gameStore.setGameState(newState);
                         } else if (data.room_id) {
@@ -130,7 +141,7 @@ function createConnectionStore() {
                     } else if (data.type === 'state_delta') {
                         // Delta update
                         console.log('Delta update received');
-                        
+
                         const currentState = gameStore.getConfirmedGameState();
                         if (!currentState) {
                             console.warn('No current state, requesting full state');
@@ -143,7 +154,7 @@ function createConnectionStore() {
                             }
                             return;
                         }
-                        
+
                         // Apply delta
                         const result = await applyDelta(currentState, data.delta);
                         if (result.success && result.state) {

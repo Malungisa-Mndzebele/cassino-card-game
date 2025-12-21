@@ -245,10 +245,12 @@ class CreateRoomResponse(BaseModel):
     Attributes:
         room_id: Created room identifier
         player_id: Creating player's ID
+        session_token: Session token for reconnection
         game_state: Initial game state
     """
     room_id: str
     player_id: int
+    session_token: Optional[str] = None
     game_state: GameStateResponse
 
 
@@ -258,9 +260,11 @@ class JoinRoomResponse(BaseModel):
     
     Attributes:
         player_id: Joining player's ID
+        session_token: Session token for reconnection
         game_state: Current game state
     """
     player_id: int
+    session_token: Optional[str] = None
     game_state: GameStateResponse
 
 
