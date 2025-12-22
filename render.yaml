@@ -21,7 +21,7 @@ services:
           name: cassino-redis
           property: connectionString
       - key: CORS_ORIGINS
-        value: https://khasinogaming.com,http://khasinogaming.com
+        value: https://khasinogaming.com,http://khasinogaming.com,http://localhost:5173,http://127.0.0.1:5173
       - key: ENVIRONMENT
         value: production
       - key: PORT
