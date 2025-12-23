@@ -325,7 +325,7 @@ async def claim_victory(
     
     # Increment version and update metadata
     room.version += 1
-    room.last_modified = func.now()
+    room.last_modified = datetime.utcnow()
     room.modified_by = player_id
     
     await db.commit()
@@ -1052,8 +1052,9 @@ async def start_shuffle(request: StartShuffleRequest, db: AsyncSession = Depends
     room.game_phase = "dealer"
     
     # Increment version and update metadata
+    from datetime import datetime
     room.version += 1
-    room.last_modified = func.now()
+    room.last_modified = datetime.utcnow()
     room.modified_by = request.player_id
     
     await db.commit()
@@ -1095,8 +1096,9 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: AsyncSessi
     room.dealing_complete = True
     
     # Increment version and update metadata
+    from datetime import datetime
     room.version += 1
-    room.last_modified = func.now()
+    room.last_modified = datetime.utcnow()
     room.modified_by = request.player_id
     
     await db.commit()
@@ -1285,8 +1287,9 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
         room.current_turn = 2 if room.current_turn == 1 else 1
     
     # Increment version and update metadata
+    from datetime import datetime
     room.version += 1
-    room.last_modified = func.now()
+    room.last_modified = datetime.utcnow()
     room.modified_by = request.player_id
     
     await db.commit()
@@ -1334,8 +1337,9 @@ async def reset_game(room_id: str, db: AsyncSession = Depends(get_db)):
         player.ready = False
     
     # Increment version and update metadata (reset is a state change)
+    from datetime import datetime
     room.version += 1
-    room.last_modified = func.now()
+    room.last_modified = datetime.utcnow()
     room.modified_by = None  # Reset doesn't have a specific player
     
     await db.commit()
