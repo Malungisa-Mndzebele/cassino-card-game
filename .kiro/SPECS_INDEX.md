@@ -171,6 +171,32 @@ Peer-to-peer voice communication between players during gameplay. This spec adds
 
 ---
 
+### 🟡 8. Social Features System
+**Status:** ✅ Complete (Ready for Implementation)  
+**Directory:** `.kiro/specs/social-features/`  
+**Priority:** Medium
+
+Comprehensive social features including player profiles, friend management, and real-time chat. This spec adds:
+- User authentication and registration with email verification
+- Player profiles with statistics tracking and privacy controls
+- Friend system with requests, search, and relationship management
+- Multi-channel chat (in-game, private messaging, global chat)
+- Content moderation with filtering and reporting
+- Privacy settings and user safety controls
+- Real-time notifications and presence system
+- Integration with existing session management and WebSocket infrastructure
+- Administrative moderation tools and audit trails
+- GDPR compliance with data export and account deletion
+
+**Business Value:** Transforms the game into a social platform, increasing player retention, community building, and engagement.
+
+**Deliverables:**
+- ✅ Requirements document (8 requirements, EARS compliant)
+- ✅ Design document (comprehensive social architecture with 31 correctness properties)
+- ✅ Implementation tasks (14 phases, 65+ tasks, optional property tests for MVP)
+
+---
+
 ## Implementation Status
 
 | Spec | Requirements | Design | Tasks | Implementation |
@@ -183,6 +209,7 @@ Peer-to-peer voice communication between players during gameplay. This spec adds
 | Spectator Mode | 📋 Not Started | 📋 Not Started | 📋 Not Started | 📋 Not Started |
 | Render Deployment Configuration | ✅ Complete | ✅ Complete | ✅ Complete | ✅ Implemented (Archived) |
 | Voice Chat System | ✅ Complete | ✅ Complete | ✅ Complete | 📋 Ready to Start |
+| Social Features System | ✅ Complete | ✅ Complete | ✅ Complete | 📋 Ready to Start |
 
 ---
 
