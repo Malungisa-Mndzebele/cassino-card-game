@@ -399,3 +399,330 @@ class StateSnapshot(Base):
     
     def __repr__(self) -> str:
         return f"<StateSnapshot(id={self.id}, room_id={self.room_id}, version={self.version})>"
+
+# Social Features Models
+
+class User(Base):
+    """
+    User model for social features authentication and profiles.
+    
+    Represents a registered user with persistent identity across game sessions.
+    Stores authentication credentials, profile information, and privacy settings.
+    
+    Attributes:
+        id: Auto-incrementing user ID (primary key)
+        username: Unique username (max 50 characters, indexed)
+        email: Unique email address (max 255 characters, indexed)
+        password_hash: Bcrypt hashed password (max 255 characters)
+        display_name: Optional display name (max 100 characters)
+        bio: Optional user biography (text)
+        avatar_url: Optional avatar image URL (max 500 characters)
+        is_verified: Whether email is verified
+        privacy_settings: Privacy preferences as JSON
+        created_at: Account creation timestamp
+        updated_at: Last profile update timestamp
+        last_seen: Last activity timestamp
+        is_active: Whether account is active (not banned/suspended)
+    """
+    __tablename__ = "users"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    privacy_settings: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+    last_seen: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Relationships
+    sent_friend_requests: Mapped[List["Friendship"]] = relationship(
+        "Friendship",
+        foreign_keys="[Friendship.user1_id]",
+        back_populates="requester",
+        cascade="all, delete-orphan"
+    )
+    received_friend_requests: Mapped[List["Friendship"]] = relationship(
+        "Friendship",
+        foreign_keys="[Friendship.user2_id]",
+        back_populates="recipient",
+        cascade="all, delete-orphan"
+    )
+    statistics: Mapped[Optional["UserStatistics"]] = relationship(
+        "UserStatistics",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False
+    )
+    reported_by: Mapped[List["ModerationReport"]] = relationship(
+        "ModerationReport",
+        foreign_keys="[ModerationReport.reporter_id]",
+        back_populates="reporter",
+        cascade="all, delete-orphan"
+    )
+    reports_against: Mapped[List["ModerationReport"]] = relationship(
+        "ModerationReport",
+        foreign_keys="[ModerationReport.reported_user_id]",
+        back_populates="reported_user",
+        cascade="all, delete-orphan"
+    )
+    blocked_users: Mapped[List["UserBlock"]] = relationship(
+        "UserBlock",
+        foreign_keys="[UserBlock.blocker_id]",
+        back_populates="blocker",
+        cascade="all, delete-orphan"
+    )
+    blocked_by: Mapped[List["UserBlock"]] = relationship(
+        "UserBlock",
+        foreign_keys="[UserBlock.blocked_id]",
+        back_populates="blocked",
+        cascade="all, delete-orphan"
+    )
+    
+    def __repr__(self) -> str:
+        return f"<User(id={self.id}, username={self.username}, email={self.email})>"
+
+
+class Friendship(Base):
+    """
+    Friendship model for managing friend relationships.
+    
+    Represents bidirectional friendship relationships between users.
+    Tracks friendship status (pending, accepted, declined, blocked).
+    
+    Attributes:
+        id: Auto-incrementing friendship ID (primary key)
+        user1_id: Foreign key to User who sent the request
+        user2_id: Foreign key to User who received the request
+        status: Friendship status (pending, accepted, declined, blocked)
+        created_at: Friend request timestamp
+        accepted_at: Friendship acceptance timestamp (nullable)
+        updated_at: Last status update timestamp
+    """
+    __tablename__ = "friendships"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user1_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    user2_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+    accepted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+    
+    # Relationships
+    requester: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[user1_id],
+        back_populates="sent_friend_requests"
+    )
+    recipient: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[user2_id],
+        back_populates="received_friend_requests"
+    )
+    
+    def __repr__(self) -> str:
+        return f"<Friendship(id={self.id}, user1_id={self.user1_id}, user2_id={self.user2_id}, status={self.status})>"
+
+
+class UserStatistics(Base):
+    """
+    User statistics model for tracking game performance.
+    
+    Stores aggregated statistics for each user's game performance.
+    Updated automatically after each completed game.
+    
+    Attributes:
+        user_id: Foreign key to User (primary key)
+        games_played: Total number of games played
+        games_won: Total number of games won
+        total_score: Cumulative score across all games
+        best_game_score: Highest score achieved in a single game
+        current_streak: Current winning streak
+        longest_streak: Longest winning streak achieved
+        last_game_at: Timestamp of last game played
+        updated_at: Last statistics update timestamp
+    """
+    __tablename__ = "user_statistics"
+    
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True
+    )
+    games_played: Mapped[int] = mapped_column(Integer, default=0)
+    games_won: Mapped[int] = mapped_column(Integer, default=0)
+    total_score: Mapped[int] = mapped_column(Integer, default=0)
+    best_game_score: Mapped[int] = mapped_column(Integer, default=0)
+    current_streak: Mapped[int] = mapped_column(Integer, default=0)
+    longest_streak: Mapped[int] = mapped_column(Integer, default=0)
+    last_game_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+    
+    # Relationship
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="statistics"
+    )
+    
+    def __repr__(self) -> str:
+        return f"<UserStatistics(user_id={self.user_id}, games_played={self.games_played}, games_won={self.games_won})>"
+
+
+class ModerationReport(Base):
+    """
+    Moderation report model for user reporting system.
+    
+    Stores reports of inappropriate behavior or content.
+    Used for automated and manual moderation processes.
+    
+    Attributes:
+        id: Auto-incrementing report ID (primary key)
+        reporter_id: Foreign key to User who made the report (nullable)
+        reported_user_id: Foreign key to User being reported
+        report_type: Type of report (harassment, spam, inappropriate_content)
+        description: Optional description of the issue
+        status: Report status (pending, reviewed, resolved)
+        created_at: Report creation timestamp
+        resolved_at: Report resolution timestamp (nullable)
+        resolved_by: Foreign key to User who resolved the report (nullable)
+        resolution_notes: Optional notes about the resolution
+    """
+    __tablename__ = "moderation_reports"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    reporter_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    reported_user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    report_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    resolved_by: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Relationships
+    reporter: Mapped[Optional["User"]] = relationship(
+        "User",
+        foreign_keys=[reporter_id],
+        back_populates="reported_by"
+    )
+    reported_user: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[reported_user_id],
+        back_populates="reports_against"
+    )
+    resolver: Mapped[Optional["User"]] = relationship(
+        "User",
+        foreign_keys=[resolved_by]
+    )
+    
+    def __repr__(self) -> str:
+        return f"<ModerationReport(id={self.id}, type={self.report_type}, status={self.status})>"
+
+
+class UserBlock(Base):
+    """
+    User block model for blocking unwanted interactions.
+    
+    Represents one user blocking another to prevent communication.
+    Blocks are unidirectional - user A can block user B without B blocking A.
+    
+    Attributes:
+        id: Auto-incrementing block ID (primary key)
+        blocker_id: Foreign key to User who is doing the blocking
+        blocked_id: Foreign key to User who is being blocked
+        created_at: Block creation timestamp
+        reason: Optional reason for the block
+    """
+    __tablename__ = "user_blocks"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    blocker_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    blocked_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+    reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
+    # Relationships
+    blocker: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[blocker_id],
+        back_populates="blocked_users"
+    )
+    blocked: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[blocked_id],
+        back_populates="blocked_by"
+    )
+    
+    def __repr__(self) -> str:
+        return f"<UserBlock(id={self.id}, blocker_id={self.blocker_id}, blocked_id={self.blocked_id})>"

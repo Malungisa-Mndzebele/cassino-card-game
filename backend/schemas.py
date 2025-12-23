@@ -354,3 +354,429 @@ class ActionRejectionDetails(BaseModel):
     card_id: Optional[str] = None
     target_cards: Optional[List[str]] = None
     timestamp: int
+
+# Social Features Schemas
+
+# Authentication Schemas
+
+class UserRegistrationRequest(BaseModel):
+    """
+    Request schema for user registration.
+    
+    Attributes:
+        username: Unique username (3-50 characters)
+        email: Valid email address
+        password: Password (8-128 characters)
+        display_name: Optional display name (1-100 characters)
+    """
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    username: str = Field(..., min_length=3, max_length=50, pattern="^[a-zA-Z0-9_-]+$")
+    email: str = Field(..., max_length=255)
+    password: str = Field(..., min_length=8, max_length=128)
+    display_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Username cannot be empty')
+        return v.strip().lower()
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, v):
+            raise ValueError('Invalid email format')
+        return v.lower()
+
+
+class UserLoginRequest(BaseModel):
+    """
+    Request schema for user login.
+    
+    Attributes:
+        username: Username or email
+        password: User password
+    """
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    username: str = Field(..., min_length=1, max_length=255)
+    password: str = Field(..., min_length=1, max_length=128)
+
+
+class EmailVerificationRequest(BaseModel):
+    """
+    Request schema for email verification.
+    
+    Attributes:
+        token: Verification token from email
+    """
+    token: str = Field(..., min_length=1, max_length=256)
+
+
+# Profile Schemas
+
+class ProfileUpdateRequest(BaseModel):
+    """
+    Request schema for updating user profile.
+    
+    Attributes:
+        display_name: Optional display name
+        bio: Optional biography
+        privacy_settings: Privacy preferences
+    """
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    display_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    bio: Optional[str] = Field(None, max_length=1000)
+    privacy_settings: Optional[Dict[str, Any]] = None
+
+
+class PrivacySettingsRequest(BaseModel):
+    """
+    Request schema for privacy settings.
+    
+    Attributes:
+        profile_visibility: Profile visibility (public, friends, private)
+        allow_friend_requests: Whether to allow friend requests
+        allow_private_messages: Who can send private messages (everyone, friends, none)
+        show_online_status: Whether to show online status
+        show_game_activity: Whether to show game activity
+        show_statistics: Whether to show game statistics
+    """
+    profile_visibility: str = Field(default="public", pattern="^(public|friends|private)$")
+    allow_friend_requests: bool = Field(default=True)
+    allow_private_messages: str = Field(default="friends", pattern="^(everyone|friends|none)$")
+    show_online_status: bool = Field(default=True)
+    show_game_activity: bool = Field(default=True)
+    show_statistics: bool = Field(default=True)
+
+
+# Friend System Schemas
+
+class FriendRequestRequest(BaseModel):
+    """
+    Request schema for sending friend requests.
+    
+    Attributes:
+        recipient_username: Username of the user to send friend request to
+    """
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    recipient_username: str = Field(..., min_length=3, max_length=50)
+
+
+class FriendRequestResponseRequest(BaseModel):
+    """
+    Request schema for responding to friend requests.
+    
+    Attributes:
+        request_id: ID of the friend request
+        accept: Whether to accept (True) or decline (False) the request
+    """
+    request_id: int = Field(..., ge=1)
+    accept: bool
+
+
+class UserSearchRequest(BaseModel):
+    """
+    Request schema for searching users.
+    
+    Attributes:
+        query: Search query (username or display name)
+        limit: Maximum number of results (default 20, max 50)
+    """
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    query: str = Field(..., min_length=1, max_length=50)
+    limit: int = Field(default=20, ge=1, le=50)
+
+
+# Chat Schemas
+
+class SendChatMessageRequest(BaseModel):
+    """
+    Request schema for sending chat messages.
+    
+    Attributes:
+        message: Message content
+        room_id: Optional room ID for game chat
+        recipient_id: Optional recipient ID for private messages
+    """
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    message: str = Field(..., min_length=1, max_length=1000)
+    room_id: Optional[str] = Field(None, min_length=6, max_length=6)
+    recipient_id: Optional[int] = Field(None, ge=1)
+    
+    @field_validator('message')
+    @classmethod
+    def validate_message(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Message cannot be empty')
+        return v.strip()
+
+
+class GetChatHistoryRequest(BaseModel):
+    """
+    Request schema for getting chat history.
+    
+    Attributes:
+        room_id: Optional room ID for game chat history
+        conversation_with: Optional user ID for private message history
+        limit: Maximum number of messages (default 50, max 100)
+        before: Optional timestamp to get messages before
+    """
+    room_id: Optional[str] = Field(None, min_length=6, max_length=6)
+    conversation_with: Optional[int] = Field(None, ge=1)
+    limit: int = Field(default=50, ge=1, le=100)
+    before: Optional[datetime] = None
+
+
+# Moderation Schemas
+
+class CreateReportRequest(BaseModel):
+    """
+    Request schema for creating moderation reports.
+    
+    Attributes:
+        reported_user_id: ID of the user being reported
+        report_type: Type of report (harassment, spam, inappropriate_content)
+        description: Optional description of the issue
+    """
+    reported_user_id: int = Field(..., ge=1)
+    report_type: str = Field(..., pattern="^(harassment|spam|inappropriate_content)$")
+    description: Optional[str] = Field(None, max_length=1000)
+
+
+class BlockUserRequest(BaseModel):
+    """
+    Request schema for blocking users.
+    
+    Attributes:
+        user_id: ID of the user to block
+        reason: Optional reason for blocking
+    """
+    user_id: int = Field(..., ge=1)
+    reason: Optional[str] = Field(None, max_length=255)
+
+
+# Notification Schemas
+
+class NotificationPreferencesRequest(BaseModel):
+    """
+    Request schema for notification preferences.
+    
+    Attributes:
+        friend_requests: Enable friend request notifications
+        friend_online: Enable friend online notifications
+        private_messages: Enable private message notifications
+        game_invites: Enable game invitation notifications
+        mentions: Enable mention notifications
+    """
+    friend_requests: bool = Field(default=True)
+    friend_online: bool = Field(default=True)
+    private_messages: bool = Field(default=True)
+    game_invites: bool = Field(default=True)
+    mentions: bool = Field(default=True)
+
+
+# Response Schemas
+
+class UserResponse(BaseModel):
+    """
+    Response schema for user information.
+    
+    Attributes:
+        id: User ID
+        username: Username
+        display_name: Display name
+        avatar_url: Avatar image URL
+        is_verified: Whether email is verified
+        created_at: Account creation timestamp
+        last_seen: Last activity timestamp
+        is_online: Current online status
+    """
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    username: str
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    is_verified: bool
+    created_at: datetime
+    last_seen: Optional[datetime] = None
+    is_online: bool = False
+
+
+class UserProfileResponse(BaseModel):
+    """
+    Response schema for detailed user profile.
+    
+    Attributes:
+        id: User ID
+        username: Username
+        display_name: Display name
+        bio: User biography
+        avatar_url: Avatar image URL
+        is_verified: Whether email is verified
+        created_at: Account creation timestamp
+        last_seen: Last activity timestamp
+        is_online: Current online status
+        statistics: User game statistics
+        privacy_settings: Privacy preferences (only for own profile)
+    """
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    username: str
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    is_verified: bool
+    created_at: datetime
+    last_seen: Optional[datetime] = None
+    is_online: bool = False
+    statistics: Optional['UserStatisticsResponse'] = None
+    privacy_settings: Optional[Dict[str, Any]] = None
+
+
+class UserStatisticsResponse(BaseModel):
+    """
+    Response schema for user statistics.
+    
+    Attributes:
+        games_played: Total games played
+        games_won: Total games won
+        win_rate: Win rate percentage
+        total_score: Cumulative score
+        best_game_score: Best single game score
+        current_streak: Current winning streak
+        longest_streak: Longest winning streak
+        last_game_at: Last game timestamp
+    """
+    model_config = ConfigDict(from_attributes=True)
+    
+    games_played: int
+    games_won: int
+    win_rate: float
+    total_score: int
+    best_game_score: int
+    current_streak: int
+    longest_streak: int
+    last_game_at: Optional[datetime] = None
+
+
+class FriendshipResponse(BaseModel):
+    """
+    Response schema for friendship information.
+    
+    Attributes:
+        id: Friendship ID
+        user: Friend user information
+        status: Friendship status
+        created_at: Friend request timestamp
+        accepted_at: Friendship acceptance timestamp
+        is_online: Friend's online status
+        unread_messages: Number of unread messages from this friend
+    """
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    user: UserResponse
+    status: str
+    created_at: datetime
+    accepted_at: Optional[datetime] = None
+    is_online: bool = False
+    unread_messages: int = 0
+
+
+class ChatMessageResponse(BaseModel):
+    """
+    Response schema for chat messages.
+    
+    Attributes:
+        id: Message ID
+        sender: Sender information
+        recipient: Recipient information (for private messages)
+        room_id: Room ID (for game chat)
+        message: Message content
+        timestamp: Message timestamp
+        message_type: Type of message (game_chat, private_message, global_chat)
+        is_moderated: Whether message was moderated
+    """
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: str
+    sender: UserResponse
+    recipient: Optional[UserResponse] = None
+    room_id: Optional[str] = None
+    message: str
+    timestamp: datetime
+    message_type: str
+    is_moderated: bool = False
+
+
+class NotificationResponse(BaseModel):
+    """
+    Response schema for notifications.
+    
+    Attributes:
+        id: Notification ID
+        type: Notification type
+        title: Notification title
+        message: Notification message
+        data: Additional notification data
+        is_read: Whether notification is read
+        created_at: Notification timestamp
+    """
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    type: str
+    title: str
+    message: str
+    data: Optional[Dict[str, Any]] = None
+    is_read: bool
+    created_at: datetime
+
+
+class AuthenticationResponse(BaseModel):
+    """
+    Response schema for authentication.
+    
+    Attributes:
+        user: User information
+        session_token: Session token for authentication
+        expires_at: Token expiration timestamp
+    """
+    user: UserResponse
+    session_token: str
+    expires_at: datetime
+
+
+class FriendRequestResponse(BaseModel):
+    """
+    Response schema for friend requests.
+    
+    Attributes:
+        id: Friend request ID
+        requester: User who sent the request
+        recipient: User who received the request
+        status: Request status
+        created_at: Request timestamp
+    """
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    requester: UserResponse
+    recipient: UserResponse
+    status: str
+    created_at: datetime
+
+
+# Update forward references
+UserProfileResponse.model_rebuild()
