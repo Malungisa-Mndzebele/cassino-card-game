@@ -535,7 +535,7 @@ def convert_dict_to_builds(builds_dict: List[Dict[str, Any]]) -> List[Build]:
     """
     return [Build(id=build["id"], cards=convert_dict_to_game_cards(build["cards"]), value=build["value"], owner=build["owner"]) for build in builds_dict]
 
-def game_state_to_response(room: Room) -> GameStateResponse:
+async def game_state_to_response(room: Room) -> GameStateResponse:
     """
     Convert room model to game state response.
     
@@ -548,15 +548,20 @@ def game_state_to_response(room: Room) -> GameStateResponse:
     # Compute checksum before returning state
     checksum = compute_checksum(room)
     
-    return GameStateResponse(
-        room_id=room.id,
-        players=[PlayerResponse(
+    # Ensure players relationship is loaded (avoid greenlet issues)
+    players_data = []
+    if hasattr(room, 'players') and room.players is not None:
+        players_data = [PlayerResponse(
             id=p.id,
             name=p.name,
             ready=bool(p.ready),
             joined_at=p.joined_at,
             ip_address=p.ip_address
-        ) for p in (room.players or [])],
+        ) for p in room.players]
+    
+    return GameStateResponse(
+        room_id=room.id,
+        players=players_data,
         phase=(room.game_phase or "waiting"),
         round=int(room.round_number or 0),
         deck=(room.deck or []),
@@ -633,6 +638,7 @@ def get_sorted_players(room: Room) -> List[Player]:
         >>> players[0]  # Player 1 (joined first)
         >>> players[1]  # Player 2 (joined second)
     """
+    from datetime import datetime
     if not room.players:
         return []
     return sorted(room.players, key=lambda p: p.joined_at or datetime.min)
@@ -768,7 +774,7 @@ async def create_room(request: CreateRoomRequest, http_request: Request, db: Asy
             room_id=room_id,
             player_id=player.id,
             session_token=session_token.to_string() if hasattr(session_token, 'to_string') else str(session_token),
-            game_state=game_state_to_response(room)
+            game_state=await game_state_to_response(room)
         )
         
     except Exception as e:
@@ -849,7 +855,7 @@ async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSe
     return JoinRoomResponse(
         player_id=player.id,
         session_token=session_token,
-        game_state=game_state_to_response(room)
+        game_state=await game_state_to_response(room)
     )
 
 @app.post("/rooms/join-random", response_model=JoinRoomResponse)
@@ -1388,7 +1394,7 @@ async def websocket_endpoint(
                     # Heartbeat ping
                     if session_id:
                         pong_response = await manager.handle_heartbeat(
-                            room_id, session_id, db
+                            websocket, db
                         )
                         await websocket.send_json(pong_response)
                 
@@ -1458,9 +1464,13 @@ async def websocket_endpoint(
         
         # Broadcast updated connection status
         try:
-            await manager.broadcast_connection_status(room_id, db)
-        except:
-            pass
+            await manager.broadcast_to_room({
+                "type": "player_disconnected",
+                "room_id": room_id,
+                "timestamp": datetime.utcnow().isoformat()
+            }, room_id)
+        except Exception as e:
+            logger.error(f"Failed to broadcast disconnect status: {e}")
 
 if __name__ == "__main__":
     import uvicorn

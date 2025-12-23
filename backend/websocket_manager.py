@@ -125,53 +125,68 @@ class WebSocketConnectionManager:
         Returns:
             Tuple of (success, error_message, session_data)
         """
-        await websocket.accept()
+        try:
+            await websocket.accept()
+        except Exception as e:
+            logger.error(f"Failed to accept WebSocket connection: {e}")
+            return False, "Connection failed", None
         
         # Validate session if token provided
         session_data = None
         if session_token:
-            session_manager = get_session_manager(db_session)
-            session_data = await session_manager.validate_session(session_token)
-            
-            if not session_data:
-                await websocket.send_json({
-                    "type": "error",
-                    "code": "invalid_session",
-                    "message": "Invalid or expired session token"
-                })
-                await websocket.close(code=1008, reason="Invalid session")
-                return False, "Invalid session token", None
-            
-            # Check if session belongs to this room
-            if session_data.get("room_id") != room_id:
-                await websocket.send_json({
-                    "type": "error",
-                    "code": "wrong_room",
-                    "message": "Session does not belong to this room"
-                })
-                await websocket.close(code=1008, reason="Wrong room")
-                return False, "Session room mismatch", None
-            
-            # Check for concurrent connection
-            session_id = session_data.get("token")
-            if session_id in self.session_websockets:
-                # Close old connection
-                old_ws = self.session_websockets[session_id]
-                await old_ws.send_json({
-                    "type": "connection_takeover",
-                    "message": "Connection taken over from another location"
-                })
-                await old_ws.close(code=1000, reason="Connection takeover")
-                logger.warning(f"Connection takeover for session {session_id}")
-            
-            # Update heartbeat
-            await session_manager.update_heartbeat(session_token)
-            
-            # Store session mapping
-            self.session_websockets[session_id] = websocket
-            self.websocket_sessions[websocket] = session_id
-            
-            logger.info(f"Session {session_id} connected to room {room_id}")
+            try:
+                session_manager = get_session_manager(db_session)
+                session_data = await session_manager.validate_session(session_token)
+                
+                if not session_data:
+                    await websocket.send_json({
+                        "type": "error",
+                        "code": "invalid_session",
+                        "message": "Invalid or expired session token"
+                    })
+                    await websocket.close(code=1008, reason="Invalid session")
+                    return False, "Invalid session token", None
+                
+                # Check if session belongs to this room
+                if session_data.get("room_id") != room_id:
+                    await websocket.send_json({
+                        "type": "error",
+                        "code": "wrong_room",
+                        "message": "Session does not belong to this room"
+                    })
+                    await websocket.close(code=1008, reason="Wrong room")
+                    return False, "Session room mismatch", None
+                
+                # Check for concurrent connection
+                session_id = session_data.get("token")
+                if session_id in self.session_websockets:
+                    # Close old connection
+                    old_ws = self.session_websockets[session_id]
+                    try:
+                        await old_ws.send_json({
+                            "type": "connection_takeover",
+                            "message": "Connection taken over from another location"
+                        })
+                        await old_ws.close(code=1000, reason="Connection takeover")
+                    except Exception as e:
+                        logger.warning(f"Failed to close old connection: {e}")
+                    logger.warning(f"Connection takeover for session {session_id}")
+                
+                # Update heartbeat
+                try:
+                    await session_manager.update_heartbeat(session_token)
+                except Exception as e:
+                    logger.warning(f"Failed to update heartbeat: {e}")
+                
+                # Store session mapping
+                self.session_websockets[session_id] = websocket
+                self.websocket_sessions[websocket] = session_id
+                
+                logger.info(f"Session {session_id} connected to room {room_id}")
+            except Exception as e:
+                logger.error(f"Session validation failed: {e}")
+                # Continue without session - allow anonymous connections
+                session_data = None
         
         # Add to active connections
         if room_id not in self.active_connections:
@@ -179,12 +194,15 @@ class WebSocketConnectionManager:
         
         self.active_connections[room_id].add(websocket)
         
-        # Broadcast connection status
-        await self.broadcast_to_room({
-            "type": "player_connected",
-            "room_id": room_id,
-            "timestamp": datetime.utcnow().isoformat()
-        }, room_id)
+        # Broadcast connection status (with error handling)
+        try:
+            await self.broadcast_to_room({
+                "type": "player_connected",
+                "room_id": room_id,
+                "timestamp": datetime.utcnow().isoformat()
+            }, room_id)
+        except Exception as e:
+            logger.warning(f"Failed to broadcast connection status: {e}")
         
         return True, None, session_data
     
