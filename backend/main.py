@@ -44,7 +44,6 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func
 from typing import List, Dict, Any
 import random
 import string
@@ -957,7 +956,7 @@ async def get_game_state(room_id: str, db: AsyncSession = Depends(get_db)):
 
 @app.post("/rooms/player-ready", response_model=StandardResponse)
 async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = Depends(get_db)):
-    """Set player ready status"""
+    """Set player ready status - Fixed async datetime issue"""
     try:
         from version_validator import validate_version
         
@@ -1006,6 +1005,7 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
             logger.info(f"Both players ready! Transitioning room {room.id} to dealer phase")
             room.game_phase = "dealer"
             # Increment version for phase change
+            from datetime import datetime
             room.version += 1
             room.last_modified = datetime.utcnow()
             room.modified_by = request.player_id
@@ -1052,7 +1052,6 @@ async def start_shuffle(request: StartShuffleRequest, db: AsyncSession = Depends
     room.game_phase = "dealer"
     
     # Increment version and update metadata
-    from datetime import datetime
     room.version += 1
     room.last_modified = datetime.utcnow()
     room.modified_by = request.player_id
@@ -1096,7 +1095,6 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: AsyncSessi
     room.dealing_complete = True
     
     # Increment version and update metadata
-    from datetime import datetime
     room.version += 1
     room.last_modified = datetime.utcnow()
     room.modified_by = request.player_id
@@ -1287,7 +1285,6 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
         room.current_turn = 2 if room.current_turn == 1 else 1
     
     # Increment version and update metadata
-    from datetime import datetime
     room.version += 1
     room.last_modified = datetime.utcnow()
     room.modified_by = request.player_id
