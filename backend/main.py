@@ -1038,6 +1038,7 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
     """Set player ready status - Fixed async datetime issue"""
     try:
         from version_validator import validate_version
+        from datetime import datetime
         
         logger.info(f"Player ready request: room_id={request.room_id}, player_id={request.player_id}, is_ready={request.is_ready}")
         
@@ -1062,35 +1063,40 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
                 )
         
         player.ready = request.is_ready
-        await db.commit()
+        
+        # Get sorted players BEFORE any commits while relationship is still loaded
+        players_in_room = get_sorted_players(room)
         
         # Update room ready status based on player position in room
-        players_in_room = get_sorted_players(room)
         if len(players_in_room) >= 1 and player.id == players_in_room[0].id:
             room.player1_ready = request.is_ready
         elif len(players_in_room) >= 2 and player.id == players_in_room[1].id:
             room.player2_ready = request.is_ready
         
         # Increment version and update metadata
-        from datetime import datetime
         room.version += 1
         room.last_modified = datetime.utcnow()
         room.modified_by = request.player_id
-        
-        await db.commit()
         
         # Auto-transition to dealer phase when both players are ready
         if room.player1_ready and room.player2_ready and room.game_phase == "waiting":
             logger.info(f"Both players ready! Transitioning room {room.id} to dealer phase")
             room.game_phase = "dealer"
             # Increment version for phase change
-            from datetime import datetime
             room.version += 1
             room.last_modified = datetime.utcnow()
             room.modified_by = request.player_id
-            await db.commit()
+        
+        # Single commit for all changes
+        await db.commit()
         
         logger.info(f"Room {room.id} ready status: player1={room.player1_ready}, player2={room.player2_ready}, phase={room.game_phase}")
+        
+        # Refresh room to get updated state and reload relationships
+        await db.refresh(room)
+        
+        # Re-fetch room with players loaded for response
+        room = await get_room_or_404(db, request.room_id)
         
         # Broadcast game state update to all connected clients with full state
         game_state_response = await game_state_to_response(room)
@@ -1112,7 +1118,7 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
         return StandardResponse(
             success=True,
             message="Player ready status updated",
-            game_state=await game_state_to_response(room)
+            game_state=game_state_response
         )
     except Exception as e:
         import traceback
