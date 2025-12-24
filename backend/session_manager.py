@@ -231,7 +231,9 @@ class SessionManager:
         # Refresh to ensure all attributes are loaded from database
         await self.db.refresh(current_session)
         
-        logger.info(f"Session created for player {player_id} in room {room_id} with token {token.to_string()[:10]}...")
+        logger.info(f"Session created for player {player_id} in room {room_id}")
+        logger.info(f"Session token stored: {token.to_string()[:20]}...")
+        logger.info(f"Database session_token: {current_session.session_token[:20] if current_session.session_token else 'None'}...")
         
         return token
     
@@ -252,14 +254,19 @@ class SessionManager:
         Returns:
             Session data dict if valid, None otherwise
         """
+        logger.info(f"Validating session token: {token_str[:20]}...")
+        
         # Try to get from Redis first (fast path) with error handling
         session_data = None
         try:
             session_data = await cache_manager.get_session(token_str)
+            if session_data:
+                logger.info(f"Session found in Redis cache")
         except Exception as e:
             logger.warning(f"Failed to get session from Redis: {e}. Falling back to database.")
         
         if not session_data:
+            logger.info(f"Session not in Redis, checking database...")
             # Fallback to database if Redis fails or session not found
             # Retry up to 3 times with small delays to handle transaction visibility delays
             max_retries = 3
@@ -278,6 +285,7 @@ class SessionManager:
                     db_session = db_session.scalar_one_or_none()
                     
                     if db_session:
+                        logger.info(f"Session found in database on attempt {attempt + 1}")
                         # Convert database session to session_data format
                         # Calculate expires_at based on connected_at + SESSION_TTL
                         expires_at = db_session.connected_at + timedelta(seconds=self.SESSION_TTL)
