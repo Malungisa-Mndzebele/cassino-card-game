@@ -1457,16 +1457,19 @@ async def websocket_endpoint(
     async def send_server_ping():
         """Send periodic pings to keep connection alive (Render timeout is 60s)"""
         try:
+            # Send first ping immediately to establish keep-alive
+            await asyncio.sleep(5)  # Wait 5 seconds then start pinging
             while True:
-                await asyncio.sleep(25)  # Send ping every 25 seconds (well under 60s timeout)
                 try:
                     await websocket.send_json({
                         "type": "server_ping",
                         "timestamp": datetime.utcnow().isoformat()
                     })
+                    print(f"[WS] Sent server ping to room {room_id}")
                 except Exception as e:
-                    logger.debug(f"Server ping failed (connection likely closed): {e}")
+                    print(f"[WS] Server ping failed (connection likely closed): {e}")
                     break
+                await asyncio.sleep(15)  # Send ping every 15 seconds (more aggressive)
         except asyncio.CancelledError:
             pass
     
@@ -1502,24 +1505,30 @@ async def websocket_endpoint(
             try:
                 message = json.loads(data)
                 message_type = message.get("type")
+                print(f"[WS] Processing message type: {message_type}")
                 
                 # Handle different message types
                 if message_type == "ping":
                     # Heartbeat ping from client
-                    if session_id:
-                        pong_response = await manager.handle_heartbeat(
-                            websocket, db
-                        )
-                        await websocket.send_json(pong_response)
-                    else:
-                        # Still respond to ping even without session
-                        await websocket.send_json({
-                            "type": "pong",
-                            "timestamp": datetime.utcnow().isoformat()
-                        })
+                    try:
+                        if session_id:
+                            pong_response = await manager.handle_heartbeat(
+                                websocket, db
+                            )
+                            await websocket.send_json(pong_response)
+                        else:
+                            # Still respond to ping even without session
+                            await websocket.send_json({
+                                "type": "pong",
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                        print(f"[WS] Sent pong response")
+                    except Exception as ping_error:
+                        print(f"[WS] Error handling ping: {ping_error}")
                 
                 elif message_type == "pong":
                     # Client responding to server ping - connection is alive
+                    print(f"[WS] Received pong from client")
                     pass
                 
                 elif message_type == "state_update":
