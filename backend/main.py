@@ -264,6 +264,7 @@ async def get_heartbeat_status(room_id: str, db: AsyncSession = Depends(get_db))
     players_status = []
     for session in sessions:
         # Calculate time since last heartbeat
+        from datetime import datetime
         time_since_heartbeat = (datetime.now() - session.last_heartbeat).total_seconds()
         
         status = {
@@ -299,6 +300,7 @@ async def claim_victory(
     sessions = session_manager.get_room_sessions(room_id)
     
     # Check if opponent has been disconnected for > 5 minutes
+    from datetime import datetime, timedelta
     five_minutes_ago = datetime.now() - timedelta(minutes=5)
     opponent_abandoned = False
     
@@ -751,6 +753,7 @@ async def create_room(request: CreateRoomRequest, http_request: Request, db: Asy
         except Exception as e:
             logger.error(f"Failed to create session for player {player.id}: {e}")
             # Continue without session - the game can still work
+            from datetime import datetime, timedelta
             session_token = SessionToken(
                 token=f"fallback_{room_id}_{player.id}",
                 room_id=room_id,
@@ -1464,6 +1467,7 @@ async def websocket_endpoint(
         
         # Broadcast updated connection status
         try:
+            from datetime import datetime
             await manager.broadcast_to_room({
                 "type": "player_disconnected",
                 "room_id": room_id,
