@@ -252,6 +252,35 @@ async def health_check():
 async def root():
     return {"message": "Casino Card Game API", "version": "1.0.0"}
 
+# Debug endpoint to check waiting rooms
+@app.get("/debug/waiting-rooms")
+async def get_waiting_rooms(db: AsyncSession = Depends(get_db)):
+    """Debug endpoint to see all waiting rooms"""
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    
+    result = await db.execute(
+        select(Room)
+        .where(Room.game_phase == "waiting")
+        .options(selectinload(Room.players))
+    )
+    waiting_rooms = result.scalars().all()
+    
+    rooms_info = []
+    for room in waiting_rooms:
+        rooms_info.append({
+            "room_id": room.id,
+            "phase": room.game_phase,
+            "player_count": len(room.players) if room.players else 0,
+            "players": [{"id": p.id, "name": p.name} for p in (room.players or [])]
+        })
+    
+    return {
+        "total_waiting_rooms": len(waiting_rooms),
+        "rooms_with_space": len([r for r in rooms_info if r["player_count"] == 1]),
+        "rooms": rooms_info
+    }
+
 # Heartbeat monitoring endpoint
 @app.get("/api/heartbeat/{room_id}")
 async def get_heartbeat_status(room_id: str, db: AsyncSession = Depends(get_db)):
@@ -864,9 +893,14 @@ async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSe
 @app.post("/rooms/join-random", response_model=JoinRoomResponse)
 async def join_random_room(request: JoinRandomRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Join a random available game room"""
-    # Find rooms that are in waiting phase
-    from sqlalchemy import select
+    # Find rooms that are in waiting phase with space for another player
+    from sqlalchemy import select, func
     from sqlalchemy.orm import selectinload
+    
+    logger.info(f"Quick match request from player: {request.player_name}")
+    
+    # Query for waiting rooms with exactly 1 player
+    # Use a subquery to count players per room
     result = await db.execute(
         select(Room)
         .where(Room.game_phase == "waiting")
@@ -874,8 +908,17 @@ async def join_random_room(request: JoinRandomRoomRequest, http_request: Request
     )
     waiting_rooms = result.scalars().all()
     
+    logger.info(f"Found {len(waiting_rooms)} rooms in waiting phase")
+    
     # Filter rooms that have exactly 1 player (space for one more)
-    rooms_with_space = [room for room in waiting_rooms if len(room.players) == 1]
+    rooms_with_space = []
+    for room in waiting_rooms:
+        player_count = len(room.players) if room.players else 0
+        logger.info(f"Room {room.id}: {player_count} players, phase={room.game_phase}")
+        if player_count == 1:
+            rooms_with_space.append(room)
+    
+    logger.info(f"Found {len(rooms_with_space)} rooms with space for another player")
     
     # If no rooms available, create a new one
     if not rooms_with_space:
