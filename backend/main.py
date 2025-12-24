@@ -1437,8 +1437,7 @@ async def reset_game(room_id: str, db: AsyncSession = Depends(get_db)):
 async def websocket_endpoint(
     websocket: WebSocket, 
     room_id: str,
-    session_token: str = None,
-    db: AsyncSession = Depends(get_db)
+    session_token: str = None
 ):
     """
     WebSocket endpoint with session support and server-side keep-alive
@@ -1474,26 +1473,29 @@ async def websocket_endpoint(
             pass
     
     try:
-        # Connect with session validation
-        success, error, game_session = await manager.connect(
-            websocket, room_id, session_token, db
-        )
-        
-        if not success:
-            print(f"[WS] Connection FAILED for room {room_id}: {error}")
-            logger.warning(f"WebSocket connection failed for room {room_id}: {error}")
-            return
-        
-        # Get session_id from the session data - use token as the identifier
-        session_id = game_session.get("token") if game_session else None
-        print(f"[WS] Connection SUCCESS for room {room_id}")
-        print(f"[WS] Session ID: {session_id[:30] if session_id else 'None'}...")
-        logger.info(f"WebSocket connected successfully for room {room_id}, session: {session_id[:20] if session_id else 'None'}...")
+        # Create a fresh database session for the connection phase
+        from database import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            # Connect with session validation
+            success, error, game_session = await manager.connect(
+                websocket, room_id, session_token, db
+            )
+            
+            if not success:
+                print(f"[WS] Connection FAILED for room {room_id}: {error}")
+                logger.warning(f"WebSocket connection failed for room {room_id}: {error}")
+                return
+            
+            # Get session_id from the session data - use token as the identifier
+            session_id = game_session.get("token") if game_session else None
+            print(f"[WS] Connection SUCCESS for room {room_id}")
+            print(f"[WS] Session ID: {session_id[:30] if session_id else 'None'}...")
+            logger.info(f"WebSocket connected successfully for room {room_id}, session: {session_id[:20] if session_id else 'None'}...")
         
         # Start server-side ping task to keep connection alive
         ping_task = asyncio.create_task(send_server_ping())
         
-        # Main message loop
+        # Main message loop (no database session needed for most operations)
         while True:
             try:
                 data = await websocket.receive_text()
@@ -1509,19 +1511,12 @@ async def websocket_endpoint(
                 
                 # Handle different message types
                 if message_type == "ping":
-                    # Heartbeat ping from client
+                    # Heartbeat ping from client - just respond with pong
                     try:
-                        if session_id:
-                            pong_response = await manager.handle_heartbeat(
-                                websocket, db
-                            )
-                            await websocket.send_json(pong_response)
-                        else:
-                            # Still respond to ping even without session
-                            await websocket.send_json({
-                                "type": "pong",
-                                "timestamp": datetime.utcnow().isoformat()
-                            })
+                        await websocket.send_json({
+                            "type": "pong",
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
                         print(f"[WS] Sent pong response")
                     except Exception as ping_error:
                         print(f"[WS] Error handling ping: {ping_error}")
