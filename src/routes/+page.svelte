@@ -2,13 +2,14 @@
   import { onMount } from 'svelte';
   import { gameStore } from '$stores/gameStore';
   import { connectionStore } from '$stores/connectionStore';
-  import { RoomManager, GameHeader, Card } from '$components';
+  import { RoomManager, GameHeader, Card, GamePhases } from '$components';
 
   // Reactive state
   $: inRoom = !!$gameStore.roomId;
   $: gameState = $gameStore.gameState;
   $: players = gameState?.players || [];
   $: hasOpponent = players.length >= 2;
+  $: phase = gameState?.phase || 'waiting';
 
   // Initialize store and attempt reconnection on mount
   onMount(async () => {
@@ -33,6 +34,60 @@
       }
     }
   });
+
+  // Handler functions for GamePhases
+  async function handleReady() {
+    try {
+      console.log('Ready button clicked');
+      
+      if (!$gameStore.roomId || !$gameStore.playerId) {
+        console.error('Missing roomId or playerId!');
+        alert('Error: Missing room or player information. Please refresh and try again.');
+        return;
+      }
+      
+      const { setPlayerReady } = await import('$lib/utils/api');
+      const isPlayer1 = players[0]?.id === $gameStore.playerId;
+      const currentReady = isPlayer1 ? gameState?.player1Ready : gameState?.player2Ready;
+      
+      const response = await setPlayerReady($gameStore.roomId, $gameStore.playerId, !currentReady);
+      
+      if (response.success && response.game_state) {
+        await gameStore.setGameState(response.game_state);
+      }
+    } catch (err: any) {
+      console.error('Failed to set ready status:', err);
+      alert(`Error: ${err.message || 'Failed to set ready status'}`);
+    }
+  }
+
+  async function handleStartShuffle() {
+    try {
+      const { startShuffle } = await import('$lib/utils/api');
+      const response = await startShuffle($gameStore.roomId, $gameStore.playerId);
+      
+      if (response.success && response.game_state) {
+        await gameStore.setGameState(response.game_state);
+      }
+    } catch (err: any) {
+      console.error('Failed to start shuffle:', err);
+      alert(`Error: ${err.message || 'Failed to start shuffle'}`);
+    }
+  }
+
+  async function handleSelectFaceUpCards(cardIds: string[]) {
+    try {
+      const { selectFaceUpCards } = await import('$lib/utils/api');
+      const response = await selectFaceUpCards($gameStore.roomId, $gameStore.playerId, cardIds);
+      
+      if (response.success && response.game_state) {
+        await gameStore.setGameState(response.game_state);
+      }
+    } catch (err: any) {
+      console.error('Failed to select face-up cards:', err);
+      alert(`Error: ${err.message || 'Failed to select cards'}`);
+    }
+  }
 </script>
 
 <svelte:head>
@@ -81,99 +136,19 @@
             </div>
           </div>
         {:else if gameState?.phase === 'waiting'}
-          <!-- Both Players Ready Check -->
-          <div class="ready-screen">
-            <div class="ready-content">
-              <h2 class="text-3xl font-bold text-casino-gold mb-6">Get Ready!</h2>
-
-              <div class="players-ready">
-                <div class="player-ready-status">
-                  <span class="player-name">{players[0]?.name}</span>
-                  <span class="ready-indicator {gameState.player1Ready ? 'ready' : 'not-ready'}">
-                    {gameState.player1Ready ? '✓ Ready' : '⏳ Not Ready'}
-                  </span>
-                </div>
-
-                <div class="vs-divider">VS</div>
-
-                <div class="player-ready-status">
-                  <span class="player-name">{players[1]?.name}</span>
-                  <span class="ready-indicator {gameState.player2Ready ? 'ready' : 'not-ready'}">
-                    {gameState.player2Ready ? '✓ Ready' : '⏳ Not Ready'}
-                  </span>
-                </div>
-              </div>
-
-              <p class="text-gray-400 mt-6 text-sm mb-6">
-                Game will start when both players are ready
-              </p>
-
-              <div class="flex gap-4 justify-center">
-                <button
-                  on:click={async () => {
-                    try {
-                      console.log('Ready button clicked');
-                      console.log('Current gameStore state:', {
-                        roomId: $gameStore.roomId,
-                        playerId: $gameStore.playerId,
-                        playerName: $gameStore.playerName
-                      });
-                      
-                      if (!$gameStore.roomId || !$gameStore.playerId) {
-                        console.error('Missing roomId or playerId!');
-                        alert('Error: Missing room or player information. Please refresh and try again.');
-                        return;
-                      }
-                      
-                      const { setPlayerReady } = await import('$lib/utils/api');
-                      const isPlayer1 = players[0]?.id === $gameStore.playerId;
-                      const currentReady = isPlayer1 ? gameState.player1Ready : gameState.player2Ready;
-                      
-                      console.log('Setting ready state:', {
-                        roomId: $gameStore.roomId,
-                        playerId: $gameStore.playerId,
-                        newReady: !currentReady,
-                        isPlayer1
-                      });
-                      
-                      const response = await setPlayerReady($gameStore.roomId, $gameStore.playerId, !currentReady);
-                      
-                      console.log('Ready state response:', response);
-                      
-                      // Update local state immediately
-                      if (response.success && response.game_state) {
-                        console.log('Updating game state with:', response.game_state);
-                        await gameStore.setGameState(response.game_state);
-                      } else {
-                        console.error('Response missing success or game_state:', response);
-                        alert('Error: Server response was invalid');
-                      }
-                    } catch (err: any) {
-                      console.error('Failed to set ready status:', err);
-                      alert(`Error: ${err.message || 'Failed to set ready status'}`);
-                    }
-                  }}
-                  class="btn-primary"
-                >
-                  {#if players[0]?.id === $gameStore.playerId}
-                    {gameState.player1Ready ? 'Not Ready' : 'Ready'}
-                  {:else}
-                    {gameState.player2Ready ? 'Not Ready' : 'Ready'}
-                  {/if}
-                </button>
-
-                <button
-                  on:click={() => {
-                    connectionStore.disconnect();
-                    gameStore.reset();
-                  }}
-                  class="btn-primary bg-red-600 hover:bg-red-700"
-                >
-                  Leave Room
-                </button>
-              </div>
-            </div>
-          </div>
+          <!-- Both Players Ready Check - Use GamePhases component -->
+          <GamePhases 
+            onReady={handleReady}
+            onStartShuffle={handleStartShuffle}
+            onSelectFaceUpCards={handleSelectFaceUpCards}
+          />
+        {:else if gameState?.phase === 'dealer'}
+          <!-- Dealer Phase - Use GamePhases component with animation -->
+          <GamePhases 
+            onReady={handleReady}
+            onStartShuffle={handleStartShuffle}
+            onSelectFaceUpCards={handleSelectFaceUpCards}
+          />
         {:else}
           <!-- Active Game -->
           <div class="game-active">
