@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { gameStore } from '$stores/gameStore';
-	import { Button, Card } from '$components';
+	import { Button, Card, DealerAnimation } from '$components';
 	import type { Card as CardType } from '$types/game';
 	
 	export let onReady: (() => void) | undefined = undefined;
@@ -8,6 +8,8 @@
 	export let onSelectFaceUpCards: ((cardIds: string[]) => void) | undefined = undefined;
 	
 	let selectedFaceUpCards: string[] = [];
+	let showDealerAnimation = false;
+	let dealerAnimationComplete = false;
 	
 	$: gameState = $gameStore.gameState;
 	$: phase = gameState?.phase || 'waiting';
@@ -17,6 +19,11 @@
 	$: isPlayer1 = player1?.id === $gameStore.playerId;
 	$: myReady = isPlayer1 ? gameState?.player1Ready : gameState?.player2Ready;
 	$: opponentReady = isPlayer1 ? gameState?.player2Ready : gameState?.player1Ready;
+	
+	// Show dealer animation when phase changes to 'dealer' and animation hasn't been shown
+	$: if (phase === 'dealer' && !dealerAnimationComplete && !showDealerAnimation) {
+		showDealerAnimation = true;
+	}
 	
 	function handleReady() {
 		if (onReady) {
@@ -28,6 +35,11 @@
 		if (onStartShuffle) {
 			onStartShuffle();
 		}
+	}
+	
+	function handleDealerAnimationComplete() {
+		showDealerAnimation = false;
+		dealerAnimationComplete = true;
 	}
 	
 	function handleCardSelect(card: CardType) {
@@ -47,6 +59,15 @@
 	
 	$: canConfirmFaceUp = selectedFaceUpCards.length === 4;
 </script>
+
+<!-- Dealer Animation Overlay -->
+{#if showDealerAnimation}
+	<DealerAnimation 
+		onComplete={handleDealerAnimationComplete}
+		autoComplete={true}
+		duration={4000}
+	/>
+{/if}
 
 <div class="game-phases">
 	{#if phase === 'waiting'}
