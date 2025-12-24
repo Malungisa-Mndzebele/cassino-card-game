@@ -79,6 +79,7 @@ class WebSocketConnectionManager:
             # Subscribe to all room channels (pattern matching)
             await pubsub.psubscribe("room:*")
             
+            print("[WS-REDIS] Subscribed to Redis pub/sub channels")
             logger.info("Subscribed to Redis pub/sub channels")
             
             async for message in pubsub.listen():
@@ -86,21 +87,31 @@ class WebSocketConnectionManager:
                     try:
                         # Extract room_id from channel name (room:ROOM_ID)
                         channel = message["channel"]
+                        if isinstance(channel, bytes):
+                            channel = channel.decode('utf-8')
                         room_id = channel.split(":", 1)[1]
                         
                         # Parse message data
-                        data = json.loads(message["data"])
+                        msg_data = message["data"]
+                        if isinstance(msg_data, bytes):
+                            msg_data = msg_data.decode('utf-8')
+                        data = json.loads(msg_data)
+                        
+                        print(f"[WS-REDIS] Received message for room {room_id}: type={data.get('type', 'unknown')}")
                         
                         # Forward to local WebSocket connections
                         await self._broadcast_to_local_connections(room_id, data)
                         
                     except Exception as e:
+                        print(f"[WS-REDIS] Error processing Redis message: {e}")
                         logger.error(f"Error processing Redis message: {e}")
         
         except asyncio.CancelledError:
+            print("[WS-REDIS] Redis subscriber cancelled")
             logger.info("Redis subscriber cancelled")
             raise
         except Exception as e:
+            print(f"[WS-REDIS] Redis subscriber error: {e}")
             logger.error(f"Redis subscriber error: {e}")
             # Attempt to reconnect after delay
             await asyncio.sleep(5)
@@ -281,14 +292,21 @@ class WebSocketConnectionManager:
         
         # Send to all local connections
         disconnected = []
+        connection_count = len(self.active_connections[room_id])
+        print(f"[WS-BROADCAST] Broadcasting to {connection_count} connections in room {room_id}")
+        
         for websocket in self.active_connections[room_id]:
             try:
                 await websocket.send_json(data)
+                print(f"[WS-BROADCAST] Successfully sent to websocket in room {room_id}")
             except Exception as e:
+                print(f"[WS-BROADCAST] Failed to send to WebSocket in room {room_id}: {e}")
                 logger.error(f"Failed to send to WebSocket: {e}")
                 disconnected.append(websocket)
         
         # Remove disconnected WebSockets
+        if disconnected:
+            print(f"[WS-BROADCAST] Removing {len(disconnected)} disconnected websockets from room {room_id}")
         for ws in disconnected:
             await self.disconnect(ws, room_id)
     
