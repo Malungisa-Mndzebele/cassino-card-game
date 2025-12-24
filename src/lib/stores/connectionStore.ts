@@ -196,6 +196,19 @@ function createConnectionStore() {
                         send({ type: 'pong', timestamp: data.timestamp });
                     } else if (data.type === 'error') {
                         update((s) => ({ ...s, error: data.message }));
+                        
+                        // Handle invalid session - clear stored session and stop reconnecting
+                        if (data.code === 'invalid_session' || data.code === 'wrong_room') {
+                            console.log('Session invalid, clearing stored session data');
+                            if (typeof localStorage !== 'undefined') {
+                                localStorage.removeItem('session_token');
+                                localStorage.removeItem('cassino_room_id');
+                                localStorage.removeItem('cassino_player_id');
+                                localStorage.removeItem('cassino_session_timestamp');
+                            }
+                            // Stop reconnection attempts for invalid sessions
+                            reconnectAttempts = maxReconnectAttempts;
+                        }
                     }
                 } catch (err) {
                     ErrorHandler.logError(err, 'WebSocket message parsing');
@@ -213,7 +226,23 @@ function createConnectionStore() {
                 update((s) => ({ ...s, status: 'disconnected' }));
                 stopHeartbeat();
 
-                // Attempt to reconnect
+                // Don't reconnect if session was invalid (code 1008)
+                if (event.code === 1008) {
+                    console.log('Session invalid, not reconnecting');
+                    if (typeof localStorage !== 'undefined') {
+                        localStorage.removeItem('session_token');
+                        localStorage.removeItem('cassino_room_id');
+                        localStorage.removeItem('cassino_player_id');
+                        localStorage.removeItem('cassino_session_timestamp');
+                    }
+                    update((s) => ({
+                        ...s,
+                        error: 'Session expired. Please create or join a new room.'
+                    }));
+                    return;
+                }
+
+                // Attempt to reconnect for other close codes
                 if (reconnectAttempts < maxReconnectAttempts) {
                     reconnectAttempts++;
                     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
