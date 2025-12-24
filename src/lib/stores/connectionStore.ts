@@ -88,7 +88,9 @@ function createConnectionStore() {
 
             ws.onmessage = async (event) => {
                 try {
+                    console.log('WebSocket raw message received:', event.data.substring(0, 200));
                     const data = JSON.parse(event.data);
+                    console.log('WebSocket parsed message type:', data.type);
 
                     // Parse state update type (delta or full)
                     const updateInfo = parseStateUpdate(data);
@@ -204,8 +206,8 @@ function createConnectionStore() {
                 update((s) => ({ ...s, status: 'error', error: errorMessage }));
             };
 
-            ws.onclose = () => {
-                console.log('WebSocket closed');
+            ws.onclose = (event) => {
+                console.log('WebSocket closed', { code: event.code, reason: event.reason, wasClean: event.wasClean });
                 update((s) => ({ ...s, status: 'disconnected' }));
                 stopHeartbeat();
 
