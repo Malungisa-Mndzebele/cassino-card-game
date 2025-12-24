@@ -4,11 +4,17 @@
 	
 	export let onComplete: (() => void) | undefined = undefined;
 	export let autoComplete: boolean = true;
-	export let duration: number = 4000; // Total animation duration in ms
+	export let duration: number = 8000; // Total animation duration in ms
 	
-	let stage: 'enter' | 'shuffle' | 'ready' = 'enter';
+	let stage: 'enter' | 'shuffle' | 'dealing' | 'ready' = 'enter';
 	let shuffleCount = 0;
 	const maxShuffles = 6;
+	
+	// Dealing animation state
+	let player1Cards: number[] = [];
+	let player2Cards: number[] = [];
+	let tableCards: number[] = [];
+	let dealingPhase: 'player1' | 'player2' | 'table' | 'done' = 'player1';
 	
 	onMount(() => {
 		// Stage 1: Dealer enters (1s)
@@ -16,6 +22,12 @@
 			stage = 'shuffle';
 			startShuffleAnimation();
 		}, 1000);
+		
+		// Stage 2: Shuffle complete, start dealing (after 3.5s)
+		setTimeout(() => {
+			stage = 'dealing';
+			startDealingAnimation();
+		}, 3500);
 		
 		// Auto-complete after duration
 		if (autoComplete && onComplete) {
@@ -35,6 +47,25 @@
 				clearInterval(shuffleInterval);
 			}
 		}, 400);
+	}
+	
+	function startDealingAnimation() {
+		// Deal 4 cards to player 1 (visible as 4, representing their hand)
+		let cardIndex = 0;
+		const dealInterval = setInterval(() => {
+			if (player1Cards.length < 4) {
+				player1Cards = [...player1Cards, cardIndex++];
+			} else if (player2Cards.length < 4) {
+				if (player2Cards.length === 0) dealingPhase = 'player2';
+				player2Cards = [...player2Cards, cardIndex++];
+			} else if (tableCards.length < 4) {
+				if (tableCards.length === 0) dealingPhase = 'table';
+				tableCards = [...tableCards, cardIndex++];
+			} else {
+				dealingPhase = 'done';
+				clearInterval(dealInterval);
+			}
+		}, 200);
 	}
 </script>
 
@@ -105,6 +136,68 @@
 				</div>
 			{/if}
 			
+			{#if stage === 'dealing'}
+				<div class="dealing-container" in:fade={{ duration: 300 }}>
+					<!-- Central deck -->
+					<div class="central-deck">
+						{#each Array(12 - player1Cards.length - player2Cards.length - tableCards.length) as _, i}
+							<div class="deck-card" style="--stack-i: {i}"></div>
+						{/each}
+					</div>
+					
+					<!-- Player 1 area (top) -->
+					<div class="player-area player1">
+						<div class="player-label">Player 1</div>
+						<div class="player-cards">
+							{#each player1Cards as cardIdx, i}
+								<div 
+									class="dealt-card face-down"
+									style="--deal-i: {i}"
+									in:fly={{ y: 100, x: -50, duration: 300 }}
+								>
+									<div class="card-back">♠♥♦♣</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+					
+					<!-- Player 2 area (bottom) -->
+					<div class="player-area player2">
+						<div class="player-label">Player 2</div>
+						<div class="player-cards">
+							{#each player2Cards as cardIdx, i}
+								<div 
+									class="dealt-card face-down"
+									style="--deal-i: {i}"
+									in:fly={{ y: -100, x: 50, duration: 300 }}
+								>
+									<div class="card-back">♠♥♦♣</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+					
+					<!-- Table cards (center) -->
+					<div class="table-area">
+						<div class="table-label">Table</div>
+						<div class="table-cards">
+							{#each tableCards as cardIdx, i}
+								<div 
+									class="dealt-card face-up"
+									style="--deal-i: {i}"
+									in:scale={{ duration: 300, delay: 50 }}
+								>
+									<div class="card-face">
+										<span class="card-rank">{['A', '2', '3', '4'][i]}</span>
+										<span class="card-suit {['spades', 'hearts', 'diamonds', 'clubs'][i]}">{['♠', '♥', '♦', '♣'][i]}</span>
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				</div>
+			{/if}
+			
 			{#if stage === 'ready'}
 				<div class="ready-deck" in:scale={{ duration: 400 }}>
 					{#each Array(5) as _, i}
@@ -127,8 +220,35 @@
 						<div class="progress-dot {i < shuffleCount ? 'active' : ''}"></div>
 					{/each}
 				</div>
+			{:else if stage === 'dealing'}
+				<h2 in:fly={{ y: 20, duration: 300 }}>🃏 Dealing Cards</h2>
+				<p>
+					{#if dealingPhase === 'player1'}
+						Dealing to Player 1...
+					{:else if dealingPhase === 'player2'}
+						Dealing to Player 2...
+					{:else if dealingPhase === 'table'}
+						Placing cards on table...
+					{:else}
+						Cards dealt!
+					{/if}
+				</p>
+				<div class="deal-progress">
+					<div class="deal-stat">
+						<span class="deal-icon">👤</span>
+						<span class="deal-count">{player1Cards.length}/4</span>
+					</div>
+					<div class="deal-stat">
+						<span class="deal-icon">👤</span>
+						<span class="deal-count">{player2Cards.length}/4</span>
+					</div>
+					<div class="deal-stat">
+						<span class="deal-icon">🎯</span>
+						<span class="deal-count">{tableCards.length}/4</span>
+					</div>
+				</div>
 			{:else if stage === 'ready'}
-				<h2 in:scale={{ duration: 300 }}>✨ Ready to Deal!</h2>
+				<h2 in:scale={{ duration: 300 }}>✨ Ready to Play!</h2>
 				<p>Let the game begin</p>
 			{/if}
 		</div>
@@ -562,6 +682,188 @@
 		50% { 
 			opacity: 1;
 			transform: scale(1) rotate(180deg);
+		}
+	}
+	
+	/* Dealing Animation Styles */
+	.dealing-container {
+		position: relative;
+		width: 100%;
+		height: 280px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1rem;
+	}
+	
+	.central-deck {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 60px;
+		height: 85px;
+	}
+	
+	.deck-card {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #1e3a8a 100%);
+		border-radius: 6px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+		transform: translateY(calc(var(--stack-i) * -2px));
+	}
+	
+	.player-area {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		z-index: 10;
+	}
+	
+	.player-area.player1 {
+		position: absolute;
+		top: 0;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+	
+	.player-area.player2 {
+		position: absolute;
+		bottom: 0;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+	
+	.player-label {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #f4d03f;
+		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+	}
+	
+	.player-cards, .table-cards {
+		display: flex;
+		gap: 8px;
+	}
+	
+	.dealt-card {
+		width: 50px;
+		height: 70px;
+		border-radius: 6px;
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+		transform-style: preserve-3d;
+		animation: card-land 0.3s ease-out forwards;
+	}
+	
+	.dealt-card.face-down {
+		background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #1e3a8a 100%);
+		border: 2px solid rgba(255, 255, 255, 0.3);
+	}
+	
+	.dealt-card.face-up {
+		background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 100%);
+		border: 2px solid #ccc;
+	}
+	
+	.card-back {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 10px;
+		color: rgba(255, 255, 255, 0.4);
+		letter-spacing: 1px;
+	}
+	
+	.card-face {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 2px;
+	}
+	
+	.card-rank {
+		font-size: 1.25rem;
+		font-weight: 700;
+		color: #1a1a1a;
+	}
+	
+	.card-suit {
+		font-size: 1.5rem;
+	}
+	
+	.card-suit.hearts, .card-suit.diamonds {
+		color: #dc2626;
+	}
+	
+	.card-suit.spades, .card-suit.clubs {
+		color: #1a1a1a;
+	}
+	
+	.table-area {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		z-index: 5;
+	}
+	
+	.table-label {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: rgba(255, 255, 255, 0.7);
+		text-transform: uppercase;
+		letter-spacing: 1px;
+	}
+	
+	.deal-progress {
+		display: flex;
+		gap: 1.5rem;
+		justify-content: center;
+		margin-top: 1rem;
+	}
+	
+	.deal-stat {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.25rem;
+	}
+	
+	.deal-icon {
+		font-size: 1.25rem;
+	}
+	
+	.deal-count {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #f4d03f;
+	}
+	
+	@keyframes card-land {
+		0% {
+			transform: scale(0.8);
+			opacity: 0;
+		}
+		50% {
+			transform: scale(1.05);
+		}
+		100% {
+			transform: scale(1);
+			opacity: 1;
 		}
 	}
 	
