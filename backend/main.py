@@ -857,12 +857,12 @@ async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSe
     
     return JoinRoomResponse(
         player_id=player.id,
-        session_token=session_token,
+        session_token=session_token.to_string() if hasattr(session_token, 'to_string') else str(session_token),
         game_state=await game_state_to_response(room)
     )
 
 @app.post("/rooms/join-random", response_model=JoinRoomResponse)
-async def join_random_room(request: JoinRandomRoomRequest, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
+async def join_random_room(request: JoinRandomRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Join a random available game room"""
     # Find rooms that are in waiting phase
     from sqlalchemy import select
@@ -931,6 +931,17 @@ async def join_random_room(request: JoinRandomRoomRequest, db: AsyncSession = De
     await db.commit()
     await db.refresh(player)
     
+    # Create session for the player
+    from session_manager import get_session_manager
+    session_manager = get_session_manager(db)
+    session_token = await session_manager.create_session(
+        room_id=room.id,
+        player_id=player.id,
+        player_name=player.name,
+        ip_address=client_ip,
+        user_agent=http_request.headers.get("user-agent")
+    )
+    
     # Reload room with players eagerly loaded to avoid MissingGreenlet in game_state_to_response
     result = await db.execute(
         select(Room)
@@ -953,6 +964,7 @@ async def join_random_room(request: JoinRandomRoomRequest, db: AsyncSession = De
     
     return JoinRoomResponse(
         player_id=player.id,
+        session_token=session_token.to_string() if hasattr(session_token, 'to_string') else str(session_token),
         game_state=await game_state_to_response(room)
     )
 
