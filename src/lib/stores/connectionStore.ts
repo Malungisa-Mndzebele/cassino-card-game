@@ -263,9 +263,12 @@ function createConnectionStore() {
 
     const startHeartbeat = () => {
         stopHeartbeat();
+        // Send first ping immediately to establish keep-alive
+        send({ type: 'ping', timestamp: Date.now() });
+        // Then send every 10 seconds (Render may have shorter idle timeout)
         heartbeatInterval = setInterval(() => {
             send({ type: 'ping', timestamp: Date.now() });
-        }, 20000); // Every 20 seconds (well under Render's 60s timeout)
+        }, 10000); // Every 10 seconds to prevent idle timeout
     };
 
     const stopHeartbeat = () => {
