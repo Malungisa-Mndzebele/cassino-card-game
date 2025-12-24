@@ -42,6 +42,8 @@ function createConnectionStore() {
             ? localStorage.getItem('session_token') 
             : null;
 
+        console.log('WebSocket connecting with session token:', sessionToken ? sessionToken.substring(0, 30) + '...' : 'NONE');
+
         const wsUrl = sessionToken 
             ? `${apiUrl}/ws/${roomId}?session_token=${encodeURIComponent(sessionToken)}`
             : `${apiUrl}/ws/${roomId}`;

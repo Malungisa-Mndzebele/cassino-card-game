@@ -57,7 +57,10 @@ export async function createRoom(playerName: string): Promise<CreateRoomResponse
 
     // Store session token if provided
     if (response.session_token && typeof localStorage !== 'undefined') {
+        console.log('Storing session token from createRoom:', response.session_token.substring(0, 30) + '...');
         localStorage.setItem('session_token', response.session_token);
+    } else {
+        console.warn('No session_token in createRoom response!');
     }
 
     return {
@@ -79,7 +82,10 @@ export async function joinRoom(roomCode: string, playerName: string): Promise<Jo
 
     // Store session token if provided
     if (response.session_token && typeof localStorage !== 'undefined') {
+        console.log('Storing session token from joinRoom:', response.session_token.substring(0, 30) + '...');
         localStorage.setItem('session_token', response.session_token);
+    } else {
+        console.warn('No session_token in joinRoom response!');
     }
 
     return {
@@ -97,6 +103,14 @@ export async function joinRandomRoom(playerName: string): Promise<JoinRoomRespon
             player_name: playerName
         })
     });
+
+    // Store session token if provided
+    if (response.session_token && typeof localStorage !== 'undefined') {
+        console.log('Storing session token from joinRandomRoom:', response.session_token.substring(0, 30) + '...');
+        localStorage.setItem('session_token', response.session_token);
+    } else {
+        console.warn('No session_token in joinRandomRoom response!');
+    }
 
     return {
         room_id: response.game_state?.room_id || '',
