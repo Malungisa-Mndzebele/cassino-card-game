@@ -253,4 +253,24 @@ export async function resetGame(roomId: string, playerId: string) {
     });
 }
 
+export async function leaveRoom(roomId: string, playerId: string) {
+    const response = await fetchAPI<any>('/rooms/leave', {
+        method: 'POST',
+        body: JSON.stringify({
+            room_id: roomId,
+            player_id: playerId
+        })
+    });
+
+    // Clear session token from localStorage
+    if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('session_token');
+    }
+
+    return {
+        success: response.success,
+        message: response.message
+    };
+}
+
 export { APIError };

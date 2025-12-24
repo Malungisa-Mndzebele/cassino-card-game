@@ -56,6 +56,7 @@ from database import get_db, async_engine
 from models import Base, Room, Player, GameSession
 from schemas import (
     CreateRoomRequest, JoinRoomRequest, JoinRandomRoomRequest, SetPlayerReadyRequest,
+    LeaveRoomRequest,
     PlayCardRequest, StartShuffleRequest, SelectFaceUpCardsRequest, StartGameRequest,
     CreateRoomResponse, JoinRoomResponse, StandardResponse, GameStateResponse, PlayerResponse,
     SyncRequest
@@ -1127,6 +1128,100 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
         with open("error_log.txt", "w") as f:
             f.write(error_msg)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.post("/rooms/leave", response_model=StandardResponse)
+async def leave_room(request: LeaveRoomRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Leave a room and clean up player session.
+    
+    This endpoint allows a player to voluntarily leave a room:
+    - Removes the player from the room
+    - Clears their session
+    - Notifies other players via WebSocket
+    - If game was in progress, opponent wins by forfeit
+    """
+    from datetime import datetime
+    
+    try:
+        logger.info(f"Leave room request: room_id={request.room_id}, player_id={request.player_id}")
+        
+        room = await get_room_or_404(db, request.room_id)
+        
+        # Verify player is in the room
+        players_in_room = get_sorted_players(room)
+        player_ids = [p.id for p in players_in_room]
+        
+        if request.player_id not in player_ids:
+            raise HTTPException(status_code=404, detail="Player not found in room")
+        
+        # Determine if this player is player 1 or 2
+        is_player1 = len(players_in_room) >= 1 and players_in_room[0].id == request.player_id
+        
+        # If game is in progress (not waiting), opponent wins by forfeit
+        if room.game_phase not in ["waiting", "finished"] and len(players_in_room) == 2:
+            room.game_phase = "finished"
+            room.game_completed = True
+            room.winner = 2 if is_player1 else 1  # Other player wins
+            logger.info(f"Player {request.player_id} forfeited. Winner: Player {room.winner}")
+        
+        # Remove the player from the room
+        player_to_remove = None
+        for p in players_in_room:
+            if p.id == request.player_id:
+                player_to_remove = p
+                break
+        
+        if player_to_remove:
+            await db.delete(player_to_remove)
+        
+        # Reset room ready status for the leaving player
+        if is_player1:
+            room.player1_ready = False
+        else:
+            room.player2_ready = False
+        
+        # Update room metadata
+        room.version += 1
+        room.last_modified = datetime.utcnow()
+        room.modified_by = request.player_id
+        
+        await db.commit()
+        
+        # Clear session from Redis
+        try:
+            from session_manager import SessionManager
+            session_manager = SessionManager()
+            session_manager.invalidate_player_sessions(request.room_id, request.player_id)
+        except Exception as e:
+            logger.warning(f"Failed to clear session: {e}")
+        
+        # Broadcast player left to remaining players
+        try:
+            await manager.broadcast_json_to_room({
+                "type": "player_left",
+                "room_id": room.id,
+                "player_id": request.player_id,
+                "message": "A player has left the room"
+            }, room.id)
+        except Exception as e:
+            logger.warning(f"Failed to broadcast player left: {e}")
+        
+        logger.info(f"Player {request.player_id} left room {request.room_id}")
+        
+        return StandardResponse(
+            success=True,
+            message="Successfully left the room",
+            game_state=None
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        logger.error(f"Error in leave_room: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 
 @app.post("/game/start-shuffle", response_model=StandardResponse)
 async def start_shuffle(request: StartShuffleRequest, db: AsyncSession = Depends(get_db)):

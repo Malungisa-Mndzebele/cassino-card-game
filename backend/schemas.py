@@ -88,6 +88,18 @@ class JoinRandomRoomRequest(BaseModel):
         return v.strip()
 
 
+class LeaveRoomRequest(BaseModel):
+    """
+    Request schema for leaving a room.
+    
+    Attributes:
+        room_id: Room identifier
+        player_id: Player identifier
+    """
+    room_id: str = Field(..., min_length=6, max_length=6)
+    player_id: int = Field(..., ge=1)
+
+
 class SetPlayerReadyRequest(BaseModel):
     """
     Request schema for setting player ready status.
