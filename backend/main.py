@@ -1454,10 +1454,9 @@ async def websocket_endpoint(
     print(f"[WS] Session token: {session_token[:30] if session_token else 'None'}...")
     
     async def send_server_ping():
-        """Send periodic pings to keep connection alive (Render timeout is ~10-15s for idle)"""
+        """Send periodic pings to keep connection alive (Render has aggressive idle timeout)"""
         try:
-            # Send first ping immediately to establish keep-alive
-            await asyncio.sleep(2)  # Wait just 2 seconds then start pinging
+            # Send first ping immediately after connection
             while True:
                 try:
                     await websocket.send_json({
@@ -1468,7 +1467,7 @@ async def websocket_endpoint(
                 except Exception as e:
                     print(f"[WS] Server ping failed (connection likely closed): {e}")
                     break
-                await asyncio.sleep(8)  # Send ping every 8 seconds (very aggressive)
+                await asyncio.sleep(5)  # Send ping every 5 seconds (very aggressive for Render)
         except asyncio.CancelledError:
             pass
     
