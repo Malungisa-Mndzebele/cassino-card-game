@@ -1218,7 +1218,7 @@ async def start_game(request: StartGameRequest, db: AsyncSession = Depends(get_d
             detail=f"Game must be in dealer phase to start. Current phase: {room.game_phase}"
         )
     
-    # Verify player is in the room
+    # Verify player is in the room - get players BEFORE any modifications
     players_in_room = get_sorted_players(room)
     player_ids = [p.id for p in players_in_room]
     if request.player_id not in player_ids:
@@ -1250,10 +1250,16 @@ async def start_game(request: StartGameRequest, db: AsyncSession = Depends(get_d
     
     await db.commit()
     
+    # Refresh room to get updated state with relationships loaded
+    await db.refresh(room)
+    
     logger.info(f"Game started in room {room.id} by player {request.player_id}")
     
     # Broadcast game state update to all connected clients
     await manager.broadcast_json_to_room({"type": "game_state_update", "room_id": room.id}, room.id)
+    
+    # Re-fetch room with players loaded for response
+    room = await get_room_or_404(db, request.room_id)
     
     return StandardResponse(
         success=True,
