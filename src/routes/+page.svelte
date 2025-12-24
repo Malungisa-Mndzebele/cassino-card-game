@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { gameStore } from '$stores/gameStore';
   import { connectionStore } from '$stores/connectionStore';
-  import { RoomManager, GameHeader, Card, GamePhases } from '$components';
+  import { RoomManager, GameHeader, Card, GamePhases, GameBoard } from '$components';
 
   // Reactive state
   $: inRoom = !!$gameStore.roomId;
@@ -150,31 +150,8 @@
             onSelectFaceUpCards={handleSelectFaceUpCards}
           />
         {:else}
-          <!-- Active Game -->
-          <div class="game-active">
-            <div class="game-board">
-              <!-- Placeholder for game board -->
-              <div class="placeholder-board">
-                <h3 class="text-2xl font-bold text-casino-gold mb-4">Game Board</h3>
-                <p class="text-gray-300 mb-4">
-                  Phase: {gameState?.phase || 'unknown'}
-                </p>
-                <p class="text-gray-400 text-sm">Game components will be added here</p>
-
-                <!-- Sample Cards Display -->
-                {#if gameState?.player1Hand && gameState.player1Hand.length > 0}
-                  <div class="mt-8">
-                    <p class="text-gray-300 mb-4">Your Hand:</p>
-                    <div class="flex gap-2 justify-center flex-wrap">
-                      {#each gameState.player1Hand.slice(0, 4) as card}
-                        <Card {card} size="medium" isPlayable={false} />
-                      {/each}
-                    </div>
-                  </div>
-                {/if}
-              </div>
-            </div>
-          </div>
+          <!-- Active Game (round1, round2, etc.) -->
+          <GameBoard />
         {/if}
       </main>
 
@@ -214,25 +191,6 @@
   .waiting-content {
     text-align: center;
     max-width: 500px;
-  }
-
-  /* Game Active */
-  .game-active {
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-
-  .game-board {
-    background: rgba(30, 41, 59, 0.6);
-    backdrop-filter: blur(10px);
-    border-radius: 1rem;
-    padding: 2rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .placeholder-board {
-    text-align: center;
-    padding: 3rem;
   }
 
   /* Footer */
