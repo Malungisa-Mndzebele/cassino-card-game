@@ -23,14 +23,19 @@ function createConnectionStore() {
     let ws: WebSocket | null = null;
     let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
     let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+    let pollingInterval: ReturnType<typeof setInterval> | null = null;
+    let currentRoomId: string | null = null;
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
+    const POLLING_INTERVAL = 2000; // Poll every 2 seconds as fallback
 
     const connect = (roomId: string) => {
         if (ws?.readyState === WebSocket.OPEN) {
             console.log('WebSocket already connected');
             return;
         }
+
+        currentRoomId = roomId;
 
         const apiUrl =
             typeof window !== 'undefined' && window.location.hostname === 'localhost'
@@ -49,6 +54,9 @@ function createConnectionStore() {
             : `${apiUrl}/ws/${roomId}`;
 
         update((s) => ({ ...s, status: 'connecting', error: null }));
+
+        // Start polling fallback immediately - this ensures state syncs even if WebSocket is flaky
+        startPolling(roomId);
 
         try {
             ws = new WebSocket(wsUrl);
@@ -93,9 +101,6 @@ function createConnectionStore() {
                     console.log('WebSocket raw message received:', event.data.substring(0, 200));
                     const data = JSON.parse(event.data);
                     console.log('WebSocket parsed message type:', data.type);
-
-                    // Parse state update type (delta or full)
-                    const updateInfo = parseStateUpdate(data);
 
                     // Handle different message types
                     if (data.type === 'server_ping') {
@@ -276,6 +281,8 @@ function createConnectionStore() {
         }
 
         stopHeartbeat();
+        stopPolling();
+        currentRoomId = null;
 
         if (ws) {
             ws.close();
@@ -313,6 +320,49 @@ function createConnectionStore() {
         if (heartbeatInterval) {
             clearInterval(heartbeatInterval);
             heartbeatInterval = null;
+        }
+    };
+
+    // Polling fallback - fetches game state periodically to ensure sync even when WebSocket is unreliable
+    const startPolling = (roomId: string) => {
+        stopPolling();
+        console.log('Starting polling fallback for room:', roomId);
+        
+        // Poll immediately on start
+        pollGameState(roomId);
+        
+        // Then poll every POLLING_INTERVAL ms
+        pollingInterval = setInterval(() => {
+            pollGameState(roomId);
+        }, POLLING_INTERVAL);
+    };
+
+    const stopPolling = () => {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+    };
+
+    const pollGameState = async (roomId: string) => {
+        try {
+            const { getGameState } = await import('$lib/utils/api');
+            const response = await getGameState(roomId);
+            
+            if (response.game_state) {
+                const currentState = gameStore.getConfirmedGameState();
+                const newVersion = response.game_state.version || 0;
+                const currentVersion = currentState?.version || 0;
+                
+                // Only update if server has newer state
+                if (newVersion > currentVersion) {
+                    console.log(`Polling: updating state from v${currentVersion} to v${newVersion}`);
+                    await gameStore.setGameState(response.game_state);
+                }
+            }
+        } catch (err) {
+            // Silently fail polling - WebSocket might still work
+            console.debug('Polling failed (this is normal if WebSocket is working):', err);
         }
     };
 
