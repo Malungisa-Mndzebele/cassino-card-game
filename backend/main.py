@@ -342,7 +342,7 @@ async def claim_victory(
         "success": True,
         "message": "Victory claimed",
         "winner": room.winner,
-        "game_state": game_state_to_response(room)
+        "game_state": await game_state_to_response(room)
     }
 
 # State recovery endpoint
@@ -953,7 +953,7 @@ async def join_random_room(request: JoinRandomRoomRequest, db: AsyncSession = De
     
     return JoinRoomResponse(
         player_id=player.id,
-        game_state=game_state_to_response(room)
+        game_state=await game_state_to_response(room)
     )
 
 @app.get("/rooms/{room_id}/state", response_model=GameStateResponse)
@@ -961,7 +961,7 @@ async def get_game_state(room_id: str, db: AsyncSession = Depends(get_db)):
     """Get current game state"""
     room = await get_room_or_404(db, room_id)
     
-    return game_state_to_response(room)
+    return await game_state_to_response(room)
 
 @app.post("/rooms/player-ready", response_model=StandardResponse)
 async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = Depends(get_db)):
@@ -1023,7 +1023,7 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
         logger.info(f"Room {room.id} ready status: player1={room.player1_ready}, player2={room.player2_ready}, phase={room.game_phase}")
         
         # Broadcast game state update to all connected clients with full state
-        game_state_response = game_state_to_response(room)
+        game_state_response = await game_state_to_response(room)
         # Verify response model structure before broadcast
         state_dict = game_state_response.model_dump()
         
@@ -1042,7 +1042,7 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
         return StandardResponse(
             success=True,
             message="Player ready status updated",
-            game_state=game_state_to_response(room)
+            game_state=await game_state_to_response(room)
         )
     except Exception as e:
         import traceback
@@ -1073,7 +1073,7 @@ async def start_shuffle(request: StartShuffleRequest, db: AsyncSession = Depends
     return StandardResponse(
         success=True,
         message="Shuffle started",
-        game_state=game_state_to_response(room)
+        game_state=await game_state_to_response(room)
     )
 
 @app.post("/game/select-face-up-cards", response_model=StandardResponse)
@@ -1116,7 +1116,7 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: AsyncSessi
     return StandardResponse(
         success=True,
         message="Cards dealt successfully",
-        game_state=game_state_to_response(room)
+        game_state=await game_state_to_response(room)
     )
 
 @app.post("/game/play-card", response_model=StandardResponse)
@@ -1306,7 +1306,7 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
     return StandardResponse(
         success=True,
         message="Card played successfully",
-        game_state=game_state_to_response(room)
+        game_state=await game_state_to_response(room)
     )
 
 @app.post("/game/reset", response_model=StandardResponse)
@@ -1353,7 +1353,7 @@ async def reset_game(room_id: str, db: AsyncSession = Depends(get_db)):
     return StandardResponse(
         success=True,
         message="Game reset successfully",
-        game_state=game_state_to_response(room)
+        game_state=await game_state_to_response(room)
     )
 
 # WebSocket endpoint for real-time updates
