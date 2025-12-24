@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
+import asyncio
 import logging
 import hashlib
 import secrets
@@ -204,6 +205,7 @@ class SessionManager:
             existing_session.ip_address = ip_address
             existing_session.user_agent = user_agent
             existing_session.is_active = True
+            current_session = existing_session
         else:
             # Create new session
             session = GameSession(
@@ -218,10 +220,18 @@ class SessionManager:
                 user_agent=user_agent
             )
             self.db.add(session)
+            current_session = session
         
+        # Flush to database to assign ID before commit
+        await self.db.flush()
+        
+        # Commit the transaction
         await self.db.commit()
         
-        logger.info(f"Session created for player {player_id} in room {room_id}")
+        # Refresh to ensure all attributes are loaded from database
+        await self.db.refresh(current_session)
+        
+        logger.info(f"Session created for player {player_id} in room {room_id} with token {token.to_string()[:10]}...")
         
         return token
     
@@ -251,41 +261,57 @@ class SessionManager:
         
         if not session_data:
             # Fallback to database if Redis fails or session not found
-            try:
-                db_session = await self.db.execute(
-                    select(GameSession).where(
-                        and_(
-                            GameSession.session_token == token_str,
-                            GameSession.is_active == True
+            # Retry up to 3 times with small delays to handle transaction visibility delays
+            max_retries = 3
+            retry_delay = 0.05  # 50ms initial delay
+            
+            for attempt in range(max_retries):
+                try:
+                    db_session = await self.db.execute(
+                        select(GameSession).where(
+                            and_(
+                                GameSession.session_token == token_str,
+                                GameSession.is_active == True
+                            )
                         )
                     )
-                )
-                db_session = db_session.scalar_one_or_none()
-                
-                if db_session:
-                    # Convert database session to session_data format
-                    # Calculate expires_at based on connected_at + SESSION_TTL
-                    expires_at = db_session.connected_at + timedelta(seconds=self.SESSION_TTL)
+                    db_session = db_session.scalar_one_or_none()
                     
-                    session_data = {
-                        "token": db_session.session_token,
-                        "room_id": db_session.room_id,
-                        "player_id": db_session.player_id,
-                        "ip_address": db_session.ip_address,
-                        "user_agent": db_session.user_agent,
-                        "connected_at": db_session.connected_at.isoformat() if db_session.connected_at else None,
-                        "last_heartbeat": db_session.last_heartbeat.isoformat() if db_session.last_heartbeat else None,
-                        "connection_count": db_session.connection_count,
-                        "is_active": db_session.is_active,
-                        "expires_at": expires_at.isoformat()  # Add missing expires_at field
-                    }
-                    logger.info(f"Session retrieved from database for token {token_str[:10]}...")
-                else:
-                    logger.warning("Session not found in database either")
-                    return None
-            except Exception as e:
-                logger.error(f"Failed to get session from database: {e}")
-                return None
+                    if db_session:
+                        # Convert database session to session_data format
+                        # Calculate expires_at based on connected_at + SESSION_TTL
+                        expires_at = db_session.connected_at + timedelta(seconds=self.SESSION_TTL)
+                        
+                        session_data = {
+                            "token": db_session.session_token,
+                            "room_id": db_session.room_id,
+                            "player_id": db_session.player_id,
+                            "ip_address": db_session.ip_address,
+                            "user_agent": db_session.user_agent,
+                            "connected_at": db_session.connected_at.isoformat() if db_session.connected_at else None,
+                            "last_heartbeat": db_session.last_heartbeat.isoformat() if db_session.last_heartbeat else None,
+                            "connection_count": db_session.connection_count,
+                            "is_active": db_session.is_active,
+                            "expires_at": expires_at.isoformat()  # Add missing expires_at field
+                        }
+                        logger.info(f"Session retrieved from database for token {token_str[:10]}... (attempt {attempt + 1})")
+                        break  # Success, exit retry loop
+                    else:
+                        if attempt < max_retries - 1:
+                            # Not found, but we have retries left
+                            logger.warning(f"Session not found in database (attempt {attempt + 1}/{max_retries}), retrying after {retry_delay}s...")
+                            await asyncio.sleep(retry_delay)
+                            retry_delay *= 2  # Exponential backoff
+                        else:
+                            # Final attempt failed
+                            logger.warning(f"Session not found in database after {max_retries} attempts for token {token_str[:10]}...")
+                            return None
+                except Exception as e:
+                    logger.error(f"Failed to get session from database (attempt {attempt + 1}): {e}")
+                    if attempt == max_retries - 1:
+                        return None
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
         
         # Check if session is active
         if not session_data.get("is_active", False):
