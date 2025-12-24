@@ -1529,7 +1529,6 @@ async def websocket_endpoint(
     async def send_server_ping():
         """Send periodic pings to keep connection alive (Render has aggressive idle timeout)"""
         try:
-            # Send first ping immediately after connection
             while True:
                 try:
                     await websocket.send_json({
@@ -1563,6 +1562,16 @@ async def websocket_endpoint(
             print(f"[WS] Connection SUCCESS for room {room_id}")
             print(f"[WS] Session ID: {session_id[:30] if session_id else 'None'}...")
             logger.info(f"WebSocket connected successfully for room {room_id}, session: {session_id[:20] if session_id else 'None'}...")
+        
+        # Send immediate ping to establish keep-alive before any delay
+        try:
+            await websocket.send_json({
+                "type": "server_ping",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            print(f"[WS] Sent immediate ping to room {room_id}")
+        except Exception as e:
+            print(f"[WS] Failed to send immediate ping: {e}")
         
         # Start server-side ping task to keep connection alive
         ping_task = asyncio.create_task(send_server_ping())

@@ -216,69 +216,6 @@
     max-width: 500px;
   }
 
-  /* Ready Screen */
-  .ready-screen {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 60vh;
-  }
-
-  .ready-content {
-    text-align: center;
-    max-width: 600px;
-    background: rgba(30, 41, 59, 0.8);
-    backdrop-filter: blur(10px);
-    border-radius: 1rem;
-    padding: 3rem;
-    border: 2px solid var(--casino-gold);
-  }
-
-  .players-ready {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2rem;
-  }
-
-  .player-ready-status {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-width: 150px;
-  }
-
-  .player-name {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .ready-indicator {
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-  }
-
-  .ready-indicator.ready {
-    background: rgba(16, 185, 129, 0.2);
-    color: #10b981;
-    border: 1px solid #10b981;
-  }
-
-  .ready-indicator.not-ready {
-    background: rgba(107, 114, 128, 0.2);
-    color: #9ca3af;
-    border: 1px solid #6b7280;
-  }
-
-  .vs-divider {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--casino-gold);
-  }
-
   /* Game Active */
   .game-active {
     max-width: 1400px;
@@ -309,19 +246,6 @@
   @media (max-width: 768px) {
     .game-main {
       padding: 1rem;
-    }
-
-    .ready-content {
-      padding: 2rem 1.5rem;
-    }
-
-    .players-ready {
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .vs-divider {
-      transform: rotate(90deg);
     }
   }
 </style>

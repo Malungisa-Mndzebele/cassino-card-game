@@ -98,7 +98,11 @@ function createConnectionStore() {
                     const updateInfo = parseStateUpdate(data);
 
                     // Handle different message types
-                    if (data.type === 'game_state_update' || data.type === 'state_update') {
+                    if (data.type === 'server_ping') {
+                        // Respond to server ping IMMEDIATELY to keep connection alive
+                        send({ type: 'pong', timestamp: data.timestamp });
+                        return;
+                    } else if (data.type === 'game_state_update' || data.type === 'state_update') {
                         // Full state update
                         console.log('Full state update received:', data);
 
@@ -191,9 +195,6 @@ function createConnectionStore() {
                             const latency = Date.now() - serverTime;
                             update((s) => ({ ...s, latency: Math.abs(latency) }));
                         }
-                    } else if (data.type === 'server_ping') {
-                        // Respond to server ping to keep connection alive
-                        send({ type: 'pong', timestamp: data.timestamp });
                     } else if (data.type === 'error') {
                         update((s) => ({ ...s, error: data.message }));
                         

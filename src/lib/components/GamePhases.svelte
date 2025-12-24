@@ -295,84 +295,6 @@
 		animation: spin 1s linear infinite;
 	}
 	
-	/* Shuffle Animation */
-	.shuffle-animation {
-		margin: 2rem 0;
-		display: flex;
-		justify-content: center;
-	}
-	
-	.deck-stack {
-		position: relative;
-		width: 100px;
-		height: 140px;
-	}
-	
-	.deck-card {
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-		border-radius: 0.5rem;
-		border: 2px solid rgba(255, 255, 255, 0.3);
-		transform: translateY(calc(var(--index) * -4px)) rotate(calc(var(--index) * 2deg));
-		animation: card-shuffle 2s ease-in-out infinite;
-		animation-delay: calc(var(--index) * 0.1s);
-	}
-	
-	/* Card Selection */
-	.selection-info {
-		margin-bottom: 1.5rem;
-	}
-	
-	.selected-count {
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: var(--casino-gold);
-		background: rgba(255, 255, 255, 0.1);
-		padding: 0.5rem 1rem;
-		border-radius: 9999px;
-	}
-	
-	.deck-selection {
-		margin-bottom: 2rem;
-		max-height: 400px;
-		overflow-y: auto;
-	}
-	
-	.cards-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-		gap: 1rem;
-		padding: 1rem;
-	}
-	
-	.selectable-card {
-		position: relative;
-		transition: transform 0.2s;
-	}
-	
-	.selectable-card.selected {
-		transform: translateY(-10px);
-	}
-	
-	.selection-number {
-		position: absolute;
-		top: -8px;
-		right: -8px;
-		width: 28px;
-		height: 28px;
-		background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: white;
-		font-weight: bold;
-		font-size: 0.875rem;
-		box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
-	}
-	
 	/* Winner Announcement */
 	.winner-announcement {
 		margin: 2rem 0;
@@ -415,15 +337,6 @@
 		}
 	}
 	
-	@keyframes card-shuffle {
-		0%, 100% {
-			transform: translateY(calc(var(--index) * -4px)) rotate(calc(var(--index) * 2deg));
-		}
-		50% {
-			transform: translateY(calc(var(--index) * -8px)) rotate(calc(var(--index) * -2deg));
-		}
-	}
-	
 	@keyframes pulse-scale {
 		0%, 100% {
 			transform: scale(1);
@@ -446,11 +359,6 @@
 		
 		.vs-divider {
 			transform: rotate(90deg);
-		}
-		
-		.cards-grid {
-			grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-			gap: 0.5rem;
 		}
 	}
 </style>
