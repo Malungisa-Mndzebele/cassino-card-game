@@ -1435,13 +1435,30 @@ async def websocket_endpoint(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    WebSocket endpoint with session support
+    WebSocket endpoint with session support and server-side keep-alive
     
     Query params:
         session_token: Optional session token for reconnection
     """
     session_id = None
     game_session = None
+    ping_task = None
+    
+    async def send_server_ping():
+        """Send periodic pings to keep connection alive (Render timeout is 60s)"""
+        try:
+            while True:
+                await asyncio.sleep(25)  # Send ping every 25 seconds (well under 60s timeout)
+                try:
+                    await websocket.send_json({
+                        "type": "server_ping",
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                except Exception as e:
+                    logger.debug(f"Server ping failed (connection likely closed): {e}")
+                    break
+        except asyncio.CancelledError:
+            pass
     
     try:
         # Connect with session validation
@@ -1452,7 +1469,10 @@ async def websocket_endpoint(
         if not success:
             return
         
-        session_id = game_session.id if game_session else None
+        session_id = game_session.get("token") if game_session else None
+        
+        # Start server-side ping task to keep connection alive
+        ping_task = asyncio.create_task(send_server_ping())
         
         # Main message loop
         while True:
@@ -1464,12 +1484,22 @@ async def websocket_endpoint(
                 
                 # Handle different message types
                 if message_type == "ping":
-                    # Heartbeat ping
+                    # Heartbeat ping from client
                     if session_id:
                         pong_response = await manager.handle_heartbeat(
                             websocket, db
                         )
                         await websocket.send_json(pong_response)
+                    else:
+                        # Still respond to ping even without session
+                        await websocket.send_json({
+                            "type": "pong",
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                
+                elif message_type == "pong":
+                    # Client responding to server ping - connection is alive
+                    pass
                 
                 elif message_type == "state_update":
                     # Broadcast state update to room
@@ -1532,12 +1562,19 @@ async def websocket_endpoint(
     except WebSocketDisconnect:
         pass
     finally:
+        # Cancel the ping task
+        if ping_task:
+            ping_task.cancel()
+            try:
+                await ping_task
+            except asyncio.CancelledError:
+                pass
+        
         # Clean up on disconnect
         await manager.disconnect(websocket, room_id)
         
         # Broadcast updated connection status
         try:
-            from datetime import datetime
             await manager.broadcast_to_room({
                 "type": "player_disconnected",
                 "room_id": room_id,

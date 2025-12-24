@@ -181,9 +181,15 @@ function createConnectionStore() {
                             console.error('Failed to refresh game state:', err);
                         }
                     } else if (data.type === 'pong') {
-                        // Calculate latency
-                        const latency = Date.now() - data.timestamp;
-                        update((s) => ({ ...s, latency }));
+                        // Calculate latency from our ping
+                        if (data.timestamp) {
+                            const serverTime = new Date(data.timestamp).getTime();
+                            const latency = Date.now() - serverTime;
+                            update((s) => ({ ...s, latency: Math.abs(latency) }));
+                        }
+                    } else if (data.type === 'server_ping') {
+                        // Respond to server ping to keep connection alive
+                        send({ type: 'pong', timestamp: data.timestamp });
                     } else if (data.type === 'error') {
                         update((s) => ({ ...s, error: data.message }));
                     }
@@ -255,7 +261,7 @@ function createConnectionStore() {
         stopHeartbeat();
         heartbeatInterval = setInterval(() => {
             send({ type: 'ping', timestamp: Date.now() });
-        }, 30000); // Every 30 seconds
+        }, 20000); // Every 20 seconds (well under Render's 60s timeout)
     };
 
     const stopHeartbeat = () => {
