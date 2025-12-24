@@ -874,13 +874,13 @@ async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSe
     
     # Broadcast player joined event to all connected clients in the room
     await manager.broadcast_to_room(
-        json.dumps({
+        {
             "type": "player_joined",
             "room_id": room.id,
             "player_id": player.id,
             "player_name": player.name,
             "player_count": len(room.players)
-        }),
+        },
         room.id
     )
     
@@ -1010,13 +1010,13 @@ async def join_random_room(request: JoinRandomRoomRequest, http_request: Request
     
     # Broadcast player joined event to all connected clients in the room
     await manager.broadcast_to_room(
-        json.dumps({
+        {
             "type": "player_joined",
             "room_id": room.id,
             "player_id": player.id,
             "player_name": player.name,
             "player_count": len(room.players)
-        }),
+        },
         room.id
     )
     
