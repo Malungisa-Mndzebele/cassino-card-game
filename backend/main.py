@@ -1143,13 +1143,22 @@ async def start_shuffle(request: StartShuffleRequest, db: AsyncSession = Depends
     
     await db.commit()
     
-    # Broadcast game state update to all connected clients
-    await manager.broadcast_json_to_room({"type": "game_state_update", "room_id": room.id}, room.id)
+    # Re-fetch room with players loaded for response
+    room = await get_room_or_404(db, request.room_id)
+    
+    # Broadcast game state update with full state
+    game_state_response = await game_state_to_response(room)
+    state_dict = game_state_response.model_dump()
+    await manager.broadcast_json_to_room({
+        "type": "game_state_update",
+        "room_id": room.id,
+        "game_state": state_dict
+    }, room.id)
     
     return StandardResponse(
         success=True,
         message="Shuffle started",
-        game_state=await game_state_to_response(room)
+        game_state=game_state_response
     )
 
 @app.post("/game/select-face-up-cards", response_model=StandardResponse)
@@ -1186,13 +1195,22 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: AsyncSessi
     
     await db.commit()
     
-    # Broadcast game state update to all connected clients
-    await manager.broadcast_json_to_room({"type": "game_state_update", "room_id": room.id}, room.id)
+    # Re-fetch room with players loaded for response
+    room = await get_room_or_404(db, request.room_id)
+    
+    # Broadcast game state update with full state
+    game_state_response = await game_state_to_response(room)
+    state_dict = game_state_response.model_dump()
+    await manager.broadcast_json_to_room({
+        "type": "game_state_update",
+        "room_id": room.id,
+        "game_state": state_dict
+    }, room.id)
     
     return StandardResponse(
         success=True,
         message="Cards dealt successfully",
-        game_state=await game_state_to_response(room)
+        game_state=game_state_response
     )
 
 
@@ -1255,16 +1273,22 @@ async def start_game(request: StartGameRequest, db: AsyncSession = Depends(get_d
     
     logger.info(f"Game started in room {room.id} by player {request.player_id}")
     
-    # Broadcast game state update to all connected clients
-    await manager.broadcast_json_to_room({"type": "game_state_update", "room_id": room.id}, room.id)
-    
     # Re-fetch room with players loaded for response
     room = await get_room_or_404(db, request.room_id)
+    
+    # Broadcast game state update with full state
+    game_state_response = await game_state_to_response(room)
+    state_dict = game_state_response.model_dump()
+    await manager.broadcast_json_to_room({
+        "type": "game_state_update",
+        "room_id": room.id,
+        "game_state": state_dict
+    }, room.id)
     
     return StandardResponse(
         success=True,
         message="Game started! Cards have been dealt.",
-        game_state=await game_state_to_response(room)
+        game_state=game_state_response
     )
 
 
@@ -1449,13 +1473,22 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
     
     await db.commit()
     
-    # Broadcast game state update to all connected clients
-    await manager.broadcast_json_to_room({"type": "game_state_update", "room_id": room.id}, room.id)
+    # Re-fetch room with players loaded for response
+    room = await get_room_or_404(db, request.room_id)
+    
+    # Broadcast game state update with full state
+    game_state_response = await game_state_to_response(room)
+    state_dict = game_state_response.model_dump()
+    await manager.broadcast_json_to_room({
+        "type": "game_state_update",
+        "room_id": room.id,
+        "game_state": state_dict
+    }, room.id)
     
     return StandardResponse(
         success=True,
         message="Card played successfully",
-        game_state=await game_state_to_response(room)
+        game_state=game_state_response
     )
 
 @app.post("/game/reset", response_model=StandardResponse)
