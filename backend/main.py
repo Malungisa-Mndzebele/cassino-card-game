@@ -1444,9 +1444,9 @@ async def websocket_endpoint(
     game_session = None
     ping_task = None
     
-    # Debug logging for session token
-    logger.info(f"WebSocket connection attempt for room {room_id}")
-    logger.info(f"Session token provided: {session_token[:20] if session_token else 'None'}...")
+    # Use print for guaranteed log output
+    print(f"[WS] Connection attempt for room {room_id}")
+    print(f"[WS] Session token: {session_token[:30] if session_token else 'None'}...")
     
     async def send_server_ping():
         """Send periodic pings to keep connection alive (Render timeout is 60s)"""
@@ -1471,11 +1471,14 @@ async def websocket_endpoint(
         )
         
         if not success:
+            print(f"[WS] Connection FAILED for room {room_id}: {error}")
             logger.warning(f"WebSocket connection failed for room {room_id}: {error}")
             return
         
         # Get session_id from the session data - use token as the identifier
         session_id = game_session.get("token") if game_session else None
+        print(f"[WS] Connection SUCCESS for room {room_id}")
+        print(f"[WS] Session ID: {session_id[:30] if session_id else 'None'}...")
         logger.info(f"WebSocket connected successfully for room {room_id}, session: {session_id[:20] if session_id else 'None'}...")
         
         # Start server-side ping task to keep connection alive

@@ -231,9 +231,11 @@ class SessionManager:
         # Refresh to ensure all attributes are loaded from database
         await self.db.refresh(current_session)
         
-        logger.info(f"Session created for player {player_id} in room {room_id}")
-        logger.info(f"Session token stored: {token.to_string()[:20]}...")
-        logger.info(f"Database session_token: {current_session.session_token[:20] if current_session.session_token else 'None'}...")
+        # Use print for guaranteed log output
+        print(f"[SESSION] Created session for player {player_id} in room {room_id}")
+        print(f"[SESSION] Token stored: {token.to_string()[:30]}...")
+        print(f"[SESSION] DB session_token: {current_session.session_token[:30] if current_session.session_token else 'None'}...")
+        print(f"[SESSION] DB is_active: {current_session.is_active}")
         
         return token
     
@@ -254,19 +256,22 @@ class SessionManager:
         Returns:
             Session data dict if valid, None otherwise
         """
-        logger.info(f"Validating session token: {token_str[:20]}...")
+        # Use print for guaranteed log output
+        print(f"[SESSION] Validating session token: {token_str[:30]}...")
         
         # Try to get from Redis first (fast path) with error handling
         session_data = None
         try:
             session_data = await cache_manager.get_session(token_str)
             if session_data:
-                logger.info(f"Session found in Redis cache")
+                print(f"[SESSION] Found in Redis cache!")
+            else:
+                print(f"[SESSION] Not in Redis cache, checking database...")
         except Exception as e:
+            print(f"[SESSION] Redis error: {e}")
             logger.warning(f"Failed to get session from Redis: {e}. Falling back to database.")
         
         if not session_data:
-            logger.info(f"Session not in Redis, checking database...")
             # Fallback to database if Redis fails or session not found
             # Retry up to 3 times with small delays to handle transaction visibility delays
             max_retries = 3
@@ -274,6 +279,16 @@ class SessionManager:
             
             for attempt in range(max_retries):
                 try:
+                    # First, let's see ALL active sessions in the database for debugging
+                    if attempt == 0:
+                        all_sessions = await self.db.execute(
+                            select(GameSession).where(GameSession.is_active == True)
+                        )
+                        all_sessions_list = all_sessions.scalars().all()
+                        print(f"[SESSION] Total active sessions in DB: {len(all_sessions_list)}")
+                        for s in all_sessions_list[:5]:  # Show first 5
+                            print(f"[SESSION]   - Token: {s.session_token[:20] if s.session_token else 'None'}... Room: {s.room_id}")
+                    
                     db_session = await self.db.execute(
                         select(GameSession).where(
                             and_(
@@ -285,7 +300,7 @@ class SessionManager:
                     db_session = db_session.scalar_one_or_none()
                     
                     if db_session:
-                        logger.info(f"Session found in database on attempt {attempt + 1}")
+                        print(f"[SESSION] Found in database on attempt {attempt + 1}!")
                         # Convert database session to session_data format
                         # Calculate expires_at based on connected_at + SESSION_TTL
                         expires_at = db_session.connected_at + timedelta(seconds=self.SESSION_TTL)
@@ -307,14 +322,17 @@ class SessionManager:
                     else:
                         if attempt < max_retries - 1:
                             # Not found, but we have retries left
+                            print(f"[SESSION] Not found in database (attempt {attempt + 1}/{max_retries}), retrying...")
                             logger.warning(f"Session not found in database (attempt {attempt + 1}/{max_retries}), retrying after {retry_delay}s...")
                             await asyncio.sleep(retry_delay)
                             retry_delay *= 2  # Exponential backoff
                         else:
                             # Final attempt failed
+                            print(f"[SESSION] NOT FOUND after {max_retries} attempts for token {token_str[:30]}...")
                             logger.warning(f"Session not found in database after {max_retries} attempts for token {token_str[:10]}...")
                             return None
                 except Exception as e:
+                    print(f"[SESSION] Database error (attempt {attempt + 1}): {e}")
                     logger.error(f"Failed to get session from database (attempt {attempt + 1}): {e}")
                     if attempt == max_retries - 1:
                         return None
