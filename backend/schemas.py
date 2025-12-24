@@ -159,6 +159,21 @@ class SelectFaceUpCardsRequest(BaseModel):
     card_ids: List[str] = Field(..., min_length=4, max_length=4)
 
 
+class StartGameRequest(BaseModel):
+    """
+    Request schema for starting the game after dealer animation.
+    
+    This endpoint combines shuffle and deal into a single action,
+    automatically dealing cards to both players and the table.
+    
+    Attributes:
+        room_id: Room identifier
+        player_id: Player identifier (any player can trigger this)
+    """
+    room_id: str = Field(..., min_length=6, max_length=6)
+    player_id: int = Field(..., ge=1)
+
+
 class SyncRequest(BaseModel):
     """
     Request schema for client state synchronization.

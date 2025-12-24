@@ -56,7 +56,7 @@ from database import get_db, async_engine
 from models import Base, Room, Player, GameSession
 from schemas import (
     CreateRoomRequest, JoinRoomRequest, JoinRandomRoomRequest, SetPlayerReadyRequest,
-    PlayCardRequest, StartShuffleRequest, SelectFaceUpCardsRequest,
+    PlayCardRequest, StartShuffleRequest, SelectFaceUpCardsRequest, StartGameRequest,
     CreateRoomResponse, JoinRoomResponse, StandardResponse, GameStateResponse, PlayerResponse,
     SyncRequest
 )
@@ -1194,6 +1194,73 @@ async def select_face_up_cards(request: SelectFaceUpCardsRequest, db: AsyncSessi
         message="Cards dealt successfully",
         game_state=await game_state_to_response(room)
     )
+
+
+@app.post("/game/start", response_model=StandardResponse)
+async def start_game(request: StartGameRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Start the game after dealer animation completes.
+    
+    This endpoint combines shuffle and deal into a single action:
+    1. Creates and shuffles the deck
+    2. Deals 12 cards to each player
+    3. Places 4 cards face-up on the table
+    4. Transitions game phase to round1
+    
+    Can be called by any player in the room once both are ready.
+    """
+    room = await get_room_or_404(db, request.room_id)
+    
+    # Verify game is in dealer phase (both players ready)
+    if room.game_phase != "dealer":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Game must be in dealer phase to start. Current phase: {room.game_phase}"
+        )
+    
+    # Verify player is in the room
+    players_in_room = get_sorted_players(room)
+    player_ids = [p.id for p in players_in_room]
+    if request.player_id not in player_ids:
+        raise HTTPException(status_code=400, detail="Player not in room")
+    
+    # Set shuffle and card selection as complete
+    room.shuffle_complete = True
+    room.card_selection_complete = True
+    room.game_phase = "round1"
+    room.game_started = True
+    room.round_number = 1
+    room.current_turn = 1
+    
+    # Create and deal cards using game logic
+    deck = game_logic.create_deck()
+    table_cards, player1_hand, player2_hand, remaining_deck = game_logic.deal_initial_cards(deck)
+    
+    # Store in database
+    room.deck = convert_game_cards_to_dict(remaining_deck)
+    room.table_cards = convert_game_cards_to_dict(table_cards)
+    room.player1_hand = convert_game_cards_to_dict(player1_hand)
+    room.player2_hand = convert_game_cards_to_dict(player2_hand)
+    room.dealing_complete = True
+    
+    # Increment version and update metadata
+    room.version += 1
+    room.last_modified = datetime.utcnow()
+    room.modified_by = request.player_id
+    
+    await db.commit()
+    
+    logger.info(f"Game started in room {room.id} by player {request.player_id}")
+    
+    # Broadcast game state update to all connected clients
+    await manager.broadcast_json_to_room({"type": "game_state_update", "room_id": room.id}, room.id)
+    
+    return StandardResponse(
+        success=True,
+        message="Game started! Cards have been dealt.",
+        game_state=await game_state_to_response(room)
+    )
+
 
 @app.post("/game/play-card", response_model=StandardResponse)
 async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)):

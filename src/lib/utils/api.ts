@@ -206,6 +206,22 @@ export async function selectFaceUpCards(
     });
 }
 
+export async function startGame(roomId: string, playerId: string) {
+    const response = await fetchAPI<any>('/game/start', {
+        method: 'POST',
+        body: JSON.stringify({
+            room_id: roomId,
+            player_id: playerId
+        })
+    });
+
+    return {
+        success: response.success,
+        message: response.message,
+        game_state: transformGameState(response.game_state)
+    };
+}
+
 export async function playCard(
     roomId: string,
     playerId: string,

@@ -1,15 +1,19 @@
 <script lang="ts">
 	import { gameStore } from '$stores/gameStore';
 	import { Button, Card, DealerAnimation } from '$components';
+	import { startGame } from '$lib/utils/api';
 	import type { Card as CardType } from '$types/game';
 	
 	export let onReady: (() => void) | undefined = undefined;
 	export let onStartShuffle: (() => void) | undefined = undefined;
 	export let onSelectFaceUpCards: ((cardIds: string[]) => void) | undefined = undefined;
+	export let onGameStarted: (() => void) | undefined = undefined;
 	
 	let selectedFaceUpCards: string[] = [];
 	let showDealerAnimation = false;
 	let dealerAnimationComplete = false;
+	let isStartingGame = false;
+	let startGameError = '';
 	
 	$: gameState = $gameStore.gameState;
 	$: phase = gameState?.phase || 'waiting';
@@ -37,9 +41,35 @@
 		}
 	}
 	
-	function handleDealerAnimationComplete() {
+	async function handleDealerAnimationComplete() {
 		showDealerAnimation = false;
 		dealerAnimationComplete = true;
+		
+		// Automatically start the game after dealer animation
+		if ($gameStore.roomId && $gameStore.playerId) {
+			isStartingGame = true;
+			startGameError = '';
+			
+			try {
+				const response = await startGame($gameStore.roomId, $gameStore.playerId);
+				
+				if (response.success && response.game_state) {
+					// Update game state with the new state from server
+					await gameStore.setGameState(response.game_state);
+					
+					if (onGameStarted) {
+						onGameStarted();
+					}
+				} else {
+					startGameError = response.message || 'Failed to start game';
+				}
+			} catch (error) {
+				console.error('Error starting game:', error);
+				startGameError = error instanceof Error ? error.message : 'Failed to start game';
+			} finally {
+				isStartingGame = false;
+			}
+		}
 	}
 	
 	function handleCardSelect(card: CardType) {
@@ -111,87 +141,33 @@
 	{:else if phase === 'dealer'}
 		<!-- Dealer Phase -->
 		<div class="phase-container dealer-phase">
-			<h2 class="phase-title">Dealer Phase</h2>
-			
-			{#if !gameState?.shuffleComplete}
-				<!-- Shuffle Step -->
-				<div class="shuffle-step">
-					<p class="phase-description">
-						{isPlayer1 ? 'Shuffle the deck to begin' : 'Player 1 is shuffling the deck'}
-					</p>
-					
-					{#if isPlayer1}
-						<div class="shuffle-animation">
-							<div class="deck-stack">
-								{#each Array(5) as _, i}
-									<div class="deck-card" style="--index: {i}"></div>
-								{/each}
-							</div>
-						</div>
-						
-						<Button variant="primary" size="large" fullWidth onClick={handleStartShuffle}>
-							🎴 Shuffle Deck
-						</Button>
-					{:else}
-						<div class="waiting-message">
-							<div class="spinner-large"></div>
-						</div>
-					{/if}
+			{#if isStartingGame}
+				<!-- Starting game after dealer animation -->
+				<h2 class="phase-title">🎴 Starting Game...</h2>
+				<div class="waiting-message">
+					<p>Dealing cards to players...</p>
+					<div class="spinner-large"></div>
 				</div>
-				
-			{:else if !gameState?.cardSelectionComplete}
-				<!-- Card Selection Step -->
-				<div class="card-selection-step">
-					<p class="phase-description">
-						{isPlayer1 
-							? 'Select 4 cards to place face-up on the table' 
-							: 'Player 1 is selecting face-up cards'}
-					</p>
-					
-					{#if isPlayer1}
-						<div class="selection-info">
-							<span class="selected-count">
-								{selectedFaceUpCards.length} / 4 cards selected
-							</span>
-						</div>
-						
-						<!-- Show deck cards for selection -->
-						<div class="deck-selection">
-							{#if gameState?.deck && gameState.deck.length > 0}
-								<div class="cards-grid">
-									{#each gameState.deck.slice(0, 12) as card (card.id)}
-										<div class="selectable-card {selectedFaceUpCards.includes(card.id) ? 'selected' : ''}">
-											<Card
-												{card}
-												size="medium"
-												isPlayable={true}
-												onClick={() => handleCardSelect(card)}
-											/>
-											{#if selectedFaceUpCards.includes(card.id)}
-												<div class="selection-number">
-													{selectedFaceUpCards.indexOf(card.id) + 1}
-												</div>
-											{/if}
-										</div>
-									{/each}
-								</div>
-							{/if}
-						</div>
-						
-						<Button
-							variant="success"
-							size="large"
-							fullWidth
-							disabled={!canConfirmFaceUp}
-							onClick={handleConfirmFaceUpCards}
-						>
-							Confirm Selection
-						</Button>
-					{:else}
-						<div class="waiting-message">
-							<div class="spinner-large"></div>
-						</div>
-					{/if}
+			{:else if startGameError}
+				<!-- Error starting game -->
+				<h2 class="phase-title">⚠️ Error</h2>
+				<p class="phase-description error-text">{startGameError}</p>
+				<Button variant="primary" size="large" fullWidth onClick={handleDealerAnimationComplete}>
+					Try Again
+				</Button>
+			{:else if dealerAnimationComplete}
+				<!-- Waiting for game state update -->
+				<h2 class="phase-title">🎴 Getting Ready...</h2>
+				<div class="waiting-message">
+					<p>Preparing the game...</p>
+					<div class="spinner-large"></div>
+				</div>
+			{:else}
+				<!-- Waiting for dealer animation to start -->
+				<h2 class="phase-title">🎴 Both Players Ready!</h2>
+				<div class="waiting-message">
+					<p>The dealer is preparing...</p>
+					<div class="spinner-large"></div>
 				</div>
 			{/if}
 		</div>
@@ -248,6 +224,10 @@
 		font-size: 1.125rem;
 		color: var(--text-secondary);
 		margin-bottom: 2rem;
+	}
+	
+	.error-text {
+		color: #ef4444;
 	}
 	
 	/* Ready Status */
