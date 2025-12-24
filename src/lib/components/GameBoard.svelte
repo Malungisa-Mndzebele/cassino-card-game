@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { gameStore } from '$stores/gameStore';
+	import { connectionStore } from '$stores/connectionStore';
 	import { Card } from '$components';
 	import type { Card as CardType } from '$types/game';
 	
@@ -35,10 +36,27 @@
 	
 	// Selected card for playing
 	let selectedCard: CardType | null = null;
+	let showExitConfirm = false;
 	
 	function handleCardClick(card: CardType) {
 		if (!isMyTurn) return;
 		selectedCard = selectedCard?.id === card.id ? null : card;
+	}
+	
+	function handleExitClick() {
+		showExitConfirm = true;
+	}
+	
+	function handleExitConfirm() {
+		// Disconnect WebSocket
+		connectionStore.disconnect();
+		// Clear game state and return to lobby
+		gameStore.reset();
+		showExitConfirm = false;
+	}
+	
+	function handleExitCancel() {
+		showExitConfirm = false;
 	}
 	
 	// Debug logging
