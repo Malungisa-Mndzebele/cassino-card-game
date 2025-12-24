@@ -1492,7 +1492,12 @@ async def websocket_endpoint(
         
         # Main message loop
         while True:
-            data = await websocket.receive_text()
+            try:
+                data = await websocket.receive_text()
+                print(f"[WS] Received message in room {room_id}: {data[:100]}...")
+            except Exception as recv_error:
+                print(f"[WS] Error receiving message in room {room_id}: {recv_error}")
+                break
             
             try:
                 message = json.loads(data)
