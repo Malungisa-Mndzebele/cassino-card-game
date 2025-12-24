@@ -7,7 +7,9 @@
 	$: gameState = $gameStore.gameState;
 	$: playerId = $gameStore.playerId;
 	$: players = gameState?.players || [];
-	$: isPlayer1 = players[0]?.id === playerId;
+	
+	// Compare as strings to handle type mismatch (API returns number, store has string)
+	$: isPlayer1 = String(players[0]?.id) === String(playerId);
 	
 	// Get the correct hand based on which player we are
 	$: myHand = isPlayer1 ? (gameState?.player1Hand || []) : (gameState?.player2Hand || []);
@@ -37,6 +39,19 @@
 	function handleCardClick(card: CardType) {
 		if (!isMyTurn) return;
 		selectedCard = selectedCard?.id === card.id ? null : card;
+	}
+	
+	// Debug logging
+	$: if (playerId && players.length > 0) {
+		console.log('GameBoard Debug:', {
+			playerId,
+			playerIdType: typeof playerId,
+			player1Id: players[0]?.id,
+			player1IdType: typeof players[0]?.id,
+			isPlayer1,
+			myHandCount: myHand.length,
+			opponentHandCount: opponentHand.length
+		});
 	}
 </script>
 

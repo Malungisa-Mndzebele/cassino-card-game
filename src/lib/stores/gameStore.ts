@@ -31,11 +31,12 @@ function createGameStore() {
                 localStorage.setItem('cassino_session_timestamp', Date.now().toString());
             }
         },
-        setPlayerId: (playerId: string) => {
-            update((s) => ({ ...s, playerId }));
+        setPlayerId: (playerId: string | number) => {
+            const playerIdStr = String(playerId);
+            update((s) => ({ ...s, playerId: playerIdStr }));
             // Persist to localStorage with timestamp
             if (typeof localStorage !== 'undefined') {
-                localStorage.setItem('cassino_player_id', playerId);
+                localStorage.setItem('cassino_player_id', playerIdStr);
                 localStorage.setItem('cassino_session_timestamp', Date.now().toString());
             }
         },
