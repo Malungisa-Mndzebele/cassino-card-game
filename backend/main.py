@@ -1,5 +1,5 @@
 """
-Casino Card Game Backend API
+Casino Card Game Backend API - v2.1.0
 
 FastAPI application providing REST and WebSocket endpoints for the Casino card game.
 Handles room management, game logic, real-time communication, and session persistence.
