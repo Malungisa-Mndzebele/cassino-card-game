@@ -1572,7 +1572,7 @@ async def websocket_endpoint(
                 except Exception as e:
                     print(f"[WS] Server ping failed (connection likely closed): {e}")
                     break
-                await asyncio.sleep(5)  # Send ping every 5 seconds (very aggressive for Render)
+                await asyncio.sleep(3)  # Send ping every 3 seconds (very aggressive for Render)
         except asyncio.CancelledError:
             pass
     

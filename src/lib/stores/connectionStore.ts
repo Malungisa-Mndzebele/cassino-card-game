@@ -100,7 +100,10 @@ function createConnectionStore() {
                     // Handle different message types
                     if (data.type === 'server_ping') {
                         // Respond to server ping IMMEDIATELY to keep connection alive
-                        send({ type: 'pong', timestamp: data.timestamp });
+                        console.log('Responding to server ping with pong');
+                        if (ws?.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'pong', timestamp: data.timestamp }));
+                        }
                         return;
                     } else if (data.type === 'game_state_update' || data.type === 'state_update') {
                         // Full state update
@@ -294,11 +297,16 @@ function createConnectionStore() {
     const startHeartbeat = () => {
         stopHeartbeat();
         // Send first ping immediately to establish keep-alive
-        send({ type: 'ping', timestamp: Date.now() });
-        // Then send every 10 seconds (Render may have shorter idle timeout)
+        if (ws?.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+            console.log('Sent initial heartbeat ping');
+        }
+        // Then send every 3 seconds (Render has very aggressive idle timeout)
         heartbeatInterval = setInterval(() => {
-            send({ type: 'ping', timestamp: Date.now() });
-        }, 10000); // Every 10 seconds to prevent idle timeout
+            if (ws?.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+            }
+        }, 3000); // Every 3 seconds to prevent idle timeout
     };
 
     const stopHeartbeat = () => {
