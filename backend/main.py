@@ -947,32 +947,47 @@ async def join_random_room(request: JoinRandomRoomRequest, http_request: Request
         room.round_number = 0
         room.current_turn = 1
         db.add(room)
+        
+        # Create player immediately (same transaction as room)
+        # This ensures the room is never visible with 0 players
+        player = Player(
+            room_id=room_id, 
+            name=request.player_name,
+            ip_address=request.ip_address or client_ip
+        )
+        db.add(player)
+        
+        # Commit both room and player together
         await db.commit()
         await db.refresh(room)
+        await db.refresh(player)
+        
+        logger.info(f"Created new room {room_id} with player {player.id}")
     else:
         # Pick a random room from available rooms
         room = random.choice(rooms_with_space)
-    
-    # Check if player name already exists in room
-    result = await db.execute(
-        select(Player).where(
-            Player.room_id == room.id,
-            Player.name == request.player_name
+        logger.info(f"Joining existing room {room.id}")
+        
+        # Check if player name already exists in room
+        result = await db.execute(
+            select(Player).where(
+                Player.room_id == room.id,
+                Player.name == request.player_name
+            )
         )
-    )
-    existing_player = result.scalar_one_or_none()
-    if existing_player:
-        raise HTTPException(status_code=400, detail="Player name already taken in this room")
-    
-    # Create player with IP address
-    player = Player(
-        room_id=room.id, 
-        name=request.player_name,
-        ip_address=request.ip_address or client_ip
-    )
-    db.add(player)
-    await db.commit()
-    await db.refresh(player)
+        existing_player = result.scalar_one_or_none()
+        if existing_player:
+            raise HTTPException(status_code=400, detail="Player name already taken in this room")
+        
+        # Create player with IP address
+        player = Player(
+            room_id=room.id, 
+            name=request.player_name,
+            ip_address=request.ip_address or client_ip
+        )
+        db.add(player)
+        await db.commit()
+        await db.refresh(player)
     
     # Create session for the player
     from session_manager import get_session_manager
