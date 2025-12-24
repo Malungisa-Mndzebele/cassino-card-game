@@ -1583,13 +1583,23 @@ async def websocket_endpoint(
                 
                 # Handle different message types
                 if message_type == "ping":
-                    # Heartbeat ping from client - just respond with pong
+                    # Heartbeat ping from client - respond with pong and update session heartbeat
                     try:
                         await websocket.send_json({
                             "type": "pong",
                             "timestamp": datetime.utcnow().isoformat()
                         })
                         print(f"[WS] Sent pong response")
+                        
+                        # Update session heartbeat in database to extend TTL
+                        if session_id:
+                            try:
+                                async with AsyncSessionLocal() as heartbeat_db:
+                                    session_manager = get_session_manager(heartbeat_db)
+                                    await session_manager.update_heartbeat(session_id)
+                                    print(f"[WS] Updated heartbeat for session")
+                            except Exception as hb_error:
+                                print(f"[WS] Failed to update heartbeat: {hb_error}")
                     except Exception as ping_error:
                         print(f"[WS] Error handling ping: {ping_error}")
                 

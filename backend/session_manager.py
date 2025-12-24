@@ -302,8 +302,10 @@ class SessionManager:
                     if db_session:
                         print(f"[SESSION] Found in database on attempt {attempt + 1}!")
                         # Convert database session to session_data format
-                        # Calculate expires_at based on connected_at + SESSION_TTL
-                        expires_at = db_session.connected_at + timedelta(seconds=self.SESSION_TTL)
+                        # Calculate expires_at based on last_heartbeat + SESSION_TTL (sliding window)
+                        # Use last_heartbeat if available, otherwise fall back to connected_at
+                        base_time = db_session.last_heartbeat or db_session.connected_at
+                        expires_at = base_time + timedelta(seconds=self.SESSION_TTL)
                         
                         session_data = {
                             "token": db_session.session_token,
@@ -376,23 +378,42 @@ class SessionManager:
         Returns:
             True if successful
         """
+        # Try to update Redis cache first
         session_data = await cache_manager.get_session(token_str)
         
-        if not session_data:
-            return False
+        if session_data:
+            # Update heartbeat timestamp in Redis
+            session_data["last_heartbeat"] = datetime.utcnow().isoformat()
+            
+            # Extend session TTL (sliding window)
+            await cache_manager.extend_session_ttl(token_str, self.SESSION_TTL)
+            
+            # Update session data
+            await cache_manager.cache_session(token_str, session_data, ttl=self.SESSION_TTL)
+            
+            logger.debug(f"Heartbeat updated in Redis for session")
         
-        # Update heartbeat timestamp
-        session_data["last_heartbeat"] = datetime.utcnow().isoformat()
+        # Also update database to ensure persistence
+        try:
+            result = await self.db.execute(
+                select(GameSession).where(
+                    and_(
+                        GameSession.session_token == token_str,
+                        GameSession.is_active == True
+                    )
+                )
+            )
+            db_session = result.scalar_one_or_none()
+            
+            if db_session:
+                db_session.last_heartbeat = datetime.utcnow()
+                await self.db.commit()
+                logger.debug(f"Heartbeat updated in database for session")
+                return True
+        except Exception as e:
+            logger.warning(f"Failed to update heartbeat in database: {e}")
         
-        # Extend session TTL (sliding window)
-        await cache_manager.extend_session_ttl(token_str, self.SESSION_TTL)
-        
-        # Update session data
-        await cache_manager.cache_session(token_str, session_data, ttl=self.SESSION_TTL)
-        
-        logger.debug(f"Heartbeat updated for session")
-        
-        return True
+        return session_data is not None
     
     async def invalidate_session(self, token_str: str) -> bool:
         """
