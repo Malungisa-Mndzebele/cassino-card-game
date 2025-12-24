@@ -264,6 +264,9 @@ class SessionManager:
                 
                 if db_session:
                     # Convert database session to session_data format
+                    # Calculate expires_at based on connected_at + SESSION_TTL
+                    expires_at = db_session.connected_at + timedelta(seconds=self.SESSION_TTL)
+                    
                     session_data = {
                         "token": db_session.session_token,
                         "room_id": db_session.room_id,
@@ -273,7 +276,8 @@ class SessionManager:
                         "connected_at": db_session.connected_at.isoformat() if db_session.connected_at else None,
                         "last_heartbeat": db_session.last_heartbeat.isoformat() if db_session.last_heartbeat else None,
                         "connection_count": db_session.connection_count,
-                        "is_active": db_session.is_active
+                        "is_active": db_session.is_active,
+                        "expires_at": expires_at.isoformat()  # Add missing expires_at field
                     }
                     logger.info(f"Session retrieved from database for token {token_str[:10]}...")
                 else:
@@ -287,12 +291,17 @@ class SessionManager:
         if not session_data.get("is_active", False):
             logger.warning("Session is not active")
             return None
-            return None
         
         # Validate fingerprint if provided
         if ip_address and user_agent:
-            fingerprint = create_session_fingerprint(ip_address, user_agent)
-            if session_data.get("fingerprint") != fingerprint:
+            expected_fingerprint = create_session_fingerprint(ip_address, user_agent)
+            stored_fingerprint = session_data.get("fingerprint")
+            
+            # If no fingerprint stored (database fallback), create and store it
+            if not stored_fingerprint:
+                session_data["fingerprint"] = expected_fingerprint
+                logger.debug("Added fingerprint to session data from database")
+            elif stored_fingerprint != expected_fingerprint:
                 logger.warning("Session fingerprint mismatch - possible session hijacking")
                 return None
         

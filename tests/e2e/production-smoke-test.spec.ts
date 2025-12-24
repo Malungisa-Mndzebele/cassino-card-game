@@ -50,32 +50,17 @@ test.describe('Production Smoke Tests', () => {
     // Wait for main title to ensure app is loaded
     await expect(page.locator('text=Casino Card Game')).toBeVisible({ timeout: 10000 });
 
-    // First, click the "Create Room" button to show the form
-    const showCreateButton = page.locator('[data-testid="show-create-form-button"]').or(
-      page.getByRole('button', { name: /create room/i }).first()
-    );
-    await expect(showCreateButton).toBeVisible({ timeout: 10000 });
-    await showCreateButton.click();
-
-    // Wait for form to appear by checking for the input field
-    const nameInput = page.locator('[data-testid="player-name-input-create-test"]').or(
-      page.locator('input[id="create-player-name"]').or(
-        page.locator('input[type="text"]').first()
-      )
-    );
+    // Fill the name input first to enable the button
+    const nameInput = page.getByRole('textbox', { name: /your name/i }).first();
     await expect(nameInput).toBeVisible({ timeout: 10000 });
     await nameInput.fill('ProductionTestPlayer');
 
-    // Click the actual create room button (not the show form button)
-    const createButton = page.locator('[data-testid="create-room-test"]').or(
-      page.getByRole('button', { name: /^create room$/i }).first()
-    );
-    await expect(createButton).toBeVisible({ timeout: 5000 });
+    // Now the create room button should be enabled
+    const createButton = page.getByRole('button', { name: /🎲 create room/i });
     await expect(createButton).toBeEnabled({ timeout: 5000 });
     await createButton.click();
 
     // Wait for room to be created - look for room-specific elements
-    // This will wait for one of these elements to appear, which is faster than fixed timeout
     const roomIndicator = page.locator('text=/Room Code|Waiting for players|Game|Casino Room|Ready/i').first();
     const inRoom = await roomIndicator.waitFor({ state: 'visible', timeout: 15000 }).then(() => true).catch(() => false);
 
