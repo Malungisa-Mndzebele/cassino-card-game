@@ -1000,40 +1000,34 @@ async def create_room(request: CreateRoomRequest, http_request: Request, db: Asy
 
 @app.post("/rooms/create-ai-game", response_model=CreateRoomResponse)
 async def create_ai_game(request: CreateAIGameRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
-    """Create a single-player game against AI opponent - starts immediately"""
+    """Create a single-player game against AI opponent - same flow as multiplayer"""
     try:
         # Generate unique room ID
         room_id = generate_room_id()
         
-        # Create and shuffle deck, deal cards immediately
-        game_logic = CasinoGameLogic()
-        deck = game_logic.create_deck()
-        table_cards, player1_hand, player2_hand, remaining_deck = game_logic.deal_initial_cards(deck)
-        
-        # Convert cards to dict format for storage
-        def cards_to_dict(cards):
-            return [{"id": c.id, "suit": c.suit, "rank": c.rank, "value": c.value} for c in cards]
-        
-        # Create room with AI flag - game starts immediately in round1
+        # Create room with AI flag - starts in dealer phase (both players ready)
+        # This matches multiplayer flow: waiting -> dealer -> round1
         room = Room(id=room_id)
-        room.deck = cards_to_dict(remaining_deck)
-        room.player1_hand = cards_to_dict(player1_hand[:4])  # First 4 cards for round 1
-        room.player2_hand = cards_to_dict(player2_hand[:4])  # First 4 cards for round 1
-        room.table_cards = cards_to_dict(table_cards)
+        room.deck = []
+        room.player1_hand = []
+        room.player2_hand = []
+        room.table_cards = []
         room.builds = []
         room.player1_captured = []
         room.player2_captured = []
         room.player1_score = 0
         room.player2_score = 0
-        room.player1_ready = True  # Human is ready (game starts immediately)
+        room.player1_ready = True  # Human is ready
         room.player2_ready = True  # AI is always ready
-        room.game_phase = "round1"  # Start game immediately
-        room.round_number = 1
-        room.current_turn = 1  # Human player goes first
+        room.game_phase = "dealer"  # Skip waiting, go straight to dealer (same as when both players ready)
+        room.round_number = 0
+        room.current_turn = 1
         room.is_ai_game = True
         room.ai_difficulty = request.difficulty
-        # Store remaining cards for later rounds
-        room.deck = cards_to_dict(player1_hand[4:]) + cards_to_dict(player2_hand[4:]) + cards_to_dict(remaining_deck)
+        room.shuffle_complete = False
+        room.card_selection_complete = False
+        room.dealing_complete = False
+        room.game_started = False
         db.add(room)
         await db.commit()
         await db.refresh(room)
@@ -1095,7 +1089,7 @@ async def create_ai_game(request: CreateAIGameRequest, http_request: Request, db
         )
         room = result.scalar_one()
         
-        logger.info(f"AI game created: room={room_id}, difficulty={request.difficulty}, phase=round1")
+        logger.info(f"AI game created: room={room_id}, difficulty={request.difficulty}, phase=dealer")
         
         return CreateRoomResponse(
             room_id=room_id,
