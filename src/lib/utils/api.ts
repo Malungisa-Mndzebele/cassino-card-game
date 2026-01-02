@@ -280,4 +280,26 @@ export async function leaveRoom(roomId: string, playerId: string) {
     };
 }
 
+export async function createAIGame(playerName: string, difficulty: 'easy' | 'medium' | 'hard' = 'medium'): Promise<CreateRoomResponse> {
+    const response = await fetchAPI<any>('/rooms/create-ai-game', {
+        method: 'POST',
+        body: JSON.stringify({
+            player_name: playerName,
+            difficulty: difficulty
+        })
+    });
+
+    // Store session token if provided
+    if (response.session_token && typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('session_token', response.session_token);
+    }
+
+    return {
+        room_id: response.room_id,
+        player_id: response.player_id,
+        player_name: playerName,
+        game_state: transformGameState(response.game_state)
+    };
+}
+
 export { APIError };

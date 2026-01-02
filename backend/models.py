@@ -119,6 +119,10 @@ class Room(Base):
     player1_ready: Mapped[bool] = mapped_column(Boolean, default=False)
     player2_ready: Mapped[bool] = mapped_column(Boolean, default=False)
     
+    # AI game settings
+    is_ai_game: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_difficulty: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    
     # Version tracking for state synchronization
     version: Mapped[int] = mapped_column(Integer, default=0, index=True)
     checksum: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
@@ -186,6 +190,7 @@ class Player(Base):
     )
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     ready: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_ai: Mapped[bool] = mapped_column(Boolean, default=False)
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now()

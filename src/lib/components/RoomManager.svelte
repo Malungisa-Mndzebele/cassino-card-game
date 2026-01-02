@@ -5,6 +5,7 @@
     createRoom,
     joinRoom,
     joinRandomRoom,
+    createAIGame,
     validatePlayerName,
     validateRoomCode,
     formatRoomCode,
@@ -20,11 +21,14 @@
   let roomCode = '';
   let isCreating = false;
   let isJoining = false;
+  let isCreatingAI = false;
   let error = '';
   let errorType: any = undefined;
   let errorTitle = '';
   let showRoomCode = false;
   let copied = false;
+  let aiDifficulty: 'easy' | 'medium' | 'hard' = 'medium';
+  let showAIOptions = false;
 
   // Load saved player name
   onMount(() => {
@@ -37,9 +41,9 @@
   // Reactive validation
   $: playerNameValid = validatePlayerName(playerName).valid;
   $: roomCodeValid = roomCode.length === 0 || validateRoomCode(roomCode).valid;
-  $: canCreateOrJoinRandom = playerNameValid && !isCreating && !isJoining;
+  $: canCreateOrJoinRandom = playerNameValid && !isCreating && !isJoining && !isCreatingAI;
   $: canJoinRoom =
-    playerNameValid && roomCodeValid && roomCode.length === 6 && !isCreating && !isJoining;
+    playerNameValid && roomCodeValid && roomCode.length === 6 && !isCreating && !isJoining && !isCreatingAI;
 
   async function handleCreateRoom() {
     error = '';
@@ -68,6 +72,34 @@
       errorTitle = formatted.title;
     } finally {
       isCreating = false;
+    }
+  }
+
+  async function handleCreateAIGame() {
+    error = '';
+    isCreatingAI = true;
+
+    try {
+      const sanitized = sanitizePlayerName(playerName);
+      localStorage.setItem('cassino_player_name', sanitized);
+
+      const response = await createAIGame(sanitized, aiDifficulty);
+
+      gameStore.setRoomId(response.room_id);
+      gameStore.setPlayerId(response.player_id);
+      gameStore.setPlayerName(sanitized);
+      gameStore.setGameState(response.game_state);
+
+      // Connect WebSocket (for state updates)
+      await connectionStore.connect(response.room_id);
+    } catch (err: any) {
+      ErrorHandler.logError(err, 'handleCreateAIGame');
+      const formatted = formatErrorForDisplay(err);
+      error = formatted.message;
+      errorType = formatted.type;
+      errorTitle = formatted.title;
+    } finally {
+      isCreatingAI = false;
     }
   }
 
@@ -237,6 +269,65 @@
             🎯 Quick Match
           {/if}
         </button>
+
+        <!-- Play vs Computer Button -->
+        <div class="mt-4">
+          {#if !showAIOptions}
+            <button
+              on:click={() => showAIOptions = true}
+              disabled={!canCreateOrJoinRandom}
+              class="btn-primary w-full bg-orange-600 hover:bg-orange-700"
+            >
+              🤖 Play vs Computer
+            </button>
+          {:else}
+            <div class="bg-gray-700 rounded-lg p-4">
+              <h3 class="text-lg font-semibold text-casino-gold mb-3">Select Difficulty</h3>
+              
+              <div class="flex gap-2 mb-4">
+                <button
+                  on:click={() => aiDifficulty = 'easy'}
+                  class="flex-1 py-2 px-3 rounded-lg font-medium transition-all {aiDifficulty === 'easy' ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}"
+                >
+                  😊 Easy
+                </button>
+                <button
+                  on:click={() => aiDifficulty = 'medium'}
+                  class="flex-1 py-2 px-3 rounded-lg font-medium transition-all {aiDifficulty === 'medium' ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}"
+                >
+                  🎯 Medium
+                </button>
+                <button
+                  on:click={() => aiDifficulty = 'hard'}
+                  class="flex-1 py-2 px-3 rounded-lg font-medium transition-all {aiDifficulty === 'hard' ? 'bg-red-600 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}"
+                >
+                  🔥 Hard
+                </button>
+              </div>
+              
+              <div class="flex gap-2">
+                <button
+                  on:click={() => showAIOptions = false}
+                  class="flex-1 py-2 px-4 rounded-lg bg-gray-600 text-gray-300 hover:bg-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  on:click={handleCreateAIGame}
+                  disabled={!canCreateOrJoinRandom}
+                  class="flex-1 py-2 px-4 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold"
+                >
+                  {#if isCreatingAI}
+                    <span class="inline-block animate-spin mr-2">⚙</span>
+                    Starting...
+                  {:else}
+                    Start Game
+                  {/if}
+                </button>
+              </div>
+            </div>
+          {/if}
+        </div>
       </section>
 
       <!-- Divider -->

@@ -186,6 +186,29 @@ class StartGameRequest(BaseModel):
     player_id: int = Field(..., ge=1)
 
 
+class CreateAIGameRequest(BaseModel):
+    """
+    Request schema for creating a single-player game against AI.
+    
+    Attributes:
+        player_name: Display name for the human player
+        difficulty: AI difficulty level (easy, medium, hard)
+        ip_address: Client IP address (auto-detected if not provided)
+    """
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    player_name: str = Field(..., min_length=1, max_length=50)
+    difficulty: str = Field(default="medium", pattern="^(easy|medium|hard)$")
+    ip_address: Optional[str] = Field(None, max_length=45)
+    
+    @field_validator('player_name')
+    @classmethod
+    def validate_player_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Player name cannot be empty')
+        return v.strip()
+
+
 class SyncRequest(BaseModel):
     """
     Request schema for client state synchronization.

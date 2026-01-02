@@ -63,6 +63,7 @@ from schemas import (
 )
 from fastapi import Request
 from game_logic import CasinoGameLogic, GameCard, Build
+from ai_player import AIPlayer
 
 # Note: Database tables are now managed by Alembic migrations
 # Run migrations with: alembic upgrade head
@@ -728,6 +729,183 @@ def assert_players_turn(room: Room, player_id: int) -> None:
     if not expected_player or expected_player.id != player_id:
         raise HTTPException(status_code=400, detail="Not your turn")
 
+
+async def execute_ai_move(room_id: str, ai_player_id: int, db: AsyncSession) -> None:
+    """
+    Execute an AI player's move.
+    
+    This function is called when it's the AI's turn in a single-player game.
+    It uses the AIPlayer class to determine the best move and executes it.
+    
+    Args:
+        room_id: Room identifier
+        ai_player_id: AI player's ID
+        db: Database session
+    """
+    from action_logger import ActionLogger
+    
+    # Fetch room with players
+    room = await get_room_or_404(db, room_id)
+    
+    if room.game_phase not in ["round1", "round2"]:
+        return
+    
+    # Get AI difficulty
+    difficulty = room.ai_difficulty or "medium"
+    ai = AIPlayer(difficulty=difficulty)
+    
+    # Determine which player is AI
+    players_in_room = get_sorted_players(room)
+    is_ai_player1 = players_in_room[0].id == ai_player_id
+    
+    # Get AI's hand and opponent info
+    ai_hand = room.player1_hand if is_ai_player1 else room.player2_hand
+    opponent_hand = room.player2_hand if is_ai_player1 else room.player1_hand
+    ai_captured = room.player1_captured if is_ai_player1 else room.player2_captured
+    opponent_captured = room.player2_captured if is_ai_player1 else room.player1_captured
+    
+    if not ai_hand:
+        return
+    
+    # Get AI's move decision
+    move = ai.get_move(
+        hand=ai_hand,
+        table_cards=room.table_cards or [],
+        builds=room.builds or [],
+        opponent_hand_size=len(opponent_hand) if opponent_hand else 0,
+        my_captured=ai_captured or [],
+        opponent_captured=opponent_captured or []
+    )
+    
+    # Log the AI action
+    action_logger = ActionLogger(db)
+    action_logger.log_game_action(
+        room_id=room_id,
+        player_id=ai_player_id,
+        action_type=move.action,
+        action_data={
+            "card_id": move.card_id,
+            "target_cards": move.target_cards,
+            "build_value": move.build_value,
+            "is_ai": True
+        }
+    )
+    
+    # Convert to game objects
+    player1_hand = convert_dict_to_game_cards(room.player1_hand or [])
+    player2_hand = convert_dict_to_game_cards(room.player2_hand or [])
+    table_cards = convert_dict_to_game_cards(room.table_cards or [])
+    builds = convert_dict_to_builds(room.builds or [])
+    player1_captured = convert_dict_to_game_cards(room.player1_captured or [])
+    player2_captured = convert_dict_to_game_cards(room.player2_captured or [])
+    
+    ai_hand_cards = player1_hand if is_ai_player1 else player2_hand
+    ai_captured_cards = player1_captured if is_ai_player1 else player2_captured
+    
+    # Find the card being played
+    hand_card = next((c for c in ai_hand_cards if c.id == move.card_id), None)
+    if not hand_card:
+        logger.error(f"AI tried to play card {move.card_id} but it's not in hand")
+        return
+    
+    # Execute the move
+    if move.action == "capture":
+        target_cards = [c for c in table_cards if c.id in move.target_cards]
+        target_builds = [b for b in builds if b.id in move.target_cards]
+        
+        captured_cards, remaining_builds, _ = game_logic.execute_capture(
+            hand_card, target_cards, target_builds, ai_player_id
+        )
+        
+        ai_hand_cards.remove(hand_card)
+        ai_captured_cards.extend(captured_cards)
+        table_cards = [c for c in table_cards if c not in target_cards]
+        builds = remaining_builds
+        
+    elif move.action == "build":
+        target_cards = [c for c in table_cards if c.id in move.target_cards]
+        
+        _, new_build = game_logic.execute_build(
+            hand_card, target_cards, move.build_value or 0, ai_player_id
+        )
+        
+        ai_hand_cards.remove(hand_card)
+        table_cards = [c for c in table_cards if c not in target_cards]
+        builds.append(new_build)
+        
+    elif move.action == "trail":
+        new_table_cards = game_logic.execute_trail(hand_card)
+        ai_hand_cards.remove(hand_card)
+        table_cards.extend(new_table_cards)
+    
+    # Update room state
+    if is_ai_player1:
+        room.player1_hand = convert_game_cards_to_dict(ai_hand_cards)
+        room.player1_captured = convert_game_cards_to_dict(ai_captured_cards)
+        room.player2_hand = convert_game_cards_to_dict(player2_hand)
+        room.player2_captured = convert_game_cards_to_dict(player2_captured)
+    else:
+        room.player2_hand = convert_game_cards_to_dict(ai_hand_cards)
+        room.player2_captured = convert_game_cards_to_dict(ai_captured_cards)
+        room.player1_hand = convert_game_cards_to_dict(player1_hand)
+        room.player1_captured = convert_game_cards_to_dict(player1_captured)
+    
+    room.table_cards = convert_game_cards_to_dict(table_cards)
+    room.builds = convert_builds_to_dict(builds)
+    
+    room.last_play = {
+        "card_id": move.card_id,
+        "action": move.action,
+        "target_cards": move.target_cards,
+        "build_value": move.build_value,
+        "player_id": ai_player_id,
+        "is_ai": True
+    }
+    room.last_action = move.action
+    
+    # Check if round is complete
+    p1_hand = convert_dict_to_game_cards(room.player1_hand or [])
+    p2_hand = convert_dict_to_game_cards(room.player2_hand or [])
+    
+    if game_logic.is_round_complete(p1_hand, p2_hand):
+        remaining_deck = convert_dict_to_game_cards(room.deck or [])
+        
+        if len(remaining_deck) > 0 and room.round_number == 1:
+            new_p1_hand, new_p2_hand, new_deck = game_logic.deal_round_cards(
+                remaining_deck, p1_hand, p2_hand
+            )
+            room.player1_hand = convert_game_cards_to_dict(new_p1_hand)
+            room.player2_hand = convert_game_cards_to_dict(new_p2_hand)
+            room.deck = convert_game_cards_to_dict(new_deck)
+            room.round_number = 2
+            room.game_phase = "round2"
+            room.current_turn = 1
+        else:
+            room.game_phase = "finished"
+            room.game_completed = True
+            
+            p1_captured = convert_dict_to_game_cards(room.player1_captured or [])
+            p2_captured = convert_dict_to_game_cards(room.player2_captured or [])
+            
+            p1_base = game_logic.calculate_score(p1_captured)
+            p2_base = game_logic.calculate_score(p2_captured)
+            p1_bonus, p2_bonus = game_logic.calculate_bonus_scores(p1_captured, p2_captured)
+            
+            room.player1_score = p1_base + p1_bonus
+            room.player2_score = p2_base + p2_bonus
+            room.winner = game_logic.determine_winner(
+                room.player1_score, room.player2_score,
+                len(p1_captured), len(p2_captured)
+            )
+    else:
+        room.current_turn = 2 if room.current_turn == 1 else 1
+    
+    room.version += 1
+    room.last_modified = datetime.utcnow()
+    room.modified_by = ai_player_id
+    
+    await db.commit()
+
 # API Endpoints
 @app.post("/rooms/create", response_model=CreateRoomResponse)
 async def create_room(request: CreateRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
@@ -818,6 +996,111 @@ async def create_room(request: CreateRoomRequest, http_request: Request, db: Asy
             status_code=500,
             detail=f"Failed to create room: {str(e)}"
         )
+
+
+@app.post("/rooms/create-ai-game", response_model=CreateRoomResponse)
+async def create_ai_game(request: 'CreateAIGameRequest', http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
+    """Create a single-player game against AI opponent"""
+    from schemas import CreateAIGameRequest
+    
+    try:
+        # Generate unique room ID
+        room_id = generate_room_id()
+        
+        # Create room with AI flag
+        room = Room(id=room_id)
+        room.deck = []
+        room.player1_hand = []
+        room.player2_hand = []
+        room.table_cards = []
+        room.builds = []
+        room.player1_captured = []
+        room.player2_captured = []
+        room.player1_score = 0
+        room.player2_score = 0
+        room.player1_ready = False
+        room.player2_ready = True  # AI is always ready
+        room.game_phase = "waiting"
+        room.round_number = 0
+        room.current_turn = 1
+        room.is_ai_game = True
+        room.ai_difficulty = request.difficulty
+        db.add(room)
+        await db.commit()
+        await db.refresh(room)
+        
+        # Create human player
+        player = Player(
+            room_id=room_id,
+            name=request.player_name,
+            ip_address=request.ip_address or client_ip
+        )
+        db.add(player)
+        await db.commit()
+        await db.refresh(player)
+        
+        # Create AI player
+        ai_player = Player(
+            room_id=room_id,
+            name=f"Computer ({request.difficulty.capitalize()})",
+            ip_address="127.0.0.1",
+            is_ai=True,
+            ready=True
+        )
+        db.add(ai_player)
+        await db.commit()
+        await db.refresh(ai_player)
+        
+        # Create session for human player
+        session_token = None
+        try:
+            from session_manager import get_session_manager
+            session_manager = get_session_manager(db)
+            session_token = await session_manager.create_session(
+                room_id=room_id,
+                player_id=player.id,
+                player_name=player.name,
+                ip_address=client_ip,
+                user_agent=http_request.headers.get("user-agent")
+            )
+        except Exception as e:
+            logger.error(f"Failed to create session: {e}")
+            from datetime import datetime, timedelta
+            session_token = SessionToken(
+                token=f"fallback_{room_id}_{player.id}",
+                room_id=room_id,
+                player_id=player.id,
+                player_name=player.name,
+                created_at=datetime.utcnow(),
+                expires_at=datetime.utcnow() + timedelta(hours=1)
+            )
+        
+        # Reload room with players
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+        result = await db.execute(
+            select(Room)
+            .where(Room.id == room_id)
+            .options(selectinload(Room.players))
+        )
+        room = result.scalar_one()
+        
+        return CreateRoomResponse(
+            room_id=room_id,
+            player_id=player.id,
+            session_token=session_token.to_string() if hasattr(session_token, 'to_string') else str(session_token),
+            game_state=await game_state_to_response(room)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating AI game: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create AI game: {str(e)}"
+        )
+
 
 @app.post("/rooms/join", response_model=JoinRoomResponse)
 async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
@@ -1598,6 +1881,31 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
         "room_id": room.id,
         "game_state": state_dict
     }, room.id)
+    
+    # If this is an AI game and it's now AI's turn, execute AI move
+    if room.is_ai_game and room.game_phase in ["round1", "round2"] and not room.game_completed:
+        players_in_room = get_sorted_players(room)
+        ai_player = next((p for p in players_in_room if p.is_ai), None)
+        
+        if ai_player:
+            ai_player_num = 1 if players_in_room[0].is_ai else 2
+            
+            if room.current_turn == ai_player_num:
+                # Execute AI move after a short delay (for UX)
+                import asyncio
+                await asyncio.sleep(1.0)  # 1 second delay for natural feel
+                
+                await execute_ai_move(room.id, ai_player.id, db)
+                
+                # Re-fetch and broadcast updated state
+                room = await get_room_or_404(db, request.room_id)
+                game_state_response = await game_state_to_response(room)
+                state_dict = game_state_response.model_dump()
+                await manager.broadcast_json_to_room({
+                    "type": "game_state_update",
+                    "room_id": room.id,
+                    "game_state": state_dict
+                }, room.id)
     
     return StandardResponse(
         success=True,
