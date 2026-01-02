@@ -1,7 +1,7 @@
 """add_ai_game_fields
 
-Revision ID: 0008
-Revises: 0007
+Revision ID: 0008_add_ai_game_fields
+Revises: 0007_add_updated_at_column
 Create Date: 2026-01-02
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0008'
-down_revision: Union[str, None] = '0007'
+revision: str = '0008_add_ai_game_fields'
+down_revision: Union[str, None] = '0007_add_updated_at_column'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
