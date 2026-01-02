@@ -94,10 +94,19 @@
       await connectionStore.connect(response.room_id);
     } catch (err: any) {
       ErrorHandler.logError(err, 'handleCreateAIGame');
-      const formatted = formatErrorForDisplay(err);
-      error = formatted.message;
-      errorType = formatted.type;
-      errorTitle = formatted.title;
+      
+      // Check if it's a 404 error (feature not deployed yet)
+      if (err.message === 'Not Found' || err.status === 404) {
+        error = 'AI game mode is coming soon! The feature is being deployed. Please try Quick Match or Create Room for now.';
+        errorType = 'info';
+        errorTitle = 'Coming Soon';
+        showAIOptions = false;
+      } else {
+        const formatted = formatErrorForDisplay(err);
+        error = formatted.message;
+        errorType = formatted.type;
+        errorTitle = formatted.title;
+      }
     } finally {
       isCreatingAI = false;
     }
