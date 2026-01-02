@@ -252,7 +252,7 @@ async def health_check():
 # Root endpoint for API
 @app.get("/")
 async def root():
-    return {"message": "Casino Card Game API", "version": "1.0.0"}
+    return {"message": "Casino Card Game API", "version": "1.1.0", "features": ["ai_game"]}
 
 # Debug endpoint to check waiting rooms
 @app.get("/debug/waiting-rooms")
