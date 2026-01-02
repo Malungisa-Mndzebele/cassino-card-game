@@ -873,14 +873,19 @@ async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSe
     # Refresh the room's players relationship to include the new player
     await db.refresh(room, ["players"])
     
-    # Broadcast player joined event to all connected clients in the room
+    # Get full game state for broadcast
+    game_state_response = await game_state_to_response(room)
+    state_dict = game_state_response.model_dump()
+    
+    # Broadcast player joined event with full game state to all connected clients
     await manager.broadcast_to_room(
         {
             "type": "player_joined",
             "room_id": room.id,
             "player_id": player.id,
             "player_name": player.name,
-            "player_count": len(room.players)
+            "player_count": len(room.players),
+            "game_state": state_dict
         },
         room.id
     )
@@ -888,7 +893,7 @@ async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSe
     return JoinRoomResponse(
         player_id=player.id,
         session_token=session_token.to_string() if hasattr(session_token, 'to_string') else str(session_token),
-        game_state=await game_state_to_response(room)
+        game_state=game_state_response
     )
 
 @app.post("/rooms/join-random", response_model=JoinRoomResponse)
@@ -1009,14 +1014,19 @@ async def join_random_room(request: JoinRandomRoomRequest, http_request: Request
     )
     room = result.scalar_one()
     
-    # Broadcast player joined event to all connected clients in the room
+    # Get full game state for broadcast
+    game_state_response = await game_state_to_response(room)
+    state_dict = game_state_response.model_dump()
+    
+    # Broadcast player joined event with full game state to all connected clients
     await manager.broadcast_to_room(
         {
             "type": "player_joined",
             "room_id": room.id,
             "player_id": player.id,
             "player_name": player.name,
-            "player_count": len(room.players)
+            "player_count": len(room.players),
+            "game_state": state_dict
         },
         room.id
     )
@@ -1024,7 +1034,7 @@ async def join_random_room(request: JoinRandomRoomRequest, http_request: Request
     return JoinRoomResponse(
         player_id=player.id,
         session_token=session_token.to_string() if hasattr(session_token, 'to_string') else str(session_token),
-        game_state=await game_state_to_response(room)
+        game_state=game_state_response
     )
 
 @app.get("/rooms/{room_id}/state", response_model=GameStateResponse)
@@ -1142,6 +1152,7 @@ async def leave_room(request: LeaveRoomRequest, db: AsyncSession = Depends(get_d
     - If game was in progress, opponent wins by forfeit
     """
     from datetime import datetime
+    from models import GameSession
     
     try:
         logger.info(f"Leave room request: room_id={request.room_id}, player_id={request.player_id}")
@@ -1164,6 +1175,14 @@ async def leave_room(request: LeaveRoomRequest, db: AsyncSession = Depends(get_d
             room.game_completed = True
             room.winner = 2 if is_player1 else 1  # Other player wins
             logger.info(f"Player {request.player_id} forfeited. Winner: Player {room.winner}")
+        
+        # Delete any game sessions for this player first (to avoid FK constraint)
+        result = await db.execute(
+            select(GameSession).where(GameSession.player_id == request.player_id)
+        )
+        sessions_to_delete = result.scalars().all()
+        for session in sessions_to_delete:
+            await db.delete(session)
         
         # Remove the player from the room
         player_to_remove = None
@@ -1646,13 +1665,14 @@ async def websocket_endpoint(
     Query params:
         session_token: Optional session token for reconnection
     """
+    import sys
     session_id = None
     game_session = None
     ping_task = None
     
-    # Use print for guaranteed log output
-    print(f"[WS] Connection attempt for room {room_id}")
-    print(f"[WS] Session token: {session_token[:30] if session_token else 'None'}...")
+    # Use print for guaranteed log output with flush
+    print(f"[WS] Connection attempt for room {room_id}", flush=True)
+    print(f"[WS] Session token: {session_token[:30] if session_token else 'None'}...", flush=True)
     
     async def send_server_ping():
         """Send periodic pings to keep connection alive (Render has aggressive idle timeout)"""

@@ -42,14 +42,14 @@ function createConnectionStore() {
                 ? 'ws://localhost:8000'
                 : 'wss://cassino-game-backend.onrender.com';
 
-        // Get session token from localStorage for reconnection
-        const sessionToken = typeof window !== 'undefined' 
-            ? localStorage.getItem('session_token') 
+        // Get session token from sessionStorage for reconnection
+        const sessionToken = typeof window !== 'undefined'
+            ? sessionStorage.getItem('session_token')
             : null;
 
         console.log('WebSocket connecting with session token:', sessionToken ? sessionToken.substring(0, 30) + '...' : 'NONE');
 
-        const wsUrl = sessionToken 
+        const wsUrl = sessionToken
             ? `${apiUrl}/ws/${roomId}?session_token=${encodeURIComponent(sessionToken)}`
             : `${apiUrl}/ws/${roomId}`;
 
@@ -187,14 +187,23 @@ function createConnectionStore() {
                             }
                         }
                     } else if (data.type === 'player_joined') {
-                        // Refresh game state when a player joins
+                        // Update game state when a player joins - use included state if available
                         console.log(`Player ${data.player_name} joined the room`);
                         try {
-                            const { getGameState } = await import('$lib/utils/api');
-                            const response = await getGameState(data.room_id);
-                            await gameStore.setGameState(response.game_state);
+                            if (data.game_state) {
+                                // Use the game state included in the message (more reliable)
+                                const { transformGameState } = await import('$lib/utils/api');
+                                const newState = transformGameState(data.game_state);
+                                console.log('Updating game state from player_joined message:', newState);
+                                await gameStore.setGameState(newState);
+                            } else {
+                                // Fallback: fetch from API if no state included
+                                const { getGameState } = await import('$lib/utils/api');
+                                const response = await getGameState(data.room_id);
+                                await gameStore.setGameState(response.game_state);
+                            }
                         } catch (err) {
-                            console.error('Failed to refresh game state:', err);
+                            console.error('Failed to update game state on player join:', err);
                         }
                     } else if (data.type === 'pong') {
                         // Calculate latency from our ping
@@ -205,15 +214,15 @@ function createConnectionStore() {
                         }
                     } else if (data.type === 'error') {
                         update((s) => ({ ...s, error: data.message }));
-                        
+
                         // Handle invalid session - clear stored session and stop reconnecting
                         if (data.code === 'invalid_session' || data.code === 'wrong_room') {
                             console.log('Session invalid, clearing stored session data');
-                            if (typeof localStorage !== 'undefined') {
-                                localStorage.removeItem('session_token');
-                                localStorage.removeItem('cassino_room_id');
-                                localStorage.removeItem('cassino_player_id');
-                                localStorage.removeItem('cassino_session_timestamp');
+                            if (typeof sessionStorage !== 'undefined') {
+                                sessionStorage.removeItem('session_token');
+                                sessionStorage.removeItem('cassino_room_id');
+                                sessionStorage.removeItem('cassino_player_id');
+                                sessionStorage.removeItem('cassino_session_timestamp');
                             }
                             // Stop reconnection attempts for invalid sessions
                             reconnectAttempts = maxReconnectAttempts;
@@ -238,11 +247,11 @@ function createConnectionStore() {
                 // Don't reconnect if session was invalid (code 1008)
                 if (event.code === 1008) {
                     console.log('Session invalid, not reconnecting');
-                    if (typeof localStorage !== 'undefined') {
-                        localStorage.removeItem('session_token');
-                        localStorage.removeItem('cassino_room_id');
-                        localStorage.removeItem('cassino_player_id');
-                        localStorage.removeItem('cassino_session_timestamp');
+                    if (typeof sessionStorage !== 'undefined') {
+                        sessionStorage.removeItem('session_token');
+                        sessionStorage.removeItem('cassino_room_id');
+                        sessionStorage.removeItem('cassino_player_id');
+                        sessionStorage.removeItem('cassino_session_timestamp');
                     }
                     update((s) => ({
                         ...s,
@@ -327,10 +336,10 @@ function createConnectionStore() {
     const startPolling = (roomId: string) => {
         stopPolling();
         console.log('Starting polling fallback for room:', roomId);
-        
+
         // Poll immediately on start
         pollGameState(roomId);
-        
+
         // Then poll every POLLING_INTERVAL ms
         pollingInterval = setInterval(() => {
             pollGameState(roomId);
@@ -348,12 +357,12 @@ function createConnectionStore() {
         try {
             const { getGameState } = await import('$lib/utils/api');
             const response = await getGameState(roomId);
-            
+
             if (response.game_state) {
                 const currentState = gameStore.getConfirmedGameState();
                 const newVersion = response.game_state.version || 0;
                 const currentVersion = currentState?.version || 0;
-                
+
                 // Only update if server has newer state
                 if (newVersion > currentVersion) {
                     console.log(`Polling: updating state from v${currentVersion} to v${newVersion}`);

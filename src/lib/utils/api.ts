@@ -56,9 +56,9 @@ export async function createRoom(playerName: string): Promise<CreateRoomResponse
     });
 
     // Store session token if provided
-    if (response.session_token && typeof localStorage !== 'undefined') {
+    if (response.session_token && typeof sessionStorage !== 'undefined') {
         console.log('Storing session token from createRoom:', response.session_token.substring(0, 30) + '...');
-        localStorage.setItem('session_token', response.session_token);
+        sessionStorage.setItem('session_token', response.session_token);
     } else {
         console.warn('No session_token in createRoom response!');
     }
@@ -81,9 +81,9 @@ export async function joinRoom(roomCode: string, playerName: string): Promise<Jo
     });
 
     // Store session token if provided
-    if (response.session_token && typeof localStorage !== 'undefined') {
+    if (response.session_token && typeof sessionStorage !== 'undefined') {
         console.log('Storing session token from joinRoom:', response.session_token.substring(0, 30) + '...');
-        localStorage.setItem('session_token', response.session_token);
+        sessionStorage.setItem('session_token', response.session_token);
     } else {
         console.warn('No session_token in joinRoom response!');
     }
@@ -105,9 +105,9 @@ export async function joinRandomRoom(playerName: string): Promise<JoinRoomRespon
     });
 
     // Store session token if provided
-    if (response.session_token && typeof localStorage !== 'undefined') {
+    if (response.session_token && typeof sessionStorage !== 'undefined') {
         console.log('Storing session token from joinRandomRoom:', response.session_token.substring(0, 30) + '...');
-        localStorage.setItem('session_token', response.session_token);
+        sessionStorage.setItem('session_token', response.session_token);
     } else {
         console.warn('No session_token in joinRandomRoom response!');
     }
@@ -225,22 +225,29 @@ export async function startGame(roomId: string, playerId: string) {
 export async function playCard(
     roomId: string,
     playerId: string,
-    cardIndex: number,
+    cardIdOrIndex: number | string,
     action: 'capture' | 'build' | 'trail',
-    targetIndices?: number[],
+    targetCards?: string[],
     buildValue?: number
 ) {
-    return fetchAPI('/game/play-card', {
+    const response = await fetchAPI<any>('/game/play-card', {
         method: 'POST',
         body: JSON.stringify({
             room_id: roomId,
             player_id: playerId,
-            card_index: cardIndex,
+            card_id: typeof cardIdOrIndex === 'string' ? cardIdOrIndex : undefined,
+            card_index: typeof cardIdOrIndex === 'number' ? cardIdOrIndex : undefined,
             action,
-            target_indices: targetIndices,
+            target_cards: targetCards,
             build_value: buildValue
         })
     });
+
+    return {
+        success: response.success,
+        message: response.message,
+        game_state: transformGameState(response.game_state)
+    };
 }
 
 export async function resetGame(roomId: string, playerId: string) {
@@ -262,9 +269,9 @@ export async function leaveRoom(roomId: string, playerId: string) {
         })
     });
 
-    // Clear session token from localStorage
-    if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('session_token');
+    // Clear session token from sessionStorage
+    if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('session_token');
     }
 
     return {

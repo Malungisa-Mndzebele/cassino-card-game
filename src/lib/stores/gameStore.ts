@@ -25,19 +25,19 @@ function createGameStore() {
         // Setters
         setRoomId: (roomId: string) => {
             update((s) => ({ ...s, roomId }));
-            // Persist to localStorage with timestamp
-            if (typeof localStorage !== 'undefined') {
-                localStorage.setItem('cassino_room_id', roomId);
-                localStorage.setItem('cassino_session_timestamp', Date.now().toString());
+            // Persist to sessionStorage with timestamp
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.setItem('cassino_room_id', roomId);
+                sessionStorage.setItem('cassino_session_timestamp', Date.now().toString());
             }
         },
         setPlayerId: (playerId: string | number) => {
             const playerIdStr = String(playerId);
             update((s) => ({ ...s, playerId: playerIdStr }));
-            // Persist to localStorage with timestamp
-            if (typeof localStorage !== 'undefined') {
-                localStorage.setItem('cassino_player_id', playerIdStr);
-                localStorage.setItem('cassino_session_timestamp', Date.now().toString());
+            // Persist to sessionStorage with timestamp
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.setItem('cassino_player_id', playerIdStr);
+                sessionStorage.setItem('cassino_session_timestamp', Date.now().toString());
             }
         },
         setPlayerName: (name: string) => {
@@ -47,7 +47,7 @@ function createGameStore() {
                 localStorage.setItem('cassino_player_name', name);
             }
         },
-        
+
         /**
          * Set game state with version tracking and checksum validation
          */
@@ -95,46 +95,48 @@ function createGameStore() {
                 playerName: get({ subscribe }).playerName, // Keep player name
                 gameState: null
             });
-            // Clear session from localStorage
-            if (typeof localStorage !== 'undefined') {
-                localStorage.removeItem('cassino_room_id');
-                localStorage.removeItem('cassino_player_id');
-                localStorage.removeItem('cassino_session_timestamp');
+            // Clear session from sessionStorage
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.removeItem('cassino_room_id');
+                sessionStorage.removeItem('cassino_player_id');
+                sessionStorage.removeItem('cassino_session_timestamp');
             }
             // Clear optimistic state
             optimisticStateManager.clearPending();
         },
 
-        // Initialize from localStorage with session validation
+        // Initialize from storage with session validation
         initialize: () => {
             if (typeof localStorage !== 'undefined') {
                 const savedName = localStorage.getItem('cassino_player_name');
-                const savedRoomId = localStorage.getItem('cassino_room_id');
-                const savedPlayerId = localStorage.getItem('cassino_player_id');
-                const sessionTimestamp = localStorage.getItem('cassino_session_timestamp');
-                
+                if (savedName) {
+                    update((s) => ({ ...s, playerName: savedName }));
+                }
+            }
+
+            if (typeof sessionStorage !== 'undefined') {
+                const savedRoomId = sessionStorage.getItem('cassino_room_id');
+                const savedPlayerId = sessionStorage.getItem('cassino_player_id');
+                const sessionTimestamp = sessionStorage.getItem('cassino_session_timestamp');
+
                 // Validate session age (24 hours max)
                 const now = Date.now();
                 const sessionAge = sessionTimestamp ? now - parseInt(sessionTimestamp) : Infinity;
                 const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
-                
-                if (savedName) {
-                    update((s) => ({ ...s, playerName: savedName }));
-                }
-                
+
                 // Only restore session if valid and not expired
                 if (savedRoomId && savedPlayerId && sessionAge < maxSessionAge) {
-                    update((s) => ({ 
-                        ...s, 
+                    update((s) => ({
+                        ...s,
                         roomId: savedRoomId,
                         playerId: savedPlayerId
                     }));
                 } else if (sessionAge >= maxSessionAge) {
                     // Clear expired session
-                    console.log('Session expired, clearing localStorage');
-                    localStorage.removeItem('cassino_room_id');
-                    localStorage.removeItem('cassino_player_id');
-                    localStorage.removeItem('cassino_session_timestamp');
+                    console.log('Session expired, clearing sessionStorage');
+                    sessionStorage.removeItem('cassino_room_id');
+                    sessionStorage.removeItem('cassino_player_id');
+                    sessionStorage.removeItem('cassino_session_timestamp');
                 }
             }
         }

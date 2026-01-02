@@ -167,6 +167,9 @@ class RedisClient:
 
         Returns:
             Number of subscribers that received the message
+            
+        Raises:
+            Exception: If Redis is unavailable or publish fails
         """
         try:
             client = await self.get_async_client()
@@ -174,7 +177,8 @@ class RedisClient:
             return await client.publish(channel, serialized)
         except Exception as e:
             print(f"Error publishing to Redis: {e}")
-            return 0
+            # Re-raise to trigger fallback in websocket_manager
+            raise
 
     async def increment(self, key: str, amount: int = 1) -> int:
         """

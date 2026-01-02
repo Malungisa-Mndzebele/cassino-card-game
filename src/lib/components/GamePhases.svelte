@@ -1,19 +1,22 @@
 <script lang="ts">
 	import { gameStore } from '$stores/gameStore';
+	import { connectionStore } from '$stores/connectionStore';
 	import { Button, Card, DealerAnimation } from '$components';
-	import { startGame } from '$lib/utils/api';
+	import { startGame, leaveRoom } from '$lib/utils/api';
 	import type { Card as CardType } from '$types/game';
 	
 	export let onReady: (() => void) | undefined = undefined;
 	export let onStartShuffle: (() => void) | undefined = undefined;
 	export let onSelectFaceUpCards: ((cardIds: string[]) => void) | undefined = undefined;
 	export let onGameStarted: (() => void) | undefined = undefined;
+	export let onQuit: (() => void) | undefined = undefined;
 	
 	let selectedFaceUpCards: string[] = [];
 	let showDealerAnimation = false;
 	let dealerAnimationComplete = false;
 	let isStartingGame = false;
 	let startGameError = '';
+	let isQuitting = false;
 	
 	$: gameState = $gameStore.gameState;
 	$: phase = gameState?.phase || 'waiting';
@@ -38,6 +41,35 @@
 	function handleStartShuffle() {
 		if (onStartShuffle) {
 			onStartShuffle();
+		}
+	}
+	
+	async function handleQuit() {
+		if (isQuitting) return;
+		
+		const confirmMessage = phase === 'waiting' 
+			? 'Are you sure you want to leave the room?'
+			: 'Are you sure you want to quit? You will forfeit the game.';
+		
+		if (!confirm(confirmMessage)) return;
+		
+		isQuitting = true;
+		
+		try {
+			if ($gameStore.roomId && $gameStore.playerId) {
+				await leaveRoom($gameStore.roomId, $gameStore.playerId);
+			}
+		} catch (err) {
+			console.error('Failed to leave room:', err);
+		} finally {
+			// Always disconnect and reset, even if API call fails
+			connectionStore.disconnect();
+			gameStore.reset();
+			isQuitting = false;
+			
+			if (onQuit) {
+				onQuit();
+			}
 		}
 	}
 	
@@ -136,6 +168,19 @@
 					<div class="spinner-large"></div>
 				</div>
 			{/if}
+			
+			<!-- Quit Button -->
+			<button 
+				class="quit-button"
+				on:click={handleQuit}
+				disabled={isQuitting}
+			>
+				{#if isQuitting}
+					<span class="spinner-small"></span> Leaving...
+				{:else}
+					🚪 Leave Room
+				{/if}
+			</button>
 		</div>
 		
 	{:else if phase === 'dealer'}
@@ -155,6 +200,19 @@
 				<Button variant="primary" size="large" fullWidth onClick={handleDealerAnimationComplete}>
 					Try Again
 				</Button>
+				
+				<!-- Quit Button -->
+				<button 
+					class="quit-button"
+					on:click={handleQuit}
+					disabled={isQuitting}
+				>
+					{#if isQuitting}
+						<span class="spinner-small"></span> Leaving...
+					{:else}
+						🚪 Leave Room
+					{/if}
+				</button>
 			{:else if dealerAnimationComplete}
 				<!-- Waiting for game state update -->
 				<h2 class="phase-title">🎴 Getting Ready...</h2>
@@ -190,9 +248,24 @@
 				<p class="tie-text">It's a tie!</p>
 			{/if}
 			
-			<Button variant="primary" size="large" fullWidth>
-				Play Again
-			</Button>
+			<div class="finished-buttons">
+				<Button variant="primary" size="large" fullWidth>
+					Play Again
+				</Button>
+				
+				<!-- Quit Button -->
+				<button 
+					class="quit-button"
+					on:click={handleQuit}
+					disabled={isQuitting}
+				>
+					{#if isQuitting}
+						<span class="spinner-small"></span> Leaving...
+					{:else}
+						🚪 Leave Room
+					{/if}
+				</button>
+			</div>
 		</div>
 	{/if}
 </div>
@@ -360,5 +433,52 @@
 		.vs-divider {
 			transform: rotate(90deg);
 		}
+	}
+	
+	/* Quit Button */
+	.quit-button {
+		margin-top: 1.5rem;
+		padding: 0.75rem 1.5rem;
+		background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+		border: none;
+		border-radius: 0.5rem;
+		color: white;
+		font-weight: 600;
+		font-size: 0.875rem;
+		cursor: pointer;
+		transition: all 0.2s;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		min-width: 140px;
+	}
+	
+	.quit-button:hover:not(:disabled) {
+		background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+	}
+	
+	.quit-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+	
+	.spinner-small {
+		width: 14px;
+		height: 14px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-top-color: white;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+	
+	/* Finished Buttons */
+	.finished-buttons {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		align-items: center;
 	}
 </style>
