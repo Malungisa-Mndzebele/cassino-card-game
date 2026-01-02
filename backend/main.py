@@ -56,7 +56,7 @@ from database import get_db, async_engine
 from models import Base, Room, Player, GameSession
 from schemas import (
     CreateRoomRequest, JoinRoomRequest, JoinRandomRoomRequest, SetPlayerReadyRequest,
-    LeaveRoomRequest,
+    LeaveRoomRequest, CreateAIGameRequest,
     PlayCardRequest, StartShuffleRequest, SelectFaceUpCardsRequest, StartGameRequest,
     CreateRoomResponse, JoinRoomResponse, StandardResponse, GameStateResponse, PlayerResponse,
     SyncRequest
@@ -999,10 +999,8 @@ async def create_room(request: CreateRoomRequest, http_request: Request, db: Asy
 
 
 @app.post("/rooms/create-ai-game", response_model=CreateRoomResponse)
-async def create_ai_game(request: 'CreateAIGameRequest', http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
+async def create_ai_game(request: CreateAIGameRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Create a single-player game against AI opponent"""
-    from schemas import CreateAIGameRequest
-    
     try:
         # Generate unique room ID
         room_id = generate_room_id()
