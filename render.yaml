@@ -1,5 +1,5 @@
 services:
-  # Backend Service
+  # Backend Service - v1.1.0 with AI game support
   - type: web
     name: cassino-game-backend
     env: python
