@@ -64,7 +64,7 @@
   async function handleStartShuffle() {
     try {
       const { startShuffle } = await import('$lib/utils/api');
-      const response = await startShuffle($gameStore.roomId, $gameStore.playerId);
+      const response = await startShuffle($gameStore.roomId, $gameStore.playerId) as { success: boolean; game_state?: any };
       
       if (response.success && response.game_state) {
         await gameStore.setGameState(response.game_state);
@@ -78,7 +78,9 @@
   async function handleSelectFaceUpCards(cardIds: string[]) {
     try {
       const { selectFaceUpCards } = await import('$lib/utils/api');
-      const response = await selectFaceUpCards($gameStore.roomId, $gameStore.playerId, cardIds);
+      // Convert string IDs to numbers for the API
+      const numericIds = cardIds.map(id => parseInt(id, 10));
+      const response = await selectFaceUpCards($gameStore.roomId, $gameStore.playerId, numericIds) as { success: boolean; game_state?: any };
       
       if (response.success && response.game_state) {
         await gameStore.setGameState(response.game_state);

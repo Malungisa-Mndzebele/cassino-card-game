@@ -19,6 +19,7 @@ describe('StateValidator', () => {
 		],
 		tableCards: [],
 		currentPlayer: 'player1',
+		currentTurn: 1,
 		deck: new Array(40).fill(null),
 		player1Hand: new Array(4).fill(null),
 		player2Hand: new Array(4).fill(null),

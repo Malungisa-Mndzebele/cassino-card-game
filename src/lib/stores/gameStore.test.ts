@@ -164,6 +164,7 @@ describe('gameStore - Session Persistence', () => {
                 players: [],
                 tableCards: [],
                 currentPlayer: 'player-1',
+                currentTurn: 1,
                 deck: [],
                 player1Hand: [],
                 player2Hand: [],

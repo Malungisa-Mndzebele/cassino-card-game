@@ -16,6 +16,7 @@ describe('DeltaApplication', () => {
 		players: [],
 		tableCards: [],
 		currentPlayer: 'player1',
+		currentTurn: 1,
 		deck: [],
 		player1Hand: [],
 		player2Hand: [],

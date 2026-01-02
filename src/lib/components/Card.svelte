@@ -5,6 +5,7 @@
 	export let card: CardType;
 	export let isHidden = false;
 	export let isPlayable = false;
+	export let isSelected = false;
 	export let size: 'small' | 'medium' | 'large' = 'medium';
 	export let onClick: (() => void) | undefined = undefined;
 	
@@ -27,7 +28,7 @@
 </script>
 
 <button
-	class="card {sizeClasses[size]} {isPlayable ? 'playable' : ''} {isHidden ? 'hidden-card' : ''}"
+	class="card {sizeClasses[size]} {isPlayable ? 'playable' : ''} {isHidden ? 'hidden-card' : ''} {isSelected ? 'selected' : ''}"
 	on:click={handleClick}
 	disabled={!isPlayable}
 	type="button"

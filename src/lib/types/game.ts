@@ -21,6 +21,7 @@ export interface GameState {
     players: Player[];
     tableCards: Card[];
     currentPlayer: string;
+    currentTurn: number;
     deck: Card[];
     player1Hand: Card[];
     player2Hand: Card[];
