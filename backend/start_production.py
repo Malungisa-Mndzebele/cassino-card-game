@@ -20,8 +20,10 @@ def run_migrations():
     """Run database migrations before starting server"""
     print("🔄 Running database migrations...", file=sys.stderr)
     try:
+        # First try 'heads' (plural) to handle multiple branches
+        # This upgrades all branches before merge migrations can be applied
         result = subprocess.run(
-            ["alembic", "upgrade", "head"],
+            ["alembic", "upgrade", "heads"],
             cwd=backend_dir,
             capture_output=True,
             text=True,
@@ -32,10 +34,25 @@ def run_migrations():
             print(result.stdout, file=sys.stderr)
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ Migration failed: {e}", file=sys.stderr)
-        print(f"stdout: {e.stdout}", file=sys.stderr)
-        print(f"stderr: {e.stderr}", file=sys.stderr)
-        return False
+        # If 'heads' fails, try 'head' as fallback for single-head scenarios
+        print(f"⚠️  Multi-head upgrade failed, trying single head...", file=sys.stderr)
+        try:
+            result = subprocess.run(
+                ["alembic", "upgrade", "head"],
+                cwd=backend_dir,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            print("✅ Migrations completed successfully", file=sys.stderr)
+            if result.stdout:
+                print(result.stdout, file=sys.stderr)
+            return True
+        except subprocess.CalledProcessError as e2:
+            print(f"❌ Migration failed: {e2}", file=sys.stderr)
+            print(f"stdout: {e2.stdout}", file=sys.stderr)
+            print(f"stderr: {e2.stderr}", file=sys.stderr)
+            return False
     except FileNotFoundError:
         print("❌ Alembic not found. Make sure it's installed.", file=sys.stderr)
         return False
