@@ -83,6 +83,7 @@
 	tabindex="-1"
 	data-testid="captured-modal"
 >
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div class="modal" on:click|stopPropagation on:keydown|stopPropagation role="document">
 		<div class="modal-header">
 			<h3 class="modal-title" id="captured-modal-title">📥 {playerName}'s Captured Cards</h3>

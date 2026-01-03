@@ -8,7 +8,8 @@
 	let chatInput = $state('');
 	let showPanel = $state(false);
 	let showVideo = $state(false);
-	let chatContainer: HTMLDivElement;
+	// DOM reference - not reactive state, used for scrolling
+	let chatContainer: HTMLDivElement | undefined;
 	let initialized = $state(false);
 	
 	// Reactive initialization - runs when gameStore values become available
@@ -37,8 +38,12 @@
 	// Auto-scroll chat
 	$effect(() => {
 		if (chatContainer && communication.messages.length > 0) {
+			// Capture reference for use in setTimeout closure
+			const container = chatContainer;
 			setTimeout(() => {
-				chatContainer.scrollTop = chatContainer.scrollHeight;
+				if (container) {
+					container.scrollTop = container.scrollHeight;
+				}
 			}, 50);
 		}
 	});
@@ -121,6 +126,7 @@
 				<!-- Remote Video -->
 				{#if communication.remoteStream && !communication.isOpponentVideoMuted}
 					<div class="video-container remote">
+						<!-- svelte-ignore a11y_media_has_caption -->
 						<video
 							data-comm-video
 							autoplay

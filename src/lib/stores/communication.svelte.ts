@@ -140,7 +140,7 @@ async function initialize(roomId: string, playerId: string, playerName: string, 
 	// Add system message
 	addSystemMessage('Connected to room. You can now chat with your opponent!');
 	
-	console.log('[Communication] Initialized successfully, websocketSend is:', websocketSend ? 'set' : 'null');
+	console.log('[Communication] Initialized successfully');
 }
 
 function cleanup() {
