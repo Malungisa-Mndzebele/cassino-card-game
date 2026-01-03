@@ -214,6 +214,7 @@ function createConnectionStore() {
                         }
                     } else if (data.type === 'chat_message') {
                         // Handle incoming chat message
+                        console.log('[ConnectionStore] Received chat_message:', data);
                         try {
                             const { communication } = await import('./communication.svelte');
                             communication.receiveMessage({
@@ -222,11 +223,13 @@ function createConnectionStore() {
                                 sender_id: data.data.sender_id,
                                 sender_name: data.data.sender_name
                             });
+                            console.log('[ConnectionStore] Chat message forwarded to communication store');
                         } catch (err) {
                             console.error('Failed to handle chat message:', err);
                         }
                     } else if (data.type === 'media_status') {
                         // Handle opponent media status update
+                        console.log('[ConnectionStore] Received media_status:', data);
                         try {
                             const { communication } = await import('./communication.svelte');
                             communication.handleOpponentMediaStatus(data.data);
@@ -235,6 +238,7 @@ function createConnectionStore() {
                         }
                     } else if (data.type === 'webrtc_offer') {
                         // Handle WebRTC offer for voice/video
+                        console.log('[ConnectionStore] Received webrtc_offer');
                         try {
                             const { communication } = await import('./communication.svelte');
                             await communication.handleOffer(data.data);
@@ -243,6 +247,7 @@ function createConnectionStore() {
                         }
                     } else if (data.type === 'webrtc_answer') {
                         // Handle WebRTC answer
+                        console.log('[ConnectionStore] Received webrtc_answer');
                         try {
                             const { communication } = await import('./communication.svelte');
                             await communication.handleAnswer(data.data);
@@ -251,6 +256,7 @@ function createConnectionStore() {
                         }
                     } else if (data.type === 'webrtc_ice_candidate') {
                         // Handle ICE candidate
+                        console.log('[ConnectionStore] Received webrtc_ice_candidate');
                         try {
                             const { communication } = await import('./communication.svelte');
                             await communication.handleIceCandidate(data.data);

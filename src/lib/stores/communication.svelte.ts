@@ -128,6 +128,8 @@ function saveSettings() {
 async function initialize(roomId: string, playerId: string, playerName: string, wsSend: (message: any) => void) {
 	if (!browser) return;
 	
+	console.log('[Communication] Initializing:', { roomId, playerId: playerId.substring(0, 20) + '...', playerName });
+	
 	state.roomId = roomId;
 	state.playerId = playerId;
 	state.playerName = playerName;
@@ -138,7 +140,7 @@ async function initialize(roomId: string, playerId: string, playerName: string, 
 	// Add system message
 	addSystemMessage('Connected to room. You can now chat with your opponent!');
 	
-	console.log('Communication initialized for room:', roomId);
+	console.log('[Communication] Initialized successfully, websocketSend is:', websocketSend ? 'set' : 'null');
 }
 
 function cleanup() {
@@ -354,10 +356,17 @@ function setVolume(volume: number) {
 }
 
 function sendMessage(content: string) {
-	if (!content.trim() || !state.playerId || !state.playerName) return;
+	if (!content.trim() || !state.playerId || !state.playerName) {
+		console.log('[Communication] sendMessage blocked:', { 
+			hasContent: !!content.trim(), 
+			hasPlayerId: !!state.playerId, 
+			hasPlayerName: !!state.playerName 
+		});
+		return;
+	}
 	
 	const message: ChatMessage = {
-		id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+		id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
 		senderId: state.playerId,
 		senderName: state.playerName,
 		content: content.trim(),
@@ -365,9 +374,11 @@ function sendMessage(content: string) {
 	};
 	
 	state.messages = [...state.messages, message];
+	console.log('[Communication] Added message to local state:', message.content);
 	
 	// Send via WebSocket
 	if (websocketSend) {
+		console.log('[Communication] Sending via WebSocket');
 		websocketSend({
 			type: 'chat_message',
 			data: {
@@ -376,6 +387,8 @@ function sendMessage(content: string) {
 				sender_name: message.senderName
 			}
 		});
+	} else {
+		console.warn('[Communication] websocketSend is null, cannot send message');
 	}
 	
 	// Also send via data channel if available
@@ -388,6 +401,8 @@ function sendMessage(content: string) {
 }
 
 function receiveMessage(data: { id: string; content: string; sender_id: string; sender_name: string }) {
+	console.log('[Communication] Received message:', data);
+	
 	const message: ChatMessage = {
 		id: data.id,
 		senderId: data.sender_id,
@@ -397,6 +412,7 @@ function receiveMessage(data: { id: string; content: string; sender_id: string; 
 	};
 	
 	state.messages = [...state.messages, message];
+	console.log('[Communication] Added received message, total messages:', state.messages.length);
 	
 	if (!state.isChatOpen) {
 		state.unreadCount++;

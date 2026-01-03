@@ -2,31 +2,36 @@
 	import { communication, type ChatMessage } from '$lib/stores/communication.svelte';
 	import { gameStore } from '$stores/gameStore';
 	import { connectionStore } from '$stores/connectionStore';
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 	
 	// State
 	let chatInput = $state('');
 	let showPanel = $state(false);
 	let showVideo = $state(false);
 	let chatContainer: HTMLDivElement;
+	let initialized = $state(false);
 	
-	// Initialize communication when component mounts
-	onMount(() => {
-		if ($gameStore.roomId && $gameStore.playerId && $gameStore.playerName) {
+	// Reactive initialization - runs when gameStore values become available
+	$effect(() => {
+		const roomId = $gameStore.roomId;
+		const playerId = $gameStore.playerId;
+		const playerName = $gameStore.playerName;
+		
+		if (roomId && playerId && playerName && !initialized) {
+			console.log('[CommunicationPanel] Initializing with:', { roomId, playerId: playerId.substring(0, 20) + '...', playerName });
 			const wsSend = (msg: any) => {
+				console.log('[CommunicationPanel] Sending message:', msg.type);
 				connectionStore.send(msg);
 			};
-			communication.initialize(
-				$gameStore.roomId,
-				$gameStore.playerId,
-				$gameStore.playerName,
-				wsSend
-			);
+			communication.initialize(roomId, playerId, playerName, wsSend);
+			initialized = true;
 		}
 	});
 	
 	onDestroy(() => {
+		console.log('[CommunicationPanel] Cleaning up');
 		communication.cleanup();
+		initialized = false;
 	});
 	
 	// Auto-scroll chat
