@@ -1,23 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 import { gameStore } from './gameStore';
 
 describe('gameStore - Session Persistence', () => {
     beforeEach(() => {
-        // Clear localStorage before each test
+        // Clear both storages before each test
         localStorage.clear();
+        sessionStorage.clear();
         // Reset store to initial state
         gameStore.reset();
-        // Clear any persisted values
-        if (typeof localStorage !== 'undefined') {
-            localStorage.removeItem('cassino_player_name');
-            localStorage.removeItem('cassino_room_id');
-            localStorage.removeItem('cassino_player_id');
-        }
     });
 
     afterEach(() => {
         localStorage.clear();
+        sessionStorage.clear();
     });
 
     describe('setRoomId', () => {
@@ -27,9 +23,9 @@ describe('gameStore - Session Persistence', () => {
             expect(state.roomId).toBe('ABC123');
         });
 
-        it('should persist room ID to localStorage', () => {
+        it('should persist room ID to sessionStorage', () => {
             gameStore.setRoomId('ABC123');
-            expect(localStorage.getItem('cassino_room_id')).toBe('ABC123');
+            expect(sessionStorage.getItem('cassino_room_id')).toBe('ABC123');
         });
     });
 
@@ -40,9 +36,9 @@ describe('gameStore - Session Persistence', () => {
             expect(state.playerId).toBe('player-123');
         });
 
-        it('should persist player ID to localStorage', () => {
+        it('should persist player ID to sessionStorage', () => {
             gameStore.setPlayerId('player-123');
-            expect(localStorage.getItem('cassino_player_id')).toBe('player-123');
+            expect(sessionStorage.getItem('cassino_player_id')).toBe('player-123');
         });
     });
 
@@ -67,29 +63,29 @@ describe('gameStore - Session Persistence', () => {
             expect(state.playerName).toBe('SavedPlayer');
         });
 
-        it('should load room ID from localStorage when both roomId and playerId exist', () => {
-            localStorage.setItem('cassino_room_id', 'XYZ789');
-            localStorage.setItem('cassino_player_id', 'player-456');
-            localStorage.setItem('cassino_session_timestamp', Date.now().toString());
+        it('should load room ID from sessionStorage when both roomId and playerId exist', () => {
+            sessionStorage.setItem('cassino_room_id', 'XYZ789');
+            sessionStorage.setItem('cassino_player_id', 'player-456');
+            sessionStorage.setItem('cassino_session_timestamp', Date.now().toString());
             gameStore.initialize();
             const state = get(gameStore);
             expect(state.roomId).toBe('XYZ789');
         });
 
-        it('should load player ID from localStorage when both roomId and playerId exist', () => {
-            localStorage.setItem('cassino_room_id', 'XYZ789');
-            localStorage.setItem('cassino_player_id', 'player-456');
-            localStorage.setItem('cassino_session_timestamp', Date.now().toString());
+        it('should load player ID from sessionStorage when both roomId and playerId exist', () => {
+            sessionStorage.setItem('cassino_room_id', 'XYZ789');
+            sessionStorage.setItem('cassino_player_id', 'player-456');
+            sessionStorage.setItem('cassino_session_timestamp', Date.now().toString());
             gameStore.initialize();
             const state = get(gameStore);
             expect(state.playerId).toBe('player-456');
         });
 
-        it('should load complete session from localStorage', () => {
+        it('should load complete session from storage', () => {
             localStorage.setItem('cassino_player_name', 'SavedPlayer');
-            localStorage.setItem('cassino_room_id', 'XYZ789');
-            localStorage.setItem('cassino_player_id', 'player-456');
-            localStorage.setItem('cassino_session_timestamp', Date.now().toString());
+            sessionStorage.setItem('cassino_room_id', 'XYZ789');
+            sessionStorage.setItem('cassino_player_id', 'player-456');
+            sessionStorage.setItem('cassino_session_timestamp', Date.now().toString());
             
             gameStore.initialize();
             const state = get(gameStore);
@@ -99,15 +95,16 @@ describe('gameStore - Session Persistence', () => {
             expect(state.playerId).toBe('player-456');
         });
 
-        it('should handle missing localStorage gracefully', () => {
-            // Ensure localStorage is completely empty
+        it('should handle missing storage gracefully', () => {
+            // Ensure both storages are completely empty
             localStorage.clear();
+            sessionStorage.clear();
             gameStore.reset();
             
             gameStore.initialize();
             const state = get(gameStore);
             
-            // Should have empty values when nothing in localStorage
+            // Should have empty values when nothing in storage
             expect(state.roomId).toBe('');
             expect(state.playerId).toBe('');
             // playerName might be empty or preserved from previous test
@@ -138,16 +135,16 @@ describe('gameStore - Session Persistence', () => {
             expect(state.playerName).toBe('TestPlayer');
         });
 
-        it('should clear room ID from localStorage', () => {
+        it('should clear room ID from sessionStorage', () => {
             gameStore.setRoomId('ABC123');
             gameStore.reset();
-            expect(localStorage.getItem('cassino_room_id')).toBeNull();
+            expect(sessionStorage.getItem('cassino_room_id')).toBeNull();
         });
 
-        it('should clear player ID from localStorage', () => {
+        it('should clear player ID from sessionStorage', () => {
             gameStore.setPlayerId('player-123');
             gameStore.reset();
-            expect(localStorage.getItem('cassino_player_id')).toBeNull();
+            expect(sessionStorage.getItem('cassino_player_id')).toBeNull();
         });
 
         it('should preserve player name in localStorage', () => {
@@ -188,15 +185,17 @@ describe('gameStore - Session Persistence', () => {
         it('should persist and restore complete session', () => {
             // Clear everything first
             localStorage.clear();
+            sessionStorage.clear();
             
             // Simulate creating a room
             gameStore.setPlayerName('Player1');
             gameStore.setRoomId('ABC123');
             gameStore.setPlayerId('player-1');
             
-            // Verify localStorage has the values
-            expect(localStorage.getItem('cassino_room_id')).toBe('ABC123');
-            expect(localStorage.getItem('cassino_player_id')).toBe('player-1');
+            // Verify sessionStorage has room/player values
+            expect(sessionStorage.getItem('cassino_room_id')).toBe('ABC123');
+            expect(sessionStorage.getItem('cassino_player_id')).toBe('player-1');
+            // Verify localStorage has player name
             expect(localStorage.getItem('cassino_player_name')).toBe('Player1');
             
             // Verify store has the values
@@ -204,16 +203,16 @@ describe('gameStore - Session Persistence', () => {
             expect(currentState.roomId).toBe('ABC123');
             expect(currentState.playerId).toBe('player-1');
             
-            // The key test: localStorage persists the values
+            // The key test: storage persists the values
             // In a real page refresh, the store would be recreated and initialize() would be called
             // Since we can't recreate the singleton store in tests, we verify that:
-            // 1. Values are in localStorage (checked above)
+            // 1. Values are in storage (checked above)
             // 2. initialize() can read them back (tested in other tests)
             // 3. The pattern works end-to-end (tested in E2E tests)
             
             // This test verifies the persistence mechanism works
-            expect(localStorage.getItem('cassino_room_id')).toBe('ABC123');
-            expect(localStorage.getItem('cassino_player_id')).toBe('player-1');
+            expect(sessionStorage.getItem('cassino_room_id')).toBe('ABC123');
+            expect(sessionStorage.getItem('cassino_player_id')).toBe('player-1');
             expect(localStorage.getItem('cassino_player_name')).toBe('Player1');
         });
 
@@ -235,9 +234,9 @@ describe('gameStore - Session Persistence', () => {
             expect(state.roomId).toBe('ROOM02');
             expect(state.playerId).toBe('player-2');
             
-            // Verify localStorage has latest session
-            expect(localStorage.getItem('cassino_room_id')).toBe('ROOM02');
-            expect(localStorage.getItem('cassino_player_id')).toBe('player-2');
+            // Verify sessionStorage has latest session
+            expect(sessionStorage.getItem('cassino_room_id')).toBe('ROOM02');
+            expect(sessionStorage.getItem('cassino_player_id')).toBe('player-2');
         });
     });
 });

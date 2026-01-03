@@ -14,6 +14,7 @@
   } from '$utils';
   import { ErrorHandler, formatErrorForDisplay } from '$lib/utils/errorHandler';
   import ErrorNotification from '$lib/components/ErrorNotification.svelte';
+  import GameInstructions from '$lib/components/GameInstructions.svelte';
   import { onMount } from 'svelte';
 
   // Component state
@@ -221,7 +222,12 @@
     <!-- Room Creation/Joining UI -->
     <div class="casino-bg backdrop-casino rounded-xl p-8 max-w-md mx-auto shadow-2xl">
       <h1 class="text-4xl font-bold text-center mb-2 text-casino-gold">Casino Card Game</h1>
-      <p class="text-center text-gray-300 mb-8">Create or join a game room to start playing</p>
+      <p class="text-center text-gray-300 mb-4">Create or join a game room to start playing</p>
+      
+      <!-- How to Play Button -->
+      <div class="flex justify-center mb-6">
+        <GameInstructions />
+      </div>
 
       <!-- Create New Room Section -->
       <section class="mb-6">

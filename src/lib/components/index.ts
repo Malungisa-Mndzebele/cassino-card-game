@@ -11,3 +11,4 @@ export { default as DealerAnimation } from './DealerAnimation.svelte';
 export { default as Button } from './Button.svelte';
 export { default as Dialog } from './Dialog.svelte';
 export { default as Toast } from './Toast.svelte';
+export { default as GameInstructions } from './GameInstructions.svelte';
