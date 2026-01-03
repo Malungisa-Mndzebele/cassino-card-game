@@ -234,7 +234,7 @@ export async function playCard(
         method: 'POST',
         body: JSON.stringify({
             room_id: roomId,
-            player_id: playerId,
+            player_id: parseInt(playerId, 10),
             card_id: typeof cardIdOrIndex === 'string' ? cardIdOrIndex : undefined,
             card_index: typeof cardIdOrIndex === 'number' ? cardIdOrIndex : undefined,
             action,
