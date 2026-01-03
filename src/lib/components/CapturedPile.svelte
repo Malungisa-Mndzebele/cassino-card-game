@@ -146,17 +146,17 @@
 	align-items: center;
 	gap: 0.25rem;
 	padding: 0.5rem;
-	background: rgba(30, 41, 59, 0.6);
-	border: 2px solid rgba(212, 175, 55, 0.3);
-	border-radius: 0.5rem;
+	background: rgba(0, 0, 0, 0.25);
+	border: 2px solid rgba(255, 255, 255, 0.15);
+	border-radius: 8px;
 	cursor: pointer;
-	transition: all 0.2s;
-	min-width: 70px;
+	transition: all 0.15s;
+	min-width: 65px;
 }
 
 .pile-button:hover:not(:disabled) {
-	border-color: var(--casino-gold);
-	background: rgba(30, 41, 59, 0.8);
+	border-color: var(--casino-gold, #d4af37);
+	background: rgba(0, 0, 0, 0.35);
 	transform: scale(1.05);
 }
 
@@ -167,8 +167,8 @@
 
 .pile-stack {
 	position: relative;
-	width: 50px;
-	height: 40px;
+	width: 45px;
+	height: 36px;
 }
 
 .card-stack {
@@ -185,52 +185,52 @@
 }
 
 .mini-card {
-	width: 36px;
-	height: 50px;
-	background: white;
-	border-radius: 0.25rem;
-	border: 1px solid rgba(0, 0, 0, 0.2);
+	width: 32px;
+	height: 45px;
+	background: #fffef8;
+	border-radius: 3px;
+	border: 1px solid rgba(0, 0, 0, 0.15);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	font-size: 0.625rem;
+	font-size: 0.5rem;
 	font-weight: 700;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .mini-card.red {
-	color: #dc2626;
+	color: #c41e3a;
 }
 
 .mini-card.black {
-	color: #1f2937;
+	color: #1a1a1a;
 }
 
 .mini-rank {
-	font-size: 0.75rem;
+	font-size: 0.625rem;
 	line-height: 1;
 }
 
 .mini-suit {
-	font-size: 0.625rem;
+	font-size: 0.5rem;
 	line-height: 1;
 }
 
 .empty-pile {
-	width: 36px;
-	height: 50px;
+	width: 32px;
+	height: 45px;
 	background: rgba(0, 0, 0, 0.2);
-	border: 2px dashed rgba(255, 255, 255, 0.2);
-	border-radius: 0.25rem;
+	border: 2px dashed rgba(255, 255, 255, 0.15);
+	border-radius: 3px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 }
 
 .empty-icon {
-	font-size: 1rem;
-	opacity: 0.5;
+	font-size: 0.875rem;
+	opacity: 0.4;
 }
 
 .pile-info {
@@ -241,51 +241,51 @@
 }
 
 .pile-label {
-	font-size: 0.625rem;
-	color: var(--text-secondary);
+	font-size: 0.5rem;
+	color: rgba(255, 255, 255, 0.6);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 }
 
 .pile-count {
-	font-size: 0.875rem;
+	font-size: 0.75rem;
 	font-weight: 700;
-	color: var(--casino-gold);
+	color: var(--casino-gold, #d4af37);
 }
 
 .pile-badges {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.25rem;
+	gap: 0.2rem;
 	justify-content: center;
-	max-width: 80px;
+	max-width: 75px;
 }
 
 .badge {
-	font-size: 0.5rem;
-	padding: 0.125rem 0.25rem;
-	border-radius: 0.25rem;
+	font-size: 0.45rem;
+	padding: 0.1rem 0.2rem;
+	border-radius: 3px;
 	font-weight: 600;
 }
 
 .badge-ace {
-	background: rgba(212, 175, 55, 0.2);
-	color: var(--casino-gold);
+	background: rgba(212, 175, 55, 0.25);
+	color: var(--casino-gold, #d4af37);
 }
 
 .badge-big {
-	background: rgba(16, 185, 129, 0.2);
+	background: rgba(16, 185, 129, 0.25);
 	color: #10b981;
 }
 
 .badge-little {
-	background: rgba(239, 68, 68, 0.2);
+	background: rgba(196, 30, 58, 0.25);
 	color: #ef4444;
 }
 
 .badge-spades {
-	background: rgba(59, 130, 246, 0.2);
-	color: #3b82f6;
+	background: rgba(59, 130, 246, 0.25);
+	color: #60a5fa;
 }
 
 /* Modal styles */
@@ -306,19 +306,19 @@
 }
 
 .modal {
-	background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-	border: 2px solid var(--casino-gold);
-	border-radius: 1rem;
-	padding: 1.5rem;
-	max-width: 500px;
+	background: linear-gradient(135deg, #1a4d2e 0%, #0d3320 100%);
+	border: 2px solid var(--casino-gold, #d4af37);
+	border-radius: 12px;
+	padding: 1.25rem;
+	max-width: 420px;
 	width: 90%;
-	max-height: 80vh;
+	max-height: 75vh;
 	overflow-y: auto;
 	animation: scale-in 0.2s ease-out;
 }
 
 @keyframes scale-in {
-	from { opacity: 0; transform: scale(0.9); }
+	from { opacity: 0; transform: scale(0.95); }
 	to { opacity: 1; transform: scale(1); }
 }
 
@@ -326,88 +326,89 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 1rem;
-	padding-bottom: 0.75rem;
+	margin-bottom: 0.75rem;
+	padding-bottom: 0.5rem;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .modal-title {
-	color: var(--casino-gold);
-	font-size: 1.25rem;
+	color: var(--casino-gold, #d4af37);
+	font-size: 1.1rem;
 	font-weight: 700;
 }
 
 .modal-close {
 	background: none;
 	border: none;
-	color: var(--text-secondary);
-	font-size: 1.25rem;
+	color: rgba(255, 255, 255, 0.6);
+	font-size: 1.1rem;
 	cursor: pointer;
 	padding: 0.25rem;
 	line-height: 1;
-	transition: color 0.2s;
+	transition: color 0.15s;
 }
 
 .modal-close:hover {
-	color: var(--text-primary);
+	color: white;
 }
 
 .modal-stats {
 	display: flex;
 	justify-content: center;
-	gap: 2rem;
-	margin-bottom: 1rem;
-	padding: 0.75rem;
-	background: rgba(0, 0, 0, 0.2);
-	border-radius: 0.5rem;
+	gap: 1.5rem;
+	margin-bottom: 0.75rem;
+	padding: 0.5rem;
+	background: rgba(0, 0, 0, 0.25);
+	border-radius: 6px;
 }
 
 .stat {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 0.25rem;
+	gap: 0.125rem;
 }
 
 .stat-value {
-	font-size: 1.5rem;
+	font-size: 1.25rem;
 	font-weight: 700;
-	color: var(--casino-gold);
+	color: var(--casino-gold, #d4af37);
 }
 
 .stat-label {
-	font-size: 0.75rem;
-	color: var(--text-secondary);
+	font-size: 0.65rem;
+	color: rgba(255, 255, 255, 0.6);
 }
 
 .special-cards {
 	display: flex;
 	justify-content: center;
 	gap: 0.5rem;
-	margin-bottom: 1rem;
+	margin-bottom: 0.75rem;
 }
 
 .special-badge {
-	padding: 0.375rem 0.75rem;
-	background: rgba(16, 185, 129, 0.1);
+	padding: 0.25rem 0.5rem;
+	background: rgba(16, 185, 129, 0.15);
 	border: 1px solid rgba(16, 185, 129, 0.3);
-	border-radius: 0.5rem;
-	font-size: 0.75rem;
+	border-radius: 6px;
+	font-size: 0.7rem;
 	font-weight: 600;
 	color: #10b981;
 }
 
 .cards-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-	gap: 0.5rem;
+	grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
+	gap: 0.375rem;
 	justify-items: center;
 }
 
 .empty-message {
 	text-align: center;
-	color: var(--text-secondary);
+	color: rgba(255, 255, 255, 0.5);
 	font-style: italic;
-	padding: 2rem;
+	padding: 1.5rem;
+	font-size: 0.875rem;
 }
 </style>
