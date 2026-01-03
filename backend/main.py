@@ -780,7 +780,7 @@ async def execute_ai_move(room_id: str, ai_player_id: int, db: AsyncSession) -> 
     
     # Log the AI action
     action_logger = ActionLogger(db)
-    action_logger.log_game_action(
+    await action_logger.log_game_action(
         room_id=room_id,
         player_id=ai_player_id,
         action_type=move.action,
@@ -1726,7 +1726,7 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
     
     # Log the action
     action_logger = ActionLogger(db)
-    action_id = action_logger.log_game_action(
+    action_id = await action_logger.log_game_action(
         room_id=request.room_id,
         player_id=request.player_id,
         action_type=request.action,
