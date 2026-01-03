@@ -2093,7 +2093,7 @@ async def websocket_endpoint(
                             "session_id": session_id
                         }, room_id)
                 
-                # Voice chat signaling messages
+                # Voice chat signaling messages (legacy)
                 elif message_type in ["voice_offer", "voice_answer", "voice_ice_candidate", "voice_mute_status"]:
                     # Validate session for voice signaling
                     if not session_id:
@@ -2129,6 +2129,75 @@ async def websocket_endpoint(
                     
                     if not sent:
                         logger.warning(f"Voice signaling message not delivered: {message_type} from {session_id}")
+                
+                # Communication messages (chat, media status, WebRTC signaling)
+                elif message_type == "chat_message":
+                    # Relay chat message to opponent
+                    if not session_id:
+                        await websocket.send_json({
+                            "type": "error",
+                            "code": "no_session",
+                            "message": "Session required for chat"
+                        })
+                        continue
+                    
+                    msg_data = message.get("data", {})
+                    relay_message = {
+                        "type": "chat_message",
+                        "data": {
+                            "id": msg_data.get("id"),
+                            "content": msg_data.get("content"),
+                            "sender_id": session_id,
+                            "sender_name": msg_data.get("sender_name", "Player")
+                        }
+                    }
+                    
+                    sent = await manager.send_to_room_except(
+                        room_id=room_id,
+                        exclude_session_id=session_id,
+                        message=relay_message
+                    )
+                    print(f"[WS] Chat message relayed: {sent}")
+                
+                elif message_type == "media_status":
+                    # Relay media status (audio/video mute state) to opponent
+                    if not session_id:
+                        continue
+                    
+                    relay_message = {
+                        "type": "media_status",
+                        "data": message.get("data", {})
+                    }
+                    
+                    await manager.send_to_room_except(
+                        room_id=room_id,
+                        exclude_session_id=session_id,
+                        message=relay_message
+                    )
+                    print(f"[WS] Media status relayed")
+                
+                elif message_type in ["webrtc_offer", "webrtc_answer", "webrtc_ice_candidate"]:
+                    # WebRTC signaling for voice/video calls
+                    if not session_id:
+                        await websocket.send_json({
+                            "type": "error",
+                            "code": "no_session",
+                            "message": "Session required for WebRTC signaling"
+                        })
+                        continue
+                    
+                    relay_message = {
+                        "type": message_type,
+                        "data": message.get("data", {}),
+                        "from_player": session_id
+                    }
+                    
+                    sent = await manager.send_to_room_except(
+                        room_id=room_id,
+                        exclude_session_id=session_id,
+                        message=relay_message
+                    )
+                    print(f"[WS] WebRTC {message_type} relayed: {sent}")
                 
                 else:
                     # Default: broadcast to room

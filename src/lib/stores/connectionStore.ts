@@ -212,6 +212,51 @@ function createConnectionStore() {
                             const latency = Date.now() - serverTime;
                             update((s) => ({ ...s, latency: Math.abs(latency) }));
                         }
+                    } else if (data.type === 'chat_message') {
+                        // Handle incoming chat message
+                        try {
+                            const { communication } = await import('./communication.svelte');
+                            communication.receiveMessage({
+                                id: data.data.id,
+                                content: data.data.content,
+                                sender_id: data.data.sender_id,
+                                sender_name: data.data.sender_name
+                            });
+                        } catch (err) {
+                            console.error('Failed to handle chat message:', err);
+                        }
+                    } else if (data.type === 'media_status') {
+                        // Handle opponent media status update
+                        try {
+                            const { communication } = await import('./communication.svelte');
+                            communication.handleOpponentMediaStatus(data.data);
+                        } catch (err) {
+                            console.error('Failed to handle media status:', err);
+                        }
+                    } else if (data.type === 'webrtc_offer') {
+                        // Handle WebRTC offer for voice/video
+                        try {
+                            const { communication } = await import('./communication.svelte');
+                            await communication.handleOffer(data.data);
+                        } catch (err) {
+                            console.error('Failed to handle WebRTC offer:', err);
+                        }
+                    } else if (data.type === 'webrtc_answer') {
+                        // Handle WebRTC answer
+                        try {
+                            const { communication } = await import('./communication.svelte');
+                            await communication.handleAnswer(data.data);
+                        } catch (err) {
+                            console.error('Failed to handle WebRTC answer:', err);
+                        }
+                    } else if (data.type === 'webrtc_ice_candidate') {
+                        // Handle ICE candidate
+                        try {
+                            const { communication } = await import('./communication.svelte');
+                            await communication.handleIceCandidate(data.data);
+                        } catch (err) {
+                            console.error('Failed to handle ICE candidate:', err);
+                        }
                     } else if (data.type === 'error') {
                         update((s) => ({ ...s, error: data.message }));
 

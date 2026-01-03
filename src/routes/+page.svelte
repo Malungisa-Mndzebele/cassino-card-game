@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { gameStore } from '$stores/gameStore';
   import { connectionStore } from '$stores/connectionStore';
-  import { RoomManager, GameHeader, Card, GamePhases, GameBoard } from '$components';
+  import { RoomManager, GameHeader, Card, GamePhases, GameBoard, CommunicationPanel } from '$components';
 
   // Reactive state
   $: inRoom = !!$gameStore.roomId;
@@ -161,6 +161,11 @@
       <footer class="game-footer">
         <p class="text-gray-500 text-sm">Casino Card Game v2.0 - SvelteKit Migration in Progress</p>
       </footer>
+      
+      <!-- Communication Panel (Voice/Video/Chat) -->
+      {#if hasOpponent}
+        <CommunicationPanel />
+      {/if}
     </div>
   {/if}
 </div>
