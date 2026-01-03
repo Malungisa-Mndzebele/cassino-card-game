@@ -41,6 +41,7 @@ Example:
 
 from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 import os
+import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
