@@ -13,3 +13,4 @@ export { default as Dialog } from './Dialog.svelte';
 export { default as Toast } from './Toast.svelte';
 export { default as GameInstructions } from './GameInstructions.svelte';
 export { default as CommunicationPanel } from './CommunicationPanel.svelte';
+export { default as CapturedPile } from './CapturedPile.svelte';
