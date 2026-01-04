@@ -131,7 +131,15 @@
 		actionError = '';
 		try {
 			const targetCards = [...selectedTableCards, ...selectedBuildIds];
-			await playCard(roomId, String(playerId), selectedCard.id, 'capture', targetCards);
+			const response = await playCard(roomId, String(playerId), selectedCard.id, 'capture', targetCards);
+
+			// Update game state with the response from the server
+
+			if (response.game_state) {
+
+			        gameStore.setGameState(response.game_state);
+
+			}
 			selectedCard = null;
 			selectedTableCards = [];
 			selectedBuildIds = [];
@@ -167,7 +175,15 @@
 		actionError = '';
 		showBuildModal = false;
 		try {
-			await playCard(roomId, String(playerId), selectedCard.id, 'build', selectedTableCards, buildValue);
+			const response = await playCard(roomId, String(playerId), selectedCard.id, 'build', selectedTableCards, buildValue);
+
+			// Update game state with the response from the server
+
+			if (response.game_state) {
+
+			        gameStore.setGameState(response.game_state);
+
+			}
 			selectedCard = null;
 			selectedTableCards = [];
 			selectedBuildIds = [];
@@ -182,7 +198,15 @@
 		isProcessing = true;
 		actionError = '';
 		try {
-			await playCard(roomId, String(playerId), selectedCard.id, 'trail');
+			const response = await playCard(roomId, String(playerId), selectedCard.id, 'trail');
+
+			// Update game state with the response from the server
+
+			if (response.game_state) {
+
+			        gameStore.setGameState(response.game_state);
+
+			}
 			selectedCard = null;
 			selectedTableCards = [];
 			selectedBuildIds = [];
