@@ -182,9 +182,9 @@
         <section class="section">
           <h3 class="section-title">🖱️ Controls</h3>
           <ul class="list">
-            <li><strong>Click/Drag</strong> a card from your hand to select it</li>
-            <li><strong>Click</strong> table cards to select them for capture</li>
-            <li>Choose your action from the popup menu</li>
+            <li><strong>Click</strong> a card from your hand to select it</li>
+            <li><strong>Click</strong> table cards to select them for capture/build</li>
+            <li>Click the <strong>Capture</strong>, <strong>Build</strong>, or <strong>Trail</strong> button</li>
           </ul>
         </section>
       </div>
