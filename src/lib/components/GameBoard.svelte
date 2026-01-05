@@ -36,14 +36,6 @@
 	let isProcessing = false;
 	let actionError = '';
 	let showExitConfirm = false;
-	let draggedHandCard: CardType | null = null;
-	let showActionMenu = false;
-	let actionMenuPosition = { x: 0, y: 0 };
-	let dragStartPos = { x: 0, y: 0 };
-	let isDragging = false;
-	const DRAG_THRESHOLD = 10;
-	let isDraggingTable = false;
-	let tableCardDragStart: { x: number; y: number } | null = null;
 	$: possibleBuildValues = calculatePossibleBuildValues();
 
 	function calculatePossibleBuildValues(): number[] {
@@ -308,10 +300,6 @@
 				{#each tableCards as card}
 					<button class="table-card-btn" class:selected={selectedTableCards.includes(card.id)} class:selectable={selectedCard && isMyTurn}
 						on:click={() => handleTableCardClick(card)}
-						on:pointerdown={(e) => handleTableCardPointerDown(e, card)}
-						on:pointermove={handleTableCardPointerMove}
-						on:pointerup={(e) => handleTableCardPointerUp(e, card)}
-						on:pointercancel={() => { tableCardDragStart = null; isDraggingTable = false; }}
 						disabled={!selectedCard || !isMyTurn || isProcessing}>
 						<Card {card} size="medium" isPlayable={!!selectedCard && isMyTurn} isSelected={selectedTableCards.includes(card.id)} />
 					</button>
@@ -350,15 +338,10 @@
 			<CapturedPile cards={myCapturedCards} playerName={myName || 'You'} position="bottom" />
 		<div class="hand my-hand">
 			{#each myHand as card}
-				<button class="hand-card" class:selected={selectedCard?.id === card.id} class:playable={isMyTurn && !isProcessing} class:dragging={draggedHandCard?.id === card.id && isDragging}
+				<button class="hand-card" class:selected={selectedCard?.id === card.id} class:playable={isMyTurn && !isProcessing}
 					on:click={() => handleCardClick(card)}
-					on:pointerdown={(e) => handleHandCardPointerDown(e, card)}
-					on:pointermove={handleHandCardPointerMove}
-					on:pointerup={(e) => handleHandCardPointerUp(e, card)}
-					on:pointercancel={() => { draggedHandCard = null; isDragging = false; }}
 					disabled={!isMyTurn || isProcessing}>
 					<Card {card} size="medium" isPlayable={isMyTurn && !isProcessing} isSelected={selectedCard?.id === card.id} />
-					{#if isMyTurn && !isProcessing}<span class="drag-hint">↕ Drag</span>{/if}
 				</button>
 			{/each}
 		</div>
@@ -414,22 +397,6 @@
 </div>
 {/if}
 
-{#if showActionMenu && selectedCard}
-<div class="action-menu-overlay" on:click={closeActionMenu}>
-	<div class="action-menu" style="left: {actionMenuPosition.x}px; top: {actionMenuPosition.y}px;" on:click|stopPropagation>
-		<div class="action-menu-header">
-			<span class="action-menu-card">{selectedCard.rank} of {selectedCard.suit}</span>
-			<button class="action-menu-close" on:click={closeActionMenu}>✕</button>
-		</div>
-		<div class="action-menu-buttons">
-			<button class="action-menu-btn capture" on:click={() => handleActionMenuSelect('capture')}>🎯 Capture</button>
-			<button class="action-menu-btn build" on:click={() => handleActionMenuSelect('build')}>🏗️ Build</button>
-			<button class="action-menu-btn trail" on:click={() => handleActionMenuSelect('trail')}>📤 Trail</button>
-		</div>
-		<p class="action-menu-hint">Select an action for this card</p>
-	</div>
-</div>
-{/if}
 {#if isGameFinished}
 <div class="game-finished-overlay">
 	<div class="game-finished-content">
@@ -465,10 +432,7 @@
 .hand-card:disabled { cursor: not-allowed; opacity: 0.7; }
 .hand-card.playable:hover { transform: translateY(-8px); }
 .hand-card.selected { transform: translateY(-16px); }
-.hand-card.dragging { transform: translateY(-20px) scale(1.1); opacity: 0.8; z-index: 10; }
-.drag-hint { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; color: rgba(16, 185, 129, 0.7); white-space: nowrap; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
-.hand-card.playable:hover .drag-hint { opacity: 1; }
-.table-area { background: rgba(22, 101, 52, 0.3); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 1rem; padding: 1.5rem; min-height: 200px; }
+.hand-card.playable:hover .table-area { background: rgba(22, 101, 52, 0.3); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 1rem; padding: 1.5rem; min-height: 200px; }
 .table-title { text-align: center; color: var(--casino-gold); font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem; }
 .table-hint { text-align: center; color: #10b981; font-size: 0.875rem; margin-bottom: 1rem; animation: pulse 2s infinite; }
 .table-cards { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem; }
@@ -520,21 +484,12 @@
 .btn-confirm { padding: 0.75rem 1.5rem; border-radius: 0.5rem; border: none; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
 .btn-confirm:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
 .btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
-.action-menu-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 200; }
-.action-menu { position: fixed; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--casino-gold); border-radius: 1rem; padding: 1rem; min-width: 180px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); animation: menu-pop 0.2s ease-out; z-index: 201; }
 @keyframes menu-pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-.action-menu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-.action-menu-card { color: var(--casino-gold); font-weight: 600; font-size: 0.875rem; }
-.action-menu-close { background: none; border: none; color: var(--text-secondary); font-size: 1rem; cursor: pointer; padding: 0.25rem; line-height: 1; }
 .action-menu-close:hover { color: var(--text-primary); }
-.action-menu-buttons { display: flex; flex-direction: column; gap: 0.5rem; }
-.action-menu-btn { padding: 0.75rem 1rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: white; }
 .action-menu-btn.capture { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
 .action-menu-btn.build { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
 .action-menu-btn.trail { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
 .action-menu-btn:hover { transform: translateX(4px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
-.action-menu-hint { margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-secondary); text-align: center; }
-
 .game-finished-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; z-index: 300; animation: fade-in 0.5s ease-out; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .game-finished-content { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 3px solid var(--casino-gold); border-radius: 1.5rem; padding: 3rem 2.5rem; text-align: center; max-width: 400px; width: 90%; animation: scale-in 0.5s ease-out; }
