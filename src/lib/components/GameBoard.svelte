@@ -36,18 +36,39 @@
 	let isProcessing = false;
 	let actionError = '';
 	let showExitConfirm = false;
-	
-	// Drag and drop state for hand cards
-	const DRAG_THRESHOLD = 10;
-	let dragStartPos: { x: number; y: number } | null = null;
-	let draggedHandCard: CardType | null = null;
-	let isDragging = false;
-	let showActionMenu = false;
-	let actionMenuPosition: { x: number; y: number } = { x: 0, y: 0 };
-	
-	// Drag state for table cards
-	let tableCardDragStart: { x: number; y: number } | null = null;
-	let isDraggingTable = false;
+// Drag and drop state for building
+let draggedCard: CardType | null = null;
+let dragOverTableCardId: string | null = null;
+let showDragBuildModal = false;
+let dragBuildCard: CardType | null = null;
+let dragTargetCard: CardType | null = null;
+$: dragBuildValues = calculateDragBuildValues();
+
+function calculateDragBuildValues(): number[] {
+if (!dragBuildCard || !dragTargetCard) return [];
+const handCardValue = getCardValue(dragBuildCard);
+const tableCardValue = getCardValue(dragTargetCard);
+const validValues: number[] = [];
+
+// Try all possible build values
+for (let v = 2; v <= 14; v++) {
+// Check if we have a card to capture this build value
+const hasCapturingCard = myHand.some(c => c.id !== dragBuildCard?.id && getCardValues(c).includes(v));
+if (!hasCapturingCard) continue;
+
+// Check if hand card + table card can make this value
+const handValues = getCardValues(dragBuildCard);
+const tableValues = getCardValues(dragTargetCard);
+for (const hv of handValues) {
+for (const tv of tableValues) {
+if (hv + tv === v) {
+if (!validValues.includes(v)) validValues.push(v);
+}
+}
+}
+}
+return validValues.sort((a, b) => a - b);
+}
 	$: possibleBuildValues = calculatePossibleBuildValues();
 
 	function calculatePossibleBuildValues(): number[] {
@@ -226,63 +247,6 @@
 	function handleExitConfirm() { connectionStore.disconnect(); gameStore.reset(); showExitConfirm = false; }
 	function handleExitCancel() { showExitConfirm = false; }
 	function cancelBuildModal() { showBuildModal = false; }
-
-	function handleHandCardPointerDown(event: PointerEvent, card: CardType) {
-		if (!isMyTurn || isProcessing) return;
-		dragStartPos = { x: event.clientX, y: event.clientY };
-		draggedHandCard = card;
-		isDragging = false;
-		(event.target as HTMLElement).setPointerCapture(event.pointerId);
-	}
-	function handleHandCardPointerMove(event: PointerEvent) {
-		if (!draggedHandCard || !dragStartPos) return;
-		const dx = event.clientX - dragStartPos.x;
-		const dy = event.clientY - dragStartPos.y;
-		if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) isDragging = true;
-	}
-	function handleHandCardPointerUp(event: PointerEvent, card: CardType) {
-		if (!draggedHandCard || !dragStartPos) return;
-		if (isDragging) {
-			showActionMenu = true;
-			actionMenuPosition = { x: Math.min(event.clientX, window.innerWidth - 200), y: Math.min(event.clientY - 100, window.innerHeight - 200) };
-			selectedCard = card;
-			selectedTableCards = [];
-			selectedBuildIds = [];
-		} else {
-			handleCardClick(card);
-		}
-		draggedHandCard = null;
-		isDragging = false;
-		(event.target as HTMLElement).releasePointerCapture(event.pointerId);
-	}
-	function handleActionMenuSelect(action: 'capture' | 'build' | 'trail') {
-		showActionMenu = false;
-		if (!selectedCard) return;
-		if (action === 'capture') actionError = 'Select cards on the table to capture, then tap Capture';
-		else if (action === 'build') actionError = 'Select cards on the table to build with, then tap Build';
-		else if (action === 'trail') handleTrail();
-	}
-	function closeActionMenu() { showActionMenu = false; }
-
-	function handleTableCardPointerDown(event: PointerEvent, card: CardType) {
-		if (!isMyTurn || !selectedCard || isProcessing) return;
-		tableCardDragStart = { x: event.clientX, y: event.clientY };
-		isDraggingTable = false;
-		(event.target as HTMLElement).setPointerCapture(event.pointerId);
-	}
-	function handleTableCardPointerMove(event: PointerEvent) {
-		if (!tableCardDragStart) return;
-		const dx = event.clientX - tableCardDragStart.x;
-		const dy = event.clientY - tableCardDragStart.y;
-		if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) isDraggingTable = true;
-	}
-	function handleTableCardPointerUp(event: PointerEvent, card: CardType) {
-		if (!tableCardDragStart) return;
-		handleTableCardClick(card);
-		tableCardDragStart = null;
-		isDraggingTable = false;
-		(event.target as HTMLElement).releasePointerCapture(event.pointerId);
-	}
 	function handleEndGame() { connectionStore.disconnect(); gameStore.reset(); }
 </script>
 
