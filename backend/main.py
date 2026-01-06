@@ -614,9 +614,13 @@ async def game_state_to_response(room: Room) -> GameStateResponse:
     last_update_value = datetime.utcnow()
     if 'last_update' not in insp.unloaded:
         # Attribute is loaded, safe to access
-        attr_value = insp.attrs.last_update.loaded_value
-        if attr_value is not None and attr_value is not insp.attrs.last_update.NO_VALUE:
-            last_update_value = attr_value
+        try:
+            attr_value = insp.attrs.last_update.loaded_value
+            if attr_value is not None:
+                last_update_value = attr_value
+        except (AttributeError, KeyError):
+            # Fallback if attribute access fails
+            pass
     
     return GameStateResponse(
         room_id=room.id,
