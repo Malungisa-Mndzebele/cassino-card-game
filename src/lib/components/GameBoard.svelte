@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { gameStore } from '$stores/gameStore';
 	import { connectionStore } from '$stores/connectionStore';
 	import { Card, CapturedPile } from '$components';
@@ -36,6 +36,18 @@
 	let isProcessing = false;
 	let actionError = '';
 	let showExitConfirm = false;
+	
+	// Drag and drop state for hand cards
+	const DRAG_THRESHOLD = 10;
+	let dragStartPos: { x: number; y: number } | null = null;
+	let draggedHandCard: CardType | null = null;
+	let isDragging = false;
+	let showActionMenu = false;
+	let actionMenuPosition: { x: number; y: number } = { x: 0, y: 0 };
+	
+	// Drag state for table cards
+	let tableCardDragStart: { x: number; y: number } | null = null;
+	let isDraggingTable = false;
 	$: possibleBuildValues = calculatePossibleBuildValues();
 
 	function calculatePossibleBuildValues(): number[] {
@@ -223,13 +235,13 @@
 		(event.target as HTMLElement).setPointerCapture(event.pointerId);
 	}
 	function handleHandCardPointerMove(event: PointerEvent) {
-		if (!draggedHandCard) return;
+		if (!draggedHandCard || !dragStartPos) return;
 		const dx = event.clientX - dragStartPos.x;
 		const dy = event.clientY - dragStartPos.y;
 		if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) isDragging = true;
 	}
 	function handleHandCardPointerUp(event: PointerEvent, card: CardType) {
-		if (!draggedHandCard) return;
+		if (!draggedHandCard || !dragStartPos) return;
 		if (isDragging) {
 			showActionMenu = true;
 			actionMenuPosition = { x: Math.min(event.clientX, window.innerWidth - 200), y: Math.min(event.clientY - 100, window.innerHeight - 200) };
@@ -276,7 +288,7 @@
 
 <div class="game-board">
 	<div class="exit-button-container">
-		<button class="btn-exit" on:click={handleExitClick}>🚪 Exit Game</button>
+		<button class="btn-exit" on:click={handleExitClick}>ðŸšª Exit Game</button>
 	</div>
 	<div class="opponent-area">
 		<div class="player-info opponent">
@@ -285,14 +297,14 @@
 			{#if !isMyTurn}<span class="turn-indicator">Their Turn</span>{/if}
 		</div>
 		<div class="hand opponent-hand">
-			{#each opponentHand as _, i}<div class="card-back"><div class="card-back-design">🎴</div></div>{/each}
+			{#each opponentHand as _, i}<div class="card-back"><div class="card-back-design">ðŸŽ´</div></div>{/each}
 		</div>
 			<CapturedPile cards={opponentCapturedCards} playerName={opponentName || 'Opponent'} position="top" />
 	</div>
 
 	<div class="table-area">
 		<h3 class="table-title">Table ({tableCards.length} cards)</h3>
-		{#if selectedCard && isMyTurn}<p class="table-hint">👆 Click or drag cards to select for capture/build</p>{/if}
+		{#if selectedCard && isMyTurn}<p class="table-hint">ðŸ‘† Click or drag cards to select for capture/build</p>{/if}
 		<div class="table-cards">
 			{#if tableCards.length === 0 && builds.length === 0}
 				<p class="empty-table">No cards on table</p>
@@ -345,7 +357,7 @@
 				</button>
 			{/each}
 		</div>
-		{#if actionError}<div class="action-error">⚠️ {actionError}</div>{/if}
+		{#if actionError}<div class="action-error">âš ï¸ {actionError}</div>{/if}
 		{#if selectedCard && isMyTurn}
 			<div class="action-buttons">
 				<p class="selected-info">Playing: <strong>{selectedCard.rank} of {selectedCard.suit}</strong>
@@ -353,13 +365,13 @@
 				</p>
 				<div class="buttons">
 					<button class="btn-action btn-capture" on:click={handleCapture} disabled={isProcessing || (selectedTableCards.length === 0 && selectedBuildIds.length === 0)}>
-						{#if isProcessing}<span class="spinner"></span>{:else}🎯 Capture{/if}
+						{#if isProcessing}<span class="spinner"></span>{:else}ðŸŽ¯ Capture{/if}
 					</button>
 					<button class="btn-action btn-build" on:click={handleBuildAction} disabled={isProcessing || selectedTableCards.length === 0}>
-						{#if isProcessing}<span class="spinner"></span>{:else}🏗️ Build{/if}
+						{#if isProcessing}<span class="spinner"></span>{:else}ðŸ—ï¸ Build{/if}
 					</button>
 					<button class="btn-action btn-trail" on:click={handleTrail} disabled={isProcessing}>
-						{#if isProcessing}<span class="spinner"></span>{:else}📤 Trail{/if}
+						{#if isProcessing}<span class="spinner"></span>{:else}ðŸ“¤ Trail{/if}
 					</button>
 				</div>
 			</div>
@@ -370,7 +382,7 @@
 {#if showBuildModal}
 <div class="modal-overlay" on:click={cancelBuildModal}>
 	<div class="modal" on:click|stopPropagation>
-		<h3 class="modal-title">🏗️ Create Build</h3>
+		<h3 class="modal-title">ðŸ—ï¸ Create Build</h3>
 		<p class="modal-desc">Combining <strong>{selectedCard?.rank} of {selectedCard?.suit}</strong> with {selectedTableCards.length} table card{selectedTableCards.length > 1 ? 's' : ''}</p>
 		<div class="build-value-selector">
 			<label for="build-value">Build Value:</label>
@@ -387,7 +399,7 @@
 {#if showExitConfirm}
 <div class="modal-overlay" on:click={handleExitCancel}>
 	<div class="modal" on:click|stopPropagation>
-		<h3 class="modal-title">🚪 Leave Game?</h3>
+		<h3 class="modal-title">ðŸšª Leave Game?</h3>
 		<p class="modal-desc">Are you sure you want to leave? The game will end.</p>
 		<div class="modal-buttons">
 			<button class="btn-cancel" on:click={handleExitCancel}>Stay</button>
@@ -400,14 +412,14 @@
 {#if isGameFinished}
 <div class="game-finished-overlay">
 	<div class="game-finished-content">
-		<h2 class="finished-title">🏆 Game Over!</h2>
+		<h2 class="finished-title">ðŸ† Game Over!</h2>
 		{#if winner}<p class="winner-text">{winnerName || (winner === 1 ? 'Player 1' : 'Player 2')} Wins!</p>{:else}<p class="tie-text">It's a Tie!</p>{/if}
 		<div class="final-scores">
 			<div class="score-row"><span class="score-name">{players[0]?.name || 'Player 1'}</span><span class="score-value">{gameState?.player1Score || 0}</span></div>
 			<div class="score-divider">vs</div>
 			<div class="score-row"><span class="score-name">{players[1]?.name || 'Player 2'}</span><span class="score-value">{gameState?.player2Score || 0}</span></div>
 		</div>
-		<button class="btn-end-game" on:click={handleEndGame}>🚪 End Game</button>
+		<button class="btn-end-game" on:click={handleEndGame}>ðŸšª End Game</button>
 	</div>
 </div>
 {/if}
