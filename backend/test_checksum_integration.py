@@ -10,7 +10,8 @@ from main import game_state_to_response
 from state_checksum import compute_checksum
 
 
-def test_game_state_response_includes_checksum():
+@pytest.mark.asyncio
+async def test_game_state_response_includes_checksum():
     """Test that game_state_to_response includes checksum"""
     room = Room(
         id="TEST01",
@@ -36,7 +37,7 @@ def test_game_state_response_includes_checksum():
         player2_ready=False
     )
     
-    response = game_state_to_response(room)
+    response = await game_state_to_response(room)
     
     # Response should include checksum
     assert response.checksum is not None
@@ -44,7 +45,8 @@ def test_game_state_response_includes_checksum():
     assert all(c in '0123456789abcdef' for c in response.checksum.lower())
 
 
-def test_game_state_response_checksum_matches_computed():
+@pytest.mark.asyncio
+async def test_game_state_response_checksum_matches_computed():
     """Test that response checksum matches independently computed checksum"""
     room = Room(
         id="TEST01",
@@ -74,13 +76,14 @@ def test_game_state_response_checksum_matches_computed():
     expected_checksum = compute_checksum(room)
     
     # Get response
-    response = game_state_to_response(room)
+    response = await game_state_to_response(room)
     
     # Checksums should match
     assert response.checksum == expected_checksum
 
 
-def test_game_state_response_includes_version():
+@pytest.mark.asyncio
+async def test_game_state_response_includes_version():
     """Test that game_state_to_response includes version"""
     room = Room(
         id="TEST01",
@@ -106,13 +109,14 @@ def test_game_state_response_includes_version():
         player2_ready=False
     )
     
-    response = game_state_to_response(room)
+    response = await game_state_to_response(room)
     
     # Response should include version
     assert response.version == 42
 
 
-def test_game_state_response_checksum_changes_with_state():
+@pytest.mark.asyncio
+async def test_game_state_response_checksum_changes_with_state():
     """Test that checksum changes when state changes"""
     room1 = Room(
         id="TEST01",
@@ -162,8 +166,8 @@ def test_game_state_response_checksum_changes_with_state():
         player2_ready=False
     )
     
-    response1 = game_state_to_response(room1)
-    response2 = game_state_to_response(room2)
+    response1 = await game_state_to_response(room1)
+    response2 = await game_state_to_response(room2)
     
     # Checksums should be different
     assert response1.checksum != response2.checksum

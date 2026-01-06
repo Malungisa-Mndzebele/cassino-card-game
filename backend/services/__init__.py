@@ -16,11 +16,12 @@ Services:
 """
 
 from .room_service import RoomService
+from .game_service import GameService, VersionConflictError
+from .player_service import PlayerService
 
 __all__ = [
     'RoomService',
+    'GameService',
+    'VersionConflictError',
+    'PlayerService',
 ]
-
-# TODO: Add these imports when services are implemented
-# from .game_service import GameService
-# from .player_service import PlayerService

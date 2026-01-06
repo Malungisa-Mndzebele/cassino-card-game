@@ -264,15 +264,16 @@ class CasinoGameLogic:
         Validate if a build move is legal.
         
         A build is valid if:
-        1. Build value differs from hand card value
-        2. Player has another card in hand that can capture the build
-        3. Target cards + hand card sum to build value
+        1. Player has another card in hand that can capture the build
+        2. Either:
+           a. Target cards + hand card sum to build value (combining build)
+           b. No target cards and hand card value equals build value (simple build)
         
         Note: Aces can be used as either 1 or 14 for builds.
         
         Args:
             hand_card (GameCard): Card being played from hand
-            target_cards (list): Table cards to include in build
+            target_cards (list): Table cards to include in build (can be empty for simple build)
             build_value (int): Declared value of the build
             player_hand (list): Player's complete hand (to verify capture card exists)
         
@@ -290,10 +291,6 @@ class CasinoGameLogic:
         # Get all possible values for the hand card (Aces can be 1 or 14)
         hand_values = self.get_card_values(hand_card)
         
-        # Can't build same value as any of the hand card's values
-        if build_value in hand_values:
-            return False
-        
         # Must have cards to capture the build value (considering Ace dual values)
         has_capturing_card = False
         for card in player_hand:
@@ -304,6 +301,16 @@ class CasinoGameLogic:
                     break
         
         if not has_capturing_card:
+            return False
+        
+        # Simple build: no target cards, hand card becomes a build with declared value
+        # The hand card's value must equal the build value
+        if len(target_cards) == 0:
+            return build_value in hand_values
+        
+        # Combining build: hand card + target cards must sum to build value
+        # Can't build same value as any of the hand card's values when combining
+        if build_value in hand_values:
             return False
         
         # Try each possible hand card value to see if build is valid

@@ -56,26 +56,26 @@ The most impactful next steps are:
   - _Requirements: 1.1_
   - _Status: Tests created in test_room_service.py, need parameter adjustments (player_ip, user_agent)_
 
-- [ ] 1.4 Implement GameService class
+- [x] 1.4 Implement GameService class
   - Extract game action logic from main.py (play_card, start_shuffle, select_face_up_cards)
   - Extract game state update logic from main.py
   - Implement dependency injection (db, cache_manager, game_logic, action_logger)
   - _Requirements: 1.2, 1.5_
 
-- [ ] 1.5 Write unit tests for GameService
+- [x] 1.5 Write unit tests for GameService
   - Test card play action
   - Test shuffle action
   - Test card selection action
   - Test state updates and caching
   - _Requirements: 1.2_
 
-- [ ] 1.6 Implement PlayerService class
+- [x] 1.6 Implement PlayerService class
   - Extract player ready status logic from main.py
   - Extract player retrieval logic from main.py
   - Implement dependency injection (db, cache_manager)
   - _Requirements: 1.3, 1.5_
 
-- [ ] 1.7 Write unit tests for PlayerService
+- [x] 1.7 Write unit tests for PlayerService
   - Test setting player ready status
   - Test player retrieval with caching
   - Test error cases (player not found)

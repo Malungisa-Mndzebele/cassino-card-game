@@ -574,17 +574,33 @@ async def game_state_to_response(room: Room) -> GameStateResponse:
     Convert room model to game state response.
     
     Computes checksum before returning state to ensure integrity verification.
+    Uses SQLAlchemy inspect to safely access attributes without triggering lazy loads.
     
     Requirements: 4.4
     """
+    import sys
+    print(f"DEBUG game_state_to_response: Starting...", file=sys.stderr)
     from state_checksum import compute_checksum
+    from datetime import datetime
+    from sqlalchemy import inspect
     
     # Compute checksum before returning state
-    checksum = compute_checksum(room)
+    print(f"DEBUG game_state_to_response: Computing checksum...", file=sys.stderr)
+    try:
+        checksum = compute_checksum(room)
+    except Exception as e:
+        print(f"DEBUG game_state_to_response: Checksum error: {e}", file=sys.stderr)
+        checksum = "error"
+    print(f"DEBUG game_state_to_response: Checksum done", file=sys.stderr)
+    
+    # Use SQLAlchemy inspect to safely access attributes without triggering lazy loads
+    insp = inspect(room)
+    print(f"DEBUG game_state_to_response: Inspect done, unloaded={insp.unloaded}", file=sys.stderr)
     
     # Ensure players relationship is loaded (avoid greenlet issues)
     players_data = []
-    if hasattr(room, 'players') and room.players is not None:
+    # Check if players is loaded before accessing
+    if 'players' not in insp.unloaded and room.players is not None:
         players_data = [PlayerResponse(
             id=p.id,
             name=p.name,
@@ -592,6 +608,15 @@ async def game_state_to_response(room: Room) -> GameStateResponse:
             joined_at=p.joined_at,
             ip_address=p.ip_address
         ) for p in room.players]
+    
+    # Safely access last_update - check if it's loaded first
+    # Use dict access to avoid triggering lazy load
+    last_update_value = datetime.utcnow()
+    if 'last_update' not in insp.unloaded:
+        # Attribute is loaded, safe to access
+        attr_value = insp.attrs.last_update.loaded_value
+        if attr_value is not None and attr_value is not insp.attrs.last_update.NO_VALUE:
+            last_update_value = attr_value
     
     return GameStateResponse(
         room_id=room.id,
@@ -614,7 +639,7 @@ async def game_state_to_response(room: Room) -> GameStateResponse:
         game_started=bool(room.game_started),
         last_play=(room.last_play or None),
         last_action=(room.last_action or None),
-        last_update=room.last_update,
+        last_update=last_update_value,
         game_completed=bool(room.game_completed),
         winner=room.winner,
         dealing_complete=bool(room.dealing_complete),
@@ -1340,14 +1365,25 @@ async def get_game_state(room_id: str, db: AsyncSession = Depends(get_db)):
 @app.post("/rooms/player-ready", response_model=StandardResponse)
 async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = Depends(get_db)):
     """Set player ready status - Fixed async datetime issue"""
+    import sys
+    
+    def debug_log(msg):
+        with open("debug.log", "a") as f:
+            f.write(f"{msg}\n")
+        print(f"DEBUG: {msg}", file=sys.stderr, flush=True)
+    
+    debug_log(f"set_player_ready called for room={request.room_id}, player={request.player_id}")
     try:
         from version_validator import validate_version
         from datetime import datetime
         
         logger.info(f"Player ready request: room_id={request.room_id}, player_id={request.player_id}, is_ready={request.is_ready}")
         
+        debug_log("Fetching room...")
         room = await get_room_or_404(db, request.room_id)
+        debug_log(f"Room fetched, id={room.id}")
         player = await get_player_or_404(db, request.room_id, request.player_id)
+        debug_log(f"Player fetched, id={player.id}")
         
         logger.info(f"Found room {room.id} with {len(room.players)} players, phase={room.game_phase}")
         
@@ -1392,18 +1428,21 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
             room.modified_by = request.player_id
         
         # Single commit for all changes
+        print(f"DEBUG: About to commit...", file=sys.stderr)
         await db.commit()
+        print(f"DEBUG: Commit done", file=sys.stderr)
         
         logger.info(f"Room {room.id} ready status: player1={room.player1_ready}, player2={room.player2_ready}, phase={room.game_phase}")
         
-        # Refresh room to get updated state and reload relationships
-        await db.refresh(room)
-        
-        # Re-fetch room with players loaded for response
+        # Re-fetch room with all attributes loaded fresh (don't use refresh which can cause issues)
+        print(f"DEBUG: Re-fetching room...", file=sys.stderr)
         room = await get_room_or_404(db, request.room_id)
+        print(f"DEBUG: Re-fetch done", file=sys.stderr)
         
         # Broadcast game state update to all connected clients with full state
+        print(f"DEBUG: Calling game_state_to_response...", file=sys.stderr)
         game_state_response = await game_state_to_response(room)
+        print(f"DEBUG: game_state_to_response done", file=sys.stderr)
         # Verify response model structure before broadcast
         state_dict = game_state_response.model_dump()
         
