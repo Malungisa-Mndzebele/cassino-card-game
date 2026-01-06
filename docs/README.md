@@ -34,6 +34,23 @@ Documentation about testing strategies, test results, and testing guides.
 - **Main README** - See [../README.md](../README.md) for project overview
 - **Specs** - See [../.kiro/specs/](../.kiro/specs/) for feature specifications
 - **Steering Rules** - See [../.kiro/steering/](../.kiro/steering/) for development guidelines
+- **API Documentation** - See [../backend/API.md](../backend/API.md) for API reference
+
+## 🎮 Key Features
+
+### Game Features
+- Real-time multiplayer Casino card game
+- Drag-and-drop card building
+- WebSocket-based state synchronization
+- Session persistence and reconnection
+- Voice chat support (WebRTC)
+
+### Technical Features
+- Service layer architecture (RoomService, GameService, PlayerService)
+- Redis-based session management and caching
+- Action logging for state recovery
+- Version-based conflict resolution
+- Comprehensive test coverage
 
 ## 📝 Contributing to Documentation
 

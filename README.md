@@ -63,6 +63,7 @@ Score the most points by capturing cards from the table. First player to 11 poin
 - Create combinations for future capture
 - Must announce the build value
 - Must have a matching card in hand
+- **Drag-and-drop support:** Drag a card from your hand to the table to create a simple build
 - Example: Play 3 on 5, announce "building 8"
 
 #### 3. Trail 🚶
@@ -92,7 +93,11 @@ Score the most points by capturing cards from the table. First player to 11 poin
 - **Vitest** with **Svelte Testing Library** for component tests
 - **Playwright** for E2E tests
 - **Pytest** for backend tests
-- **97.2% test coverage** (70/72 tests passing)
+
+### Infrastructure
+- **Redis** for session management and caching
+- **PostgreSQL** for production database
+- **SQLite** for local development
 
 ### Deployment
 - **Backend**: Render
@@ -109,22 +114,25 @@ cassino-card-game/
 │   ├── main.py                # Main API server
 │   ├── models.py              # Database models
 │   ├── game_logic.py          # Game rules engine
+│   ├── services/              # Service layer
+│   │   ├── room_service.py    # Room management
+│   │   ├── game_service.py    # Game actions
+│   │   └── player_service.py  # Player operations
 │   ├── requirements.txt       # Python dependencies
 │   └── test_*.py              # Backend tests
 ├── src/                        # SvelteKit source
 │   ├── routes/                # SvelteKit routes
 │   ├── lib/                   # Shared libraries
 │   │   ├── components/        # Svelte components
+│   │   │   ├── GameBoard.svelte      # Main game board with drag-and-drop
 │   │   │   ├── CasinoRoomView.svelte
 │   │   │   ├── PokerTableView.svelte
 │   │   │   ├── GamePhases.svelte
 │   │   │   └── ui/            # Reusable UI components
 │   │   └── stores/            # Svelte stores (state management)
-│   │       ├── gameState.svelte.ts
-│   │       ├── websocket.svelte.ts
-│   │       ├── gameActions.svelte.ts
-│   │       ├── roomActions.svelte.ts
-│   │       └── connectionState.svelte.ts
+│   │       ├── gameStore.ts
+│   │       ├── connectionStore.ts
+│   │       └── voiceChat.svelte.ts
 ├── tests/                      # Test suites
 │   ├── frontend/              # Component tests (Vitest)
 │   ├── e2e/                   # End-to-end tests (Playwright)
@@ -136,7 +144,7 @@ cassino-card-game/
 │   └── deploy-frontend.yml    # Frontend deployment
 ├── vite.config.ts             # Vite configuration
 ├── playwright.config.ts       # E2E test config
-└── run-all-tests.js           # Comprehensive test runner
+└── run-all-tests.ps1          # Comprehensive test runner
 ```
 
 ---
@@ -145,7 +153,13 @@ cassino-card-game/
 
 ### Run All Tests
 ```bash
-node run-all-tests.js
+# Windows
+.\run-all-tests.ps1
+
+# Or run individual test suites
+npm run test:frontend
+npm run test:e2e
+npm run test:backend
 ```
 
 ### Frontend Tests
@@ -176,12 +190,11 @@ npx playwright test tests/e2e/production-smoke-test.spec.ts --config=playwright.
 ```
 
 ### Test Coverage
-- **Frontend**: 94/94 tests passing (100%)
-- **Backend**: 41/41 tests passing (100%)
-- **Integration**: 13/13 tests passing (100%)
-- **E2E**: 12/13 tests passing (92.3%)
-- **Performance**: 5/5 tests passing (100%)
-- **Overall**: 70/72 tests passing (97.2%)
+Tests are organized by category:
+- **Frontend**: Vitest component and store tests
+- **Backend**: Pytest API and service tests  
+- **E2E**: Playwright browser automation tests
+- **Integration**: Full-stack integration tests
 
 ---
 
@@ -533,11 +546,9 @@ Events:
 ```
 SvelteKit App
   ├── Svelte Stores (State Management)
-  │   ├── gameState (Svelte 5 runes)
-  │   ├── connectionState
-  │   ├── websocket
-  │   ├── gameActions
-  │   └── roomActions
+  │   ├── gameStore.ts (game state)
+  │   ├── connectionStore.ts (WebSocket)
+  │   └── voiceChat.svelte.ts (voice chat)
   │
   ├── Routes (SvelteKit)
   │   ├── / (Lobby)
@@ -545,9 +556,9 @@ SvelteKit App
   │   └── /game/[id] (Game Table)
   │
   └── Components
+      ├── GameBoard.svelte (drag-and-drop)
       ├── GamePhases.svelte
       ├── Card.svelte
-      ├── AppHeader.svelte
       └── UI Components
 ```
 
@@ -555,10 +566,15 @@ SvelteKit App
 ```
 FastAPI Server
   ├── REST API (main.py)
+  ├── Service Layer
+  │   ├── RoomService
+  │   ├── GameService
+  │   └── PlayerService
   ├── WebSocket Manager
   ├── Game Logic Engine (game_logic.py)
-  ├── Database Models (models.py)
-  └── SQLAlchemy ORM
+  ├── Session Manager (Redis)
+  ├── Cache Manager (Redis)
+  └── Database Models (SQLAlchemy)
 ```
 
 ---
@@ -646,11 +662,11 @@ All documentation is organized in the [`docs/`](docs/) directory:
 
 ## 📊 Project Stats
 
-- **Lines of Code**: ~15,000+
-- **Test Coverage**: 97.2%
-- **Components**: 25+
-- **API Endpoints**: 10+
-- **Svelte Stores**: 5
+- **Lines of Code**: ~20,000+
+- **Components**: 30+
+- **API Endpoints**: 15+
+- **Svelte Stores**: 5+
+- **Service Classes**: 3 (Room, Game, Player)
 - **Deployment**: Automated CI/CD
 
 ---

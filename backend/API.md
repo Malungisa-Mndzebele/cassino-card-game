@@ -761,6 +761,8 @@ Complete game state object returned by most endpoints:
 ### Actions
 - **Capture:** Take cards/builds from table that sum to hand card value
 - **Build:** Combine hand card with table cards to create a build for later capture
+  - **Simple Build:** Drag a card to the table to create a build with just that card's value
+  - **Combining Build:** Combine hand card with table cards to create a higher-value build
 - **Trail:** Place hand card on table (when no capture/build possible)
 
 ### Scoring
