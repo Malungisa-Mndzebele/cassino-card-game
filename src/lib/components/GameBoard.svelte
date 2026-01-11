@@ -69,17 +69,55 @@ if (!validValues.includes(v)) validValues.push(v);
 }
 return validValues.sort((a, b) => a - b);
 }
-	$: possibleBuildValues = calculatePossibleBuildValues();
+	// Force reactivity by explicitly depending on tableCards and myHand
+	$: possibleBuildValues = calculatePossibleBuildValues(tableCards, myHand);
 
-	function calculatePossibleBuildValues(): number[] {
-		if (!selectedCard || selectedTableCards.length === 0) return [];
+	function calculatePossibleBuildValues(tableCardsRef: typeof tableCards, myHandRef: typeof myHand): number[] {
+		if (!selectedCard || selectedTableCards.length === 0) {
+			console.log('[Build Debug] Early return - selectedCard:', !!selectedCard, 'selectedTableCards:', selectedTableCards.length);
+			return [];
+		}
 		const handCardValue = getCardValue(selectedCard);
 		const validValues: number[] = [];
+		
+		// Debug logging
+		console.log('[Build Debug] === Starting build value calculation ===');
+		console.log('[Build Debug] Selected hand card:', selectedCard.rank, selectedCard.suit, 'value:', handCardValue, 'id:', selectedCard.id);
+		console.log('[Build Debug] Selected table card IDs:', selectedTableCards);
+		console.log('[Build Debug] Available table cards:', tableCardsRef.map(c => `${c.rank}_${c.suit}(${c.id})`));
+		console.log('[Build Debug] My hand cards:', myHandRef.map(c => `${c.rank}_${c.suit}(${c.id})`));
+		console.log('[Build Debug] isPlayer1:', isPlayer1, 'playerId:', playerId);
+		
+		// Check if table cards can be found
+		const foundTableCards = selectedTableCards.map(id => {
+			const found = tableCardsRef.find(c => c.id === id);
+			console.log(`[Build Debug] Looking for table card id "${id}":`, found ? `Found ${found.rank}_${found.suit}` : 'NOT FOUND');
+			return found;
+		}).filter(Boolean);
+		console.log('[Build Debug] Found table cards count:', foundTableCards.length, 'of', selectedTableCards.length);
+		
 		for (let v = 2; v <= 14; v++) {
 			if (v === handCardValue) continue;
-			const hasCapturingCard = myHand.some(c => c.id !== selectedCard?.id && getCardValues(c).includes(v));
-			if (hasCapturingCard && canMakeValue(v)) validValues.push(v);
+			const hasCapturingCard = myHandRef.some(c => {
+				if (c.id === selectedCard?.id) return false;
+				const cardValues = getCardValues(c);
+				const matches = cardValues.includes(v);
+				if (matches) {
+					console.log(`[Build Debug] Found capturing card for value ${v}:`, c.rank, c.suit, 'values:', cardValues);
+				}
+				return matches;
+			});
+			const canMake = canMakeValue(v, tableCardsRef);
+			if (v === 11) {
+				console.log(`[Build Debug] Checking value 11: hasCapturingCard=${hasCapturingCard}, canMake=${canMake}`);
+			}
+			if (hasCapturingCard && canMake) {
+				console.log(`[Build Debug] Valid build value: ${v}`);
+				validValues.push(v);
+			}
 		}
+		
+		console.log('[Build Debug] Final valid values:', validValues);
 		return validValues;
 	}
 	function getCardValue(card: CardType): number {
@@ -94,14 +132,35 @@ return validValues.sort((a, b) => a - b);
 		if (card.rank === 'A') return [1, 14];
 		return [getCardValue(card)];
 	}
-	function canMakeValue(targetValue: number): boolean {
-		if (!selectedCard) return false;
+	function canMakeValue(targetValue: number, tableCardsRef: typeof tableCards): boolean {
+		if (!selectedCard) {
+			console.log(`[canMakeValue Debug] No selected card`);
+			return false;
+		}
 		const handValues = getCardValues(selectedCard);
-		const selectedCards = selectedTableCards.map(id => tableCards.find(c => c.id === id)).filter(Boolean) as CardType[];
+		const selectedCards = selectedTableCards.map(id => {
+			const found = tableCardsRef.find(c => c.id === id);
+			if (!found) {
+				console.log(`[canMakeValue Debug] Table card not found for id: "${id}"`);
+			}
+			return found;
+		}).filter(Boolean) as CardType[];
+		
+		console.log(`[canMakeValue Debug] Target: ${targetValue}, Hand values: ${handValues}`);
+		console.log(`[canMakeValue Debug] Selected cards (${selectedCards.length}):`, selectedCards.map(c => `${c.rank}(${getCardValue(c)})`));
+		
+		if (selectedCards.length === 0) {
+			console.log(`[canMakeValue Debug] No selected cards found - returning false`);
+			return false;
+		}
+		
 		for (const handValue of handValues) {
 			const neededValue = targetValue - handValue;
+			console.log(`[canMakeValue Debug] Hand value: ${handValue}, Needed from table: ${neededValue}`);
 			if (neededValue <= 0) continue;
-			if (canSumTo(selectedCards, neededValue)) return true;
+			const canSum = canSumTo(selectedCards, neededValue);
+			console.log(`[canMakeValue Debug] Can sum to ${neededValue}? ${canSum}`);
+			if (canSum) return true;
 		}
 		return false;
 	}
