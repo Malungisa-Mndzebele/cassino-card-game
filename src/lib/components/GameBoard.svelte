@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { gameStore } from '$stores/gameStore';
 	import { connectionStore } from '$stores/connectionStore';
 	import { Card, CapturedPile } from '$components';
@@ -69,55 +69,40 @@ if (!validValues.includes(v)) validValues.push(v);
 }
 return validValues.sort((a, b) => a - b);
 }
-	// Force reactivity by explicitly depending on tableCards and myHand
-	$: possibleBuildValues = calculatePossibleBuildValues(tableCards, myHand);
+	// Force reactivity by explicitly depending on ALL variables used in calculation
+	// selectedCard and selectedTableCards must be in the reactive statement for proper updates
+	$: possibleBuildValues = calculatePossibleBuildValues(tableCards, myHand, selectedCard, selectedTableCards);
 
-	function calculatePossibleBuildValues(tableCardsRef: typeof tableCards, myHandRef: typeof myHand): number[] {
-		if (!selectedCard || selectedTableCards.length === 0) {
-			console.log('[Build Debug] Early return - selectedCard:', !!selectedCard, 'selectedTableCards:', selectedTableCards.length);
+	function calculatePossibleBuildValues(
+		tableCardsRef: typeof tableCards, 
+		myHandRef: typeof myHand,
+		handCard: typeof selectedCard,
+		selectedIds: typeof selectedTableCards
+	): number[] {
+		if (!handCard || selectedIds.length === 0) {
 			return [];
 		}
-		const handCardValue = getCardValue(selectedCard);
+		const handCardValue = getCardValue(handCard);
 		const validValues: number[] = [];
 		
-		// Debug logging
-		console.log('[Build Debug] === Starting build value calculation ===');
-		console.log('[Build Debug] Selected hand card:', selectedCard.rank, selectedCard.suit, 'value:', handCardValue, 'id:', selectedCard.id);
-		console.log('[Build Debug] Selected table card IDs:', selectedTableCards);
-		console.log('[Build Debug] Available table cards:', tableCardsRef.map(c => `${c.rank}_${c.suit}(${c.id})`));
-		console.log('[Build Debug] My hand cards:', myHandRef.map(c => `${c.rank}_${c.suit}(${c.id})`));
-		console.log('[Build Debug] isPlayer1:', isPlayer1, 'playerId:', playerId);
-		
-		// Check if table cards can be found
-		const foundTableCards = selectedTableCards.map(id => {
+						const selectedCards = selectedIds.map(id => {
 			const found = tableCardsRef.find(c => c.id === id);
-			console.log(`[Build Debug] Looking for table card id "${id}":`, found ? `Found ${found.rank}_${found.suit}` : 'NOT FOUND');
 			return found;
-		}).filter(Boolean);
-		console.log('[Build Debug] Found table cards count:', foundTableCards.length, 'of', selectedTableCards.length);
-		
+		}).filter(Boolean) as CardType[];
 		for (let v = 2; v <= 14; v++) {
 			if (v === handCardValue) continue;
 			const hasCapturingCard = myHandRef.some(c => {
 				if (c.id === selectedCard?.id) return false;
 				const cardValues = getCardValues(c);
 				const matches = cardValues.includes(v);
-				if (matches) {
-					console.log(`[Build Debug] Found capturing card for value ${v}:`, c.rank, c.suit, 'values:', cardValues);
-				}
-				return matches;
+								return matches;
 			});
-			const canMake = canMakeValue(v, tableCardsRef);
-			if (v === 11) {
-				console.log(`[Build Debug] Checking value 11: hasCapturingCard=${hasCapturingCard}, canMake=${canMake}`);
-			}
-			if (hasCapturingCard && canMake) {
-				console.log(`[Build Debug] Valid build value: ${v}`);
+			const canMake = canMakeValueWithCards(v, handCard, selectedCards);
+						if (hasCapturingCard && canMake) {
 				validValues.push(v);
 			}
 		}
 		
-		console.log('[Build Debug] Final valid values:', validValues);
 		return validValues;
 	}
 	function getCardValue(card: CardType): number {
@@ -134,32 +119,24 @@ return validValues.sort((a, b) => a - b);
 	}
 	function canMakeValue(targetValue: number, tableCardsRef: typeof tableCards): boolean {
 		if (!selectedCard) {
-			console.log(`[canMakeValue Debug] No selected card`);
 			return false;
 		}
 		const handValues = getCardValues(selectedCard);
 		const selectedCards = selectedTableCards.map(id => {
 			const found = tableCardsRef.find(c => c.id === id);
 			if (!found) {
-				console.log(`[canMakeValue Debug] Table card not found for id: "${id}"`);
-			}
+				}
 			return found;
 		}).filter(Boolean) as CardType[];
 		
-		console.log(`[canMakeValue Debug] Target: ${targetValue}, Hand values: ${handValues}`);
-		console.log(`[canMakeValue Debug] Selected cards (${selectedCards.length}):`, selectedCards.map(c => `${c.rank}(${getCardValue(c)})`));
-		
 		if (selectedCards.length === 0) {
-			console.log(`[canMakeValue Debug] No selected cards found - returning false`);
 			return false;
 		}
 		
 		for (const handValue of handValues) {
 			const neededValue = targetValue - handValue;
-			console.log(`[canMakeValue Debug] Hand value: ${handValue}, Needed from table: ${neededValue}`);
 			if (neededValue <= 0) continue;
 			const canSum = canSumTo(selectedCards, neededValue);
-			console.log(`[canMakeValue Debug] Can sum to ${neededValue}? ${canSum}`);
 			if (canSum) return true;
 		}
 		return false;
@@ -311,7 +288,7 @@ return validValues.sort((a, b) => a - b);
 
 <div class="game-board">
 	<div class="exit-button-container">
-		<button class="btn-exit" on:click={handleExitClick}>ðŸšª Exit Game</button>
+		<button class="btn-exit" on:click={handleExitClick}>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Âª Exit Game</button>
 	</div>
 	<div class="opponent-area">
 		<div class="player-info opponent">
@@ -320,14 +297,14 @@ return validValues.sort((a, b) => a - b);
 			{#if !isMyTurn}<span class="turn-indicator">Their Turn</span>{/if}
 		</div>
 		<div class="hand opponent-hand">
-			{#each opponentHand as _, i}<div class="card-back"><div class="card-back-design">ðŸŽ´</div></div>{/each}
+			{#each opponentHand as _, i}<div class="card-back"><div class="card-back-design">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â´</div></div>{/each}
 		</div>
 			<CapturedPile cards={opponentCapturedCards} playerName={opponentName || 'Opponent'} position="top" />
 	</div>
 
 	<div class="table-area">
 		<h3 class="table-title">Table ({tableCards.length} cards)</h3>
-		{#if selectedCard && isMyTurn}<p class="table-hint">ðŸ‘† Click or drag cards to select for capture/build</p>{/if}
+		{#if selectedCard && isMyTurn}<p class="table-hint">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  Click or drag cards to select for capture/build</p>{/if}
 		<div class="table-cards">
 			{#if tableCards.length === 0 && builds.length === 0}
 				<p class="empty-table">No cards on table</p>
@@ -380,7 +357,7 @@ return validValues.sort((a, b) => a - b);
 				</button>
 			{/each}
 		</div>
-		{#if actionError}<div class="action-error">âš ï¸ {actionError}</div>{/if}
+		{#if actionError}<div class="action-error">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â {actionError}</div>{/if}
 		{#if selectedCard && isMyTurn}
 			<div class="action-buttons">
 				<p class="selected-info">Playing: <strong>{selectedCard.rank} of {selectedCard.suit}</strong>
@@ -388,13 +365,13 @@ return validValues.sort((a, b) => a - b);
 				</p>
 				<div class="buttons">
 					<button class="btn-action btn-capture" on:click={handleCapture} disabled={isProcessing || (selectedTableCards.length === 0 && selectedBuildIds.length === 0)}>
-						{#if isProcessing}<span class="spinner"></span>{:else}ðŸŽ¯ Capture{/if}
+						{#if isProcessing}<span class="spinner"></span>{:else}ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¯ Capture{/if}
 					</button>
 					<button class="btn-action btn-build" on:click={handleBuildAction} disabled={isProcessing || selectedTableCards.length === 0}>
-						{#if isProcessing}<span class="spinner"></span>{:else}ðŸ—ï¸ Build{/if}
+						{#if isProcessing}<span class="spinner"></span>{:else}ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Build{/if}
 					</button>
 					<button class="btn-action btn-trail" on:click={handleTrail} disabled={isProcessing}>
-						{#if isProcessing}<span class="spinner"></span>{:else}ðŸ“¤ Trail{/if}
+						{#if isProcessing}<span class="spinner"></span>{:else}ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â¤ Trail{/if}
 					</button>
 				</div>
 			</div>
@@ -405,7 +382,7 @@ return validValues.sort((a, b) => a - b);
 {#if showBuildModal}
 <div class="modal-overlay" on:click={cancelBuildModal}>
 	<div class="modal" on:click|stopPropagation>
-		<h3 class="modal-title">ðŸ—ï¸ Create Build</h3>
+		<h3 class="modal-title">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Create Build</h3>
 		<p class="modal-desc">Combining <strong>{selectedCard?.rank} of {selectedCard?.suit}</strong> with {selectedTableCards.length} table card{selectedTableCards.length > 1 ? 's' : ''}</p>
 		<div class="build-value-selector">
 			<label for="build-value">Build Value:</label>
@@ -422,7 +399,7 @@ return validValues.sort((a, b) => a - b);
 {#if showExitConfirm}
 <div class="modal-overlay" on:click={handleExitCancel}>
 	<div class="modal" on:click|stopPropagation>
-		<h3 class="modal-title">ðŸšª Leave Game?</h3>
+		<h3 class="modal-title">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Âª Leave Game?</h3>
 		<p class="modal-desc">Are you sure you want to leave? The game will end.</p>
 		<div class="modal-buttons">
 			<button class="btn-cancel" on:click={handleExitCancel}>Stay</button>
@@ -435,14 +412,14 @@ return validValues.sort((a, b) => a - b);
 {#if isGameFinished}
 <div class="game-finished-overlay">
 	<div class="game-finished-content">
-		<h2 class="finished-title">ðŸ† Game Over!</h2>
+		<h2 class="finished-title">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  Game Over!</h2>
 		{#if winner}<p class="winner-text">{winnerName || (winner === 1 ? 'Player 1' : 'Player 2')} Wins!</p>{:else}<p class="tie-text">It's a Tie!</p>{/if}
 		<div class="final-scores">
 			<div class="score-row"><span class="score-name">{players[0]?.name || 'Player 1'}</span><span class="score-value">{gameState?.player1Score || 0}</span></div>
 			<div class="score-divider">vs</div>
 			<div class="score-row"><span class="score-name">{players[1]?.name || 'Player 2'}</span><span class="score-value">{gameState?.player2Score || 0}</span></div>
 		</div>
-		<button class="btn-end-game" on:click={handleEndGame}>ðŸšª End Game</button>
+		<button class="btn-end-game" on:click={handleEndGame}>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Âª End Game</button>
 	</div>
 </div>
 {/if}
