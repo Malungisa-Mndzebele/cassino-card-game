@@ -3,6 +3,7 @@
 	import { gameStore } from '$stores/gameStore';
 	import { connectionStore } from '$stores/connectionStore';
 	import { onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
 	
 	// State
 	let chatInput = $state('');
@@ -12,19 +13,45 @@
 	let chatContainer: HTMLDivElement | undefined;
 	let initialized = $state(false);
 	
+	// Get session token for message ownership comparison
+	// This matches the sender_id that the backend uses
+	function getSessionToken(): string | null {
+		if (!browser) return null;
+		return sessionStorage.getItem('session_token');
+	}
+	
+	// Check if a message is from the current user
+	function isOwnMessage(senderId: string): boolean {
+		const sessionToken = getSessionToken();
+		// Compare with session token (backend sends session_id as sender_id)
+		if (sessionToken && senderId === sessionToken) return true;
+		// Fallback: compare with player ID
+		if (senderId === $gameStore.playerId) return true;
+		return false;
+	}
+	
 	// Reactive initialization - runs when gameStore values become available
 	$effect(() => {
 		const roomId = $gameStore.roomId;
 		const playerId = $gameStore.playerId;
 		const playerName = $gameStore.playerName;
 		
+		// Get session token for sender identification (used by backend)
+		const sessionToken = getSessionToken();
+		
 		if (roomId && playerId && playerName && !initialized) {
-			console.log('[CommunicationPanel] Initializing with:', { roomId, playerId: playerId.substring(0, 20) + '...', playerName });
+			console.log('[CommunicationPanel] Initializing with:', { 
+				roomId, 
+				playerId, 
+				playerName,
+				hasSessionToken: !!sessionToken 
+			});
 			const wsSend = (msg: any) => {
 				console.log('[CommunicationPanel] Sending message:', msg.type);
 				connectionStore.send(msg);
 			};
-			communication.initialize(roomId, playerId, playerName, wsSend);
+			// Use session token as the ID for message comparison (matches backend sender_id)
+			communication.initialize(roomId, sessionToken || playerId, playerName, wsSend);
 			initialized = true;
 		}
 	});
@@ -220,7 +247,7 @@
 				{#each communication.messages as msg (msg.id)}
 					<div 
 						class="message"
-						class:own={msg.senderId === $gameStore.playerId}
+						class:own={isOwnMessage(msg.senderId)}
 						class:system={msg.isSystem}
 					>
 						{#if !msg.isSystem}
