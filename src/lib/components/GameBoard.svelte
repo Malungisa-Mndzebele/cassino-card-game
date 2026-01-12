@@ -298,7 +298,7 @@ return validValues.sort((a, b) => a - b);
 			{#if !isMyTurn}<span class="turn-indicator">Their Turn</span>{/if}
 		</div>
 		<div class="hand opponent-hand">
-			{#each opponentHand as _, i}<div class="card-back"><div class="card-back-design">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â´</div></div>{/each}
+		{#each opponentHand as _, i}<div class="card-back"><div class="card-back-design"></div></div>{/each}
 		</div>
 			<CapturedPile cards={opponentCapturedCards} playerName={opponentName || 'Opponent'} position="top" />
 	</div>
