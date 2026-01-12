@@ -1,4 +1,5 @@
 <script lang="ts">
+	// GameBoard - force redeploy 2026-01-12 14:58
 	import { gameStore } from '$stores/gameStore';
 	import { connectionStore } from '$stores/connectionStore';
 	import { Card, CapturedPile } from '$components';
