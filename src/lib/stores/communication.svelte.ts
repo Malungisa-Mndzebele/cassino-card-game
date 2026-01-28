@@ -35,7 +35,7 @@ interface CommunicationState {
 	isConnected: boolean;
 	isConnecting: boolean;
 	connectionError: string | null;
-	
+
 	// Audio
 	isAudioEnabled: boolean;
 	isAudioMuted: boolean;
@@ -43,25 +43,25 @@ interface CommunicationState {
 	isSpeaking: boolean;
 	isOpponentSpeaking: boolean;
 	audioVolume: number;
-	
+
 	// Video
 	isVideoEnabled: boolean;
 	isVideoMuted: boolean;
 	isOpponentVideoMuted: boolean;
-	
+
 	// Chat
 	messages: ChatMessage[];
 	unreadCount: number;
 	isChatOpen: boolean;
-	
+
 	// Streams
 	localStream: MediaStream | null;
 	remoteStream: MediaStream | null;
-	
+
 	// WebRTC
 	peerConnection: RTCPeerConnection | null;
 	dataChannel: RTCDataChannel | null;
-	
+
 	// Room info
 	roomId: string | null;
 	playerId: string | null;
@@ -127,51 +127,51 @@ function saveSettings() {
 
 async function initialize(roomId: string, playerId: string, playerName: string, wsSend: (message: any) => void) {
 	if (!browser) return;
-	
+
 	console.log('[Communication] Initializing:', { roomId, playerId: playerId.substring(0, 20) + '...', playerName });
-	
+
 	state.roomId = roomId;
 	state.playerId = playerId;
 	state.playerName = playerName;
 	websocketSend = wsSend;
-	
+
 	loadSettings();
-	
+
 	// Add system message
 	addSystemMessage('Connected to room. You can now chat with your opponent!');
-	
+
 	console.log('[Communication] Initialized successfully');
 }
 
 function cleanup() {
 	console.log('Cleaning up communication');
-	
+
 	if (speakingCheckInterval) {
 		clearInterval(speakingCheckInterval);
 		speakingCheckInterval = null;
 	}
-	
+
 	if (audioContext) {
 		audioContext.close();
 		audioContext = null;
 		analyser = null;
 	}
-	
+
 	if (state.localStream) {
 		state.localStream.getTracks().forEach(track => track.stop());
 		state.localStream = null;
 	}
-	
+
 	if (state.dataChannel) {
 		state.dataChannel.close();
 		state.dataChannel = null;
 	}
-	
+
 	if (state.peerConnection) {
 		state.peerConnection.close();
 		state.peerConnection = null;
 	}
-	
+
 	state.isConnected = false;
 	state.isConnecting = false;
 	state.connectionError = null;
@@ -189,11 +189,11 @@ function cleanup() {
 
 async function toggleAudio() {
 	if (!browser) return;
-	
+
 	if (state.isAudioMuted) {
 		try {
 			state.connectionError = null;
-			
+
 			const constraints: MediaStreamConstraints = {
 				audio: {
 					echoCancellation: true,
@@ -202,7 +202,7 @@ async function toggleAudio() {
 				},
 				video: state.isVideoEnabled ? true : false
 			};
-			
+
 			if (state.localStream) {
 				// Just enable audio track
 				const audioTrack = state.localStream.getAudioTracks()[0];
@@ -213,23 +213,24 @@ async function toggleAudio() {
 					const stream = await navigator.mediaDevices.getUserMedia({ audio: constraints.audio });
 					stream.getAudioTracks().forEach(track => {
 						state.localStream!.addTrack(track);
-						if (state.peerConnection) {
-							state.peerConnection.addTrack(track, state.localStream!);
-						}
 					});
 				}
 			} else {
 				const stream = await navigator.mediaDevices.getUserMedia(constraints);
 				state.localStream = stream;
 				setupSpeakingDetection(stream);
-				
-				if (state.peerConnection) {
-					stream.getTracks().forEach(track => {
-						state.peerConnection!.addTrack(track, stream);
-					});
-				}
 			}
-			
+
+			// Ensure connection exists and add tracks
+			const isNew = ensurePeerConnection();
+			await addLocalTracks();
+
+			if (isNew) {
+				// Create data channel if we initiated
+				state.dataChannel = state.peerConnection!.createDataChannel('chat', { ordered: true });
+				setupDataChannelHandlers(state.dataChannel);
+			}
+
 			state.isAudioEnabled = true;
 			state.isAudioMuted = false;
 			sendMediaStatus();
@@ -252,11 +253,11 @@ async function toggleAudio() {
 
 async function toggleVideo() {
 	if (!browser) return;
-	
+
 	if (state.isVideoMuted) {
 		try {
 			state.connectionError = null;
-			
+
 			if (state.localStream) {
 				const videoTrack = state.localStream.getVideoTracks()[0];
 				if (videoTrack) {
@@ -265,29 +266,29 @@ async function toggleVideo() {
 					const stream = await navigator.mediaDevices.getUserMedia({ video: true });
 					stream.getVideoTracks().forEach(track => {
 						state.localStream!.addTrack(track);
-						if (state.peerConnection) {
-							state.peerConnection.addTrack(track, state.localStream!);
-						}
 					});
 				}
 			} else {
-				const stream = await navigator.mediaDevices.getUserMedia({ 
+				const stream = await navigator.mediaDevices.getUserMedia({
 					video: true,
 					audio: state.isAudioEnabled
 				});
 				state.localStream = stream;
-				
+
 				if (state.isAudioEnabled) {
 					setupSpeakingDetection(stream);
 				}
-				
-				if (state.peerConnection) {
-					stream.getTracks().forEach(track => {
-						state.peerConnection!.addTrack(track, stream);
-					});
-				}
 			}
-			
+
+			// Ensure connection and add tracks
+			const isNew = ensurePeerConnection();
+			await addLocalTracks();
+
+			if (isNew) {
+				state.dataChannel = state.peerConnection!.createDataChannel('chat', { ordered: true });
+				setupDataChannelHandlers(state.dataChannel);
+			}
+
 			state.isVideoEnabled = true;
 			state.isVideoMuted = false;
 			sendMediaStatus();
@@ -309,7 +310,7 @@ async function toggleVideo() {
 
 function handleMediaError(error: any, device: string) {
 	console.error(`Failed to access ${device}:`, error);
-	
+
 	if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
 		state.connectionError = `${device.charAt(0).toUpperCase() + device.slice(1)} permission denied. Please allow access in browser settings.`;
 	} else if (error.name === 'NotFoundError') {
@@ -321,17 +322,17 @@ function handleMediaError(error: any, device: string) {
 
 function setupSpeakingDetection(stream: MediaStream) {
 	if (!browser) return;
-	
+
 	try {
 		audioContext = new AudioContext();
 		analyser = audioContext.createAnalyser();
 		const source = audioContext.createMediaStreamSource(stream);
 		source.connect(analyser);
-		
+
 		analyser.fftSize = 256;
 		const bufferLength = analyser.frequencyBinCount;
 		const dataArray = new Uint8Array(bufferLength);
-		
+
 		speakingCheckInterval = window.setInterval(() => {
 			if (!analyser) return;
 			analyser.getByteFrequencyData(dataArray);
@@ -346,7 +347,7 @@ function setupSpeakingDetection(stream: MediaStream) {
 function setVolume(volume: number) {
 	state.audioVolume = Math.max(0, Math.min(100, volume));
 	saveSettings();
-	
+
 	if (browser && state.remoteStream) {
 		const audioElements = document.querySelectorAll('audio[data-comm-audio], video[data-comm-video]');
 		audioElements.forEach(el => {
@@ -357,14 +358,14 @@ function setVolume(volume: number) {
 
 function sendMessage(content: string) {
 	if (!content.trim() || !state.playerId || !state.playerName) {
-		console.log('[Communication] sendMessage blocked:', { 
-			hasContent: !!content.trim(), 
-			hasPlayerId: !!state.playerId, 
-			hasPlayerName: !!state.playerName 
+		console.log('[Communication] sendMessage blocked:', {
+			hasContent: !!content.trim(),
+			hasPlayerId: !!state.playerId,
+			hasPlayerName: !!state.playerName
 		});
 		return;
 	}
-	
+
 	const message: ChatMessage = {
 		id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
 		senderId: state.playerId,
@@ -372,10 +373,10 @@ function sendMessage(content: string) {
 		content: content.trim(),
 		timestamp: new Date()
 	};
-	
+
 	state.messages = [...state.messages, message];
 	console.log('[Communication] Added message to local state:', message.content);
-	
+
 	// Send via WebSocket
 	if (websocketSend) {
 		console.log('[Communication] Sending via WebSocket');
@@ -390,7 +391,7 @@ function sendMessage(content: string) {
 	} else {
 		console.warn('[Communication] websocketSend is null, cannot send message');
 	}
-	
+
 	// Also send via data channel if available
 	if (state.dataChannel?.readyState === 'open') {
 		state.dataChannel.send(JSON.stringify({
@@ -402,7 +403,7 @@ function sendMessage(content: string) {
 
 function receiveMessage(data: { id: string; content: string; sender_id: string; sender_name: string }) {
 	console.log('[Communication] Received message:', data);
-	
+
 	const message: ChatMessage = {
 		id: data.id,
 		senderId: data.sender_id,
@@ -410,10 +411,10 @@ function receiveMessage(data: { id: string; content: string; sender_id: string; 
 		content: data.content,
 		timestamp: new Date()
 	};
-	
+
 	state.messages = [...state.messages, message];
 	console.log('[Communication] Added received message, total messages:', state.messages.length);
-	
+
 	if (!state.isChatOpen) {
 		state.unreadCount++;
 	}
@@ -440,7 +441,7 @@ function toggleChat() {
 
 function sendMediaStatus() {
 	if (!websocketSend) return;
-	
+
 	websocketSend({
 		type: 'media_status',
 		data: {
@@ -457,34 +458,31 @@ function handleOpponentMediaStatus(data: { audio_muted: boolean; video_muted: bo
 
 async function createOffer() {
 	if (!browser || !websocketSend) return;
-	
+
 	try {
 		state.isConnecting = true;
 		state.connectionError = null;
-		
-		state.peerConnection = new RTCPeerConnection(rtcConfiguration);
-		setupPeerConnectionHandlers();
-		
-		// Create data channel for chat
-		state.dataChannel = state.peerConnection.createDataChannel('chat', {
-			ordered: true
-		});
-		setupDataChannelHandlers(state.dataChannel);
-		
-		if (state.localStream) {
-			state.localStream.getTracks().forEach(track => {
-				state.peerConnection!.addTrack(track, state.localStream!);
+
+		const isNew = ensurePeerConnection();
+
+		if (isNew) {
+			// Create data channel for chat if new connection
+			state.dataChannel = state.peerConnection!.createDataChannel('chat', {
+				ordered: true
 			});
+			setupDataChannelHandlers(state.dataChannel);
 		}
-		
-		const offer = await state.peerConnection.createOffer();
-		await state.peerConnection.setLocalDescription(offer);
-		
+
+		await addLocalTracks();
+
+		const offer = await state.peerConnection!.createOffer();
+		await state.peerConnection!.setLocalDescription(offer);
+
 		websocketSend({
 			type: 'webrtc_offer',
 			data: { sdp: offer.sdp, type: offer.type }
 		});
-		
+
 		console.log('WebRTC offer created');
 	} catch (e) {
 		console.error('Failed to create offer:', e);
@@ -495,31 +493,24 @@ async function createOffer() {
 
 async function handleOffer(offer: RTCSessionDescriptionInit) {
 	if (!browser || !websocketSend) return;
-	
+
 	try {
 		state.isConnecting = true;
-		
-		if (!state.peerConnection) {
-			state.peerConnection = new RTCPeerConnection(rtcConfiguration);
-			setupPeerConnectionHandlers();
-		}
-		
-		await state.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-		
-		if (state.localStream) {
-			state.localStream.getTracks().forEach(track => {
-				state.peerConnection!.addTrack(track, state.localStream!);
-			});
-		}
-		
+
+		ensurePeerConnection();
+
+		await state.peerConnection!.setRemoteDescription(new RTCSessionDescription(offer));
+
+		await addLocalTracks();
+
 		const answer = await state.peerConnection.createAnswer();
 		await state.peerConnection.setLocalDescription(answer);
-		
+
 		websocketSend({
 			type: 'webrtc_answer',
 			data: { sdp: answer.sdp, type: answer.type }
 		});
-		
+
 		console.log('WebRTC answer created');
 	} catch (e) {
 		console.error('Failed to handle offer:', e);
@@ -530,7 +521,7 @@ async function handleOffer(offer: RTCSessionDescriptionInit) {
 
 async function handleAnswer(answer: RTCSessionDescriptionInit) {
 	if (!state.peerConnection) return;
-	
+
 	try {
 		await state.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
 		console.log('WebRTC answer received');
@@ -541,7 +532,7 @@ async function handleAnswer(answer: RTCSessionDescriptionInit) {
 
 async function handleIceCandidate(candidate: RTCIceCandidateInit) {
 	if (!state.peerConnection) return;
-	
+
 	try {
 		await state.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
 	} catch (e) {
@@ -551,7 +542,7 @@ async function handleIceCandidate(candidate: RTCIceCandidateInit) {
 
 function setupPeerConnectionHandlers() {
 	if (!state.peerConnection || !websocketSend) return;
-	
+
 	state.peerConnection.onicecandidate = (event) => {
 		if (event.candidate && websocketSend) {
 			websocketSend({
@@ -564,11 +555,11 @@ function setupPeerConnectionHandlers() {
 			});
 		}
 	};
-	
+
 	state.peerConnection.ontrack = (event) => {
 		console.log('Received remote track');
 		state.remoteStream = event.streams[0];
-		
+
 		setTimeout(() => {
 			const elements = document.querySelectorAll('audio[data-comm-audio], video[data-comm-video]');
 			elements.forEach(el => {
@@ -576,15 +567,35 @@ function setupPeerConnectionHandlers() {
 			});
 		}, 100);
 	};
-	
+
+	state.peerConnection.onnegotiationneeded = async () => {
+		console.log('Negotiation needed');
+		if (!state.peerConnection || state.peerConnection.signalingState !== 'stable') return;
+
+		try {
+			const offer = await state.peerConnection.createOffer();
+			await state.peerConnection.setLocalDescription(offer);
+
+			if (websocketSend) {
+				websocketSend({
+					type: 'webrtc_offer',
+					data: { sdp: offer.sdp, type: offer.type }
+				});
+				console.log('Renegotiation offer sent');
+			}
+		} catch (e) {
+			console.error('Failed to handle negotiation needed:', e);
+		}
+	};
+
 	state.peerConnection.ondatachannel = (event) => {
 		state.dataChannel = event.channel;
 		setupDataChannelHandlers(event.channel);
 	};
-	
+
 	state.peerConnection.onconnectionstatechange = () => {
 		if (!state.peerConnection) return;
-		
+
 		switch (state.peerConnection.connectionState) {
 			case 'connected':
 				state.isConnected = true;
@@ -607,11 +618,35 @@ function setupPeerConnectionHandlers() {
 	};
 }
 
+function ensurePeerConnection() {
+	if (!state.peerConnection) {
+		console.log('Creating new PeerConnection');
+		state.peerConnection = new RTCPeerConnection(rtcConfiguration);
+		setupPeerConnectionHandlers();
+		return true; // Created new
+	}
+	return false; // Existing
+}
+
+async function addLocalTracks() {
+	if (!state.peerConnection || !state.localStream) return;
+
+	const senders = state.peerConnection.getSenders();
+	state.localStream.getTracks().forEach(track => {
+		// Check if track is already added
+		const exists = senders.some(sender => sender.track === track);
+		if (!exists) {
+			console.log(`Adding track ${track.kind} to peer connection`);
+			state.peerConnection!.addTrack(track, state.localStream!);
+		}
+	});
+}
+
 function setupDataChannelHandlers(channel: RTCDataChannel) {
 	channel.onopen = () => {
 		console.log('Data channel opened');
 	};
-	
+
 	channel.onmessage = (event) => {
 		try {
 			const data = JSON.parse(event.data);
@@ -627,7 +662,7 @@ function setupDataChannelHandlers(channel: RTCDataChannel) {
 			console.error('Failed to parse data channel message:', e);
 		}
 	};
-	
+
 	channel.onclose = () => {
 		console.log('Data channel closed');
 	};
@@ -652,7 +687,7 @@ export const communication = {
 	get isChatOpen() { return state.isChatOpen; },
 	get localStream() { return state.localStream; },
 	get remoteStream() { return state.remoteStream; },
-	
+
 	// Actions
 	initialize,
 	cleanup,

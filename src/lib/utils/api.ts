@@ -250,6 +250,30 @@ export async function playCard(
     };
 }
 
+
+export async function tableBuild(
+    roomId: string,
+    playerId: string,
+    targetCards: string[],
+    buildValue: number
+) {
+    const response = await fetchAPI<any>('/game/table-build', {
+        method: 'POST',
+        body: JSON.stringify({
+            room_id: roomId,
+            player_id: parseInt(playerId, 10),
+            target_cards: targetCards,
+            build_value: buildValue
+        })
+    });
+
+    return {
+        success: response.success,
+        message: response.message,
+        game_state: transformGameState(response.game_state)
+    };
+}
+
 export async function resetGame(roomId: string, playerId: string) {
     return fetchAPI('/game/reset', {
         method: 'POST',

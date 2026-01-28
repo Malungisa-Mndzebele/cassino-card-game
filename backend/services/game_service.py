@@ -287,6 +287,9 @@ class GameService:
         if not hand_card:
             raise ValueError("Card not found in player's hand")
         
+        # Establish opponent's captured pile
+        opponent_captured = player2_captured if is_player1 else player1_captured
+
         # Execute the action based on type
         if action == "capture":
             self._execute_capture(
@@ -296,7 +299,7 @@ class GameService:
         elif action == "build":
             self._execute_build(
                 hand_card, player_hand, table_cards, builds,
-                target_cards or [], build_value or 0, player_id
+                opponent_captured, target_cards or [], build_value or 0, player_id
             )
         elif action == "trail":
             self._execute_trail(hand_card, player_hand, table_cards)
@@ -381,18 +384,27 @@ class GameService:
         player_hand: List[GameCard],
         table_cards: List[GameCard],
         builds: List[Build],
+        opponent_captured: List[GameCard],
         target_card_ids: List[str],
         build_value: int,
         player_id: int
     ) -> None:
         """Execute a build action."""
+        # Find target cards in table
         target_cards = [card for card in table_cards if card.id in target_card_ids]
+        target_builds = [build for build in builds if build.id in target_card_ids]
         
-        if not self.game_logic.validate_build(hand_card, target_cards, build_value, player_hand):
+        # Check opponent's top captured card
+        opponent_top_card = None
+        if opponent_captured and opponent_captured[-1].id in target_card_ids:
+            opponent_top_card = opponent_captured[-1]
+            target_cards.append(opponent_top_card)
+        
+        if not self.game_logic.validate_build(hand_card, target_cards, build_value, player_hand, target_builds):
             raise ValueError("Invalid build")
         
         _, new_build = self.game_logic.execute_build(
-            hand_card, target_cards, build_value, player_id
+            hand_card, target_cards, build_value, player_id, target_builds
         )
         
         player_hand.remove(hand_card)
@@ -401,7 +413,15 @@ class GameService:
         for card in target_cards:
             if card in table_cards:
                 table_cards.remove(card)
+            # Remove from opponent captured if it was the top card
+            elif opponent_top_card and card.id == opponent_top_card.id:
+                opponent_captured.remove(card)
         
+        # Remove merged builds from builds list
+        for build in target_builds:
+            if build in builds:
+                builds.remove(build)
+
         builds.append(new_build)
     
     def _execute_trail(

@@ -259,7 +259,7 @@ class CasinoGameLogic:
         
         return False
     
-    def validate_build(self, hand_card: GameCard, target_cards: List[GameCard], build_value: int, player_hand: List[GameCard]) -> bool:
+    def validate_build(self, hand_card: GameCard, target_cards: List[GameCard], build_value: int, player_hand: List[GameCard], target_builds: List[Build] = None) -> bool:
         """
         Validate if a build move is legal.
         
@@ -268,6 +268,7 @@ class CasinoGameLogic:
         2. Either:
            a. Target cards + hand card sum to build value (combining build)
            b. No target cards and hand card value equals build value (simple build)
+           c. target_builds are present: Hand Card + [Target Cards] sum to Build Value (augmenting build)
         
         Note: Aces can be used as either 1 or 14 for builds.
         
@@ -276,18 +277,14 @@ class CasinoGameLogic:
             target_cards (list): Table cards to include in build (can be empty for simple build)
             build_value (int): Declared value of the build
             player_hand (list): Player's complete hand (to verify capture card exists)
+            target_builds (list, optional): Existing builds to augment
         
         Returns:
             bool: True if build is valid, False otherwise
-        
-        Example:
-            >>> logic = CasinoGameLogic()
-            >>> hand_card = GameCard("5_hearts", "hearts", "5", 5)
-            >>> table = [GameCard("3_spades", "spades", "3", 3)]
-            >>> player_hand = [hand_card, GameCard("8_clubs", "clubs", "8", 8)]
-            >>> logic.validate_build(hand_card, table, 8, player_hand)
-            True  # 5 + 3 = 8, and player has 8 to capture later
         """
+        if target_builds is None:
+            target_builds = []
+
         # Get all possible values for the hand card (Aces can be 1 or 14)
         hand_values = self.get_card_values(hand_card)
         
@@ -303,6 +300,26 @@ class CasinoGameLogic:
         if not has_capturing_card:
             return False
         
+        # Check target builds
+        if target_builds:
+            # All target builds must have the same value as the new build value
+            for build in target_builds:
+                if build.value != build_value:
+                    return False
+            
+            # Augmenting a build: Hand Card + Target Cards must sum to Build Value
+            # Try each possible hand card value
+            for hand_value in hand_values:
+                needed_value = build_value - hand_value
+                if needed_value <= 0:
+                    continue
+                
+                # Check if target cards sum to needed value (considering Ace dual values)
+                if self.can_make_value_with_aces(target_cards, needed_value):
+                    return True
+            
+            return False
+
         # Simple build: no target cards, hand card becomes a build with declared value
         # The hand card's value must equal the build value
         if len(target_cards) == 0:
@@ -464,14 +481,29 @@ class CasinoGameLogic:
         
         return captured_cards, remaining_builds, remaining_table_cards
     
-    def execute_build(self, hand_card: GameCard, target_cards: List[GameCard], build_value: int, player_id: int) -> Tuple[List[GameCard], Build]:
+    def execute_build(self, hand_card: GameCard, target_cards: List[GameCard], build_value: int, player_id: int, target_builds: List[Build] = None) -> Tuple[List[GameCard], Build]:
         """Execute a build move"""
+        if target_builds is None:
+            target_builds = []
+
         # Remove target cards from table
         remaining_table_cards = []
         
-        # Create new build
+        # Create new build cards list
         build_cards = [hand_card] + target_cards
+        
+        # Add cards from existing builds if any
+        for build in target_builds:
+            build_cards.extend(build.cards)
+
+        # Create new build
+        # If we are augmenting, we might want to keep the original owner? 
+        # Standard rule: if you act on a build, you become the owner.
         build_id = f"build_{player_id}_{len(build_cards)}_{build_value}"
+        # Make id unique if augmenting to avoid collisions or confusion, though purely internal ID
+        if target_builds:
+            build_id += "_aug"
+            
         new_build = Build(id=build_id, cards=build_cards, value=build_value, owner=player_id)
         
         return remaining_table_cards, new_build
@@ -479,6 +511,62 @@ class CasinoGameLogic:
     def execute_trail(self, hand_card: GameCard) -> List[GameCard]:
         """Execute a trail move - add card to table"""
         return [hand_card]
+
+    def validate_table_build(self, target_cards: List[GameCard], build_value: int, player_hand: List[GameCard]) -> bool:
+        """
+        Validate if a table-only build is legal (non-standard rule).
+        
+        A table-only build combines table cards into a build WITHOUT playing a hand card.
+        This does NOT consume a turn.
+        
+        Rules:
+        1. Player must have a card in hand that can capture the build value
+        2. Target cards must sum to the build value
+        3. Must have at least 2 target cards
+        
+        Args:
+            target_cards (list): Table cards to combine into build
+            build_value (int): Declared value of the build
+            player_hand (list): Player's hand (to verify capture card exists)
+        
+        Returns:
+            bool: True if table-only build is valid, False otherwise
+        """
+        # Must have at least 2 cards to combine
+        if len(target_cards) < 2:
+            return False
+        
+        # Must have a card in hand to capture this build value
+        has_capturing_card = False
+        for card in player_hand:
+            card_values = self.get_card_values(card)
+            if build_value in card_values:
+                has_capturing_card = True
+                break
+        
+        if not has_capturing_card:
+            return False
+        
+        # Target cards must sum to build value (considering Ace dual values)
+        return self.can_make_value_with_aces(target_cards, build_value)
+    
+    def execute_table_build(self, target_cards: List[GameCard], build_value: int, player_id: int) -> Build:
+        """
+        Execute a table-only build (non-standard rule).
+        
+        Creates a build from table cards only, without playing a hand card.
+        
+        Args:
+            target_cards (list): Table cards to combine
+            build_value (int): Build value
+            player_id (int): Player creating the build
+        
+        Returns:
+            Build: The new build object
+        """
+        build_id = f"build_{player_id}_{len(target_cards)}_{build_value}_table"
+        return Build(id=build_id, cards=target_cards, value=build_value, owner=player_id)
+
     
     def calculate_score(self, captured_cards: List[GameCard]) -> int:
         """

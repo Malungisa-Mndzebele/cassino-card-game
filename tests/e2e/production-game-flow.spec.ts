@@ -19,7 +19,7 @@ test.describe('Production Game Flow', () => {
 		try {
 			// Step 1: Player 1 creates a room
 			await test.step('Player 1 creates a room', async () => {
-				await player1Page.goto('/');
+				await player1Page.goto('./');
 				await player1Page.waitForLoadState('networkidle');
 				await player1Page.waitForTimeout(2000); // Wait for JS hydration
 
@@ -35,11 +35,11 @@ test.describe('Production Game Flow', () => {
 
 				// Wait for "Room Created!" heading to appear
 				await player1Page.waitForSelector('text=/Room Created/i', { timeout: 20000 });
-				
+
 				// Wait for the room code element to be visible
 				const roomCodeElement = player1Page.locator('.text-5xl.font-bold.tracking-widest');
 				await expect(roomCodeElement).toBeVisible({ timeout: 10000 });
-				
+
 				// Extract room code
 				roomCode = (await roomCodeElement.textContent() || '').trim();
 				expect(roomCode).toMatch(/^[A-Z0-9]{6}$/);
@@ -55,7 +55,7 @@ test.describe('Production Game Flow', () => {
 
 			// Step 2: Player 2 joins the room
 			await test.step('Player 2 joins the room', async () => {
-				await player2Page.goto('/');
+				await player2Page.goto('./');
 				await player2Page.waitForLoadState('networkidle');
 				await player2Page.waitForTimeout(2000); // Wait for JS hydration
 
@@ -149,7 +149,7 @@ test.describe('Production Game Flow', () => {
 				const player3Context = await browser.newContext();
 				const player3Page = await player3Context.newPage();
 
-				await player3Page.goto('/');
+				await player3Page.goto('./');
 				await player3Page.waitForLoadState('networkidle');
 				await player3Page.waitForTimeout(2000); // Wait for JS hydration
 
@@ -195,7 +195,7 @@ test.describe('Production Game Flow', () => {
 		try {
 			// Player 1 uses quick match
 			await test.step('Player 1 uses quick match', async () => {
-				await player1Page.goto('/');
+				await player1Page.goto('./');
 				await player1Page.waitForLoadState('networkidle');
 				await player1Page.waitForTimeout(2000); // Wait for JS hydration
 
@@ -215,7 +215,7 @@ test.describe('Production Game Flow', () => {
 
 			// Player 2 uses quick match (should join Player 1's room)
 			await test.step('Player 2 uses quick match', async () => {
-				await player2Page.goto('/');
+				await player2Page.goto('./');
 				await player2Page.waitForLoadState('networkidle');
 				await player2Page.waitForTimeout(2000); // Wait for JS hydration
 
@@ -265,7 +265,7 @@ test.describe('Production Game Flow', () => {
 		await test.step('Measure page load time', async () => {
 			const startTime = Date.now();
 
-			await page.goto('/');
+			await page.goto('./');
 			await page.waitForLoadState('networkidle');
 
 			const loadTime = Date.now() - startTime;
@@ -287,7 +287,7 @@ test.describe('Production Game Flow', () => {
 
 		try {
 			await test.step('Mobile view works', async () => {
-				await mobilePage.goto('/');
+				await mobilePage.goto('./');
 				await mobilePage.waitForLoadState('networkidle');
 				await mobilePage.waitForTimeout(2000); // Wait for JS hydration
 
@@ -298,7 +298,7 @@ test.describe('Production Game Flow', () => {
 				// Verify mobile layout is functional
 				const nameInput = mobilePage.locator('[data-testid="player-name-input-create-test"]');
 				await expect(nameInput).toBeVisible({ timeout: 10000 });
-				
+
 				// Fill in player name to enable the button
 				await nameInput.fill('MobilePlayer');
 				await mobilePage.waitForTimeout(500); // Wait for validation

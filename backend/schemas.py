@@ -145,6 +145,26 @@ class PlayCardRequest(BaseModel):
         return v
 
 
+
+
+class TableBuildRequest(BaseModel):
+    """
+    Request schema for table-only build action (non-standard rule).
+    
+    Combines table cards into a build WITHOUT playing a hand card.
+    Does NOT consume a turn.
+    
+    Attributes:
+        room_id: Room identifier
+        player_id: Player identifier
+        target_cards: Table card IDs to combine into build
+        build_value: Target build value
+    """
+    room_id: str = Field(..., min_length=6, max_length=6)
+    player_id: int = Field(..., ge=1)
+    target_cards: List[str] = Field(..., min_length=2)
+    build_value: int = Field(..., ge=2, le=14)
+
 class StartShuffleRequest(BaseModel):
     """
     Request schema for starting the shuffle phase.
