@@ -420,10 +420,11 @@
       {#if isMyTurn}<span class="turn-indicator my-turn">Your Turn!</span>{/if}
     </div>
     <CapturedPile cards={myCapturedCards} playerName={myName || 'You'} position="bottom" />
-    <div class="hand my-hand">
+    <div class="hand my-hand" data-testid="player-hand">
       {#each myHand as card}
         <button
           class="hand-card"
+          data-testid="card-in-hand"
           class:selected={selectedCard?.id === card.id}
           class:playable={isMyTurn && !isProcessing}
           on:click={() => handleCardClick(card)}
@@ -470,7 +471,12 @@
               ></span>{:else}ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â
               Build{/if}
           </button>
-          <button class="btn-action btn-trail" on:click={handleTrail} disabled={isProcessing}>
+          <button
+            class="btn-action btn-trail"
+            on:click={handleTrail}
+            disabled={isProcessing}
+            data-testid="trail-action"
+          >
             {#if isProcessing}<span class="spinner"
               ></span>{:else}ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â¤ Trail{/if}
           </button>

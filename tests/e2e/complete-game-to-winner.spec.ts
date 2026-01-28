@@ -78,18 +78,18 @@ async function setReady(page: Page) {
 // Helper to play a card (trail action - safest move)
 async function playCard(page: Page): Promise<boolean> {
   try {
-    // Look for player hand cards
-    const handCards = page.locator('[data-testid="player-hand"] .card, [data-testid*="card"]').first()
+    // Look for player hand cards using the specific test ID
+    const handCards = page.locator('[data-testid="player-hand"] [data-testid="card-in-hand"]').first()
 
-    // Wait for card to be clickable
-    await handCards.waitFor({ state: 'visible', timeout: 5000 })
+    // Wait for card to be clickable - increased timeout for animations
+    await handCards.waitFor({ state: 'visible', timeout: 10000 })
     await handCards.click()
 
     // Wait a bit for UI to update
     await new Promise(resolve => setTimeout(resolve, 500))
 
     // Look for trail button
-    const trailButton = page.getByRole('button', { name: /trail/i }).first()
+    const trailButton = page.locator('[data-testid="trail-action"]')
     const trailVisible = await trailButton.isVisible().catch(() => false)
 
     if (trailVisible) {
