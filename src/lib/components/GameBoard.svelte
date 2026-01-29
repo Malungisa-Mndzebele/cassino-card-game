@@ -475,10 +475,11 @@
           >
             {#if isProcessing}<span class="spinner"></span>{:else}⬇️ Trail{/if}
           </button>
+        </div>
       </div>
-    </div>
+    {/if}
   </div>
-{/if}
+</div>
 {#if showExitConfirm}
   <div class="modal-overlay" on:click={handleExitCancel}>
     <div class="modal" on:click|stopPropagation>
