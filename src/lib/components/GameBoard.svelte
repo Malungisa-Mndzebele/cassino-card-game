@@ -354,8 +354,7 @@
   <div class="table-area">
     <h3 class="table-title">Table ({tableCards.length} cards)</h3>
     {#if selectedCard && isMyTurn}<p class="table-hint">
-        ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  Click or drag cards to select for
-        capture/build
+        👆 Click or drag cards to select for capture/build
       </p>{/if}
     <div class="table-cards">
       {#if tableCards.length === 0 && builds.length === 0}
@@ -440,7 +439,7 @@
       {/each}
     </div>
     {#if actionError}<div class="action-error">
-        ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â {actionError}
+        ⚠️ {actionError}
       </div>{/if}
     {#if selectedCard && isMyTurn}
       <div class="action-buttons">
@@ -459,17 +458,14 @@
             disabled={isProcessing ||
               (selectedTableCards.length === 0 && selectedBuildIds.length === 0)}
           >
-            {#if isProcessing}<span class="spinner"
-              ></span>{:else}ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¯ Capture{/if}
+            {#if isProcessing}<span class="spinner"></span>{:else}⚡ Capture{/if}
           </button>
           <button
             class="btn-action btn-build"
             on:click={handleBuildAction}
             disabled={isProcessing || selectedTableCards.length === 0}
           >
-            {#if isProcessing}<span class="spinner"
-              ></span>{:else}ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â
-              Build{/if}
+            {#if isProcessing}<span class="spinner"></span>{:else}🏗️ Build{/if}
           </button>
           <button
             class="btn-action btn-trail"
@@ -477,37 +473,8 @@
             disabled={isProcessing}
             data-testid="trail-action"
           >
-            {#if isProcessing}<span class="spinner"
-              ></span>{:else}ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â¤ Trail{/if}
+            {#if isProcessing}<span class="spinner"></span>{:else}⬇️ Trail{/if}
           </button>
-        </div>
-      </div>
-    {/if}
-  </div>
-</div>
-
-{#if showBuildModal}
-  <div class="modal-overlay" on:click={cancelBuildModal}>
-    <div class="modal" on:click|stopPropagation>
-      <h3 class="modal-title">Create Build</h3>
-      <p class="modal-desc">
-        Combining <strong>{selectedCard?.rank} of {selectedCard?.suit}</strong> with {selectedTableCards.length}
-        table card{selectedTableCards.length > 1 ? 's' : ''}
-      </p>
-      <div class="build-value-selector">
-        <label for="build-value">Build Value:</label>
-        <select id="build-value" bind:value={buildValue}
-          >{#each possibleBuildValues as value}<option {value}>{value}</option>{/each}</select
-        >
-      </div>
-      <p class="modal-hint">
-        You must have a card worth {buildValue} in your hand to capture this build later.
-      </p>
-      <div class="modal-buttons">
-        <button class="btn-cancel" on:click={cancelBuildModal}>Cancel</button>
-        <button class="btn-confirm" on:click={confirmBuild} disabled={isProcessing}
-          >{#if isProcessing}<span class="spinner"></span>{:else}Confirm Build{/if}</button
-        >
       </div>
     </div>
   </div>
@@ -529,7 +496,7 @@
 {#if isGameFinished}
   <div class="game-finished-overlay">
     <div class="game-finished-content">
-      <h2 class="finished-title">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  Game Over!</h2>
+      <h2 class="finished-title">🏆 Game Over!</h2>
       {#if winner}<p class="winner-text">
           {winnerName || (winner === 1 ? 'Player 1' : 'Player 2')} Wins!
         </p>{:else}<p class="tie-text">It's a Tie!</p>{/if}
@@ -546,9 +513,7 @@
           >
         </div>
       </div>
-      <button class="btn-end-game" on:click={handleEndGame}
-        >ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Âª End Game</button
-      >
+      <button class="btn-end-game" on:click={handleEndGame}>🚪 End Game</button>
     </div>
   </div>
 {/if}
