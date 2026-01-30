@@ -155,23 +155,26 @@
           }
         }
       } else if (hasOpponentBuild) {
-        // OPPONENT'S BUILD: Can augment to any valid higher value
-        const buildValueSum = selectedBuilds.reduce((sum, b) => sum + (b?.value || 0), 0);
+        // OPPONENT'S BUILD: Can augment with hand card ONLY (no table cards allowed)
+        // Only allow if no table cards are selected
+        if (tableCardsSum === 0) {
+          const buildValueSum = selectedBuilds.reduce((sum, b) => sum + (b?.value || 0), 0);
 
-        for (let v = 2; v <= 14; v++) {
-          if (v === handCardValue) continue;
+          for (let v = 2; v <= 14; v++) {
+            if (v === handCardValue) continue;
 
-          // Check if we have a card in hand to capture this value
-          const hasCapturingCard = myHandRef.some((c) => {
-            if (c.id === selectedCard?.id) return false;
-            return getCardValues(c).includes(v);
-          });
+            // Check if we have a card in hand to capture this value
+            const hasCapturingCard = myHandRef.some((c) => {
+              if (c.id === selectedCard?.id) return false;
+              return getCardValues(c).includes(v);
+            });
 
-          if (!hasCapturingCard) continue;
+            if (!hasCapturingCard) continue;
 
-          // Check if hand card + table cards + builds can make this value
-          if (handCardValue + tableCardsSum + buildValueSum === v) {
-            validValues.push(v);
+            // Check if hand card + build value = new value (no table cards)
+            if (handCardValue + buildValueSum === v) {
+              validValues.push(v);
+            }
           }
         }
       }
