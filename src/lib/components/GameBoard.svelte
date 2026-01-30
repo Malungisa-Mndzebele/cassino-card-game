@@ -3,7 +3,7 @@
   import { gameStore } from '$stores/gameStore';
   import { connectionStore } from '$stores/connectionStore';
   import { Card, CapturedPile } from '$components';
-  import { playCard } from '$lib/utils/api';
+  import { playCard, tableBuild } from '$lib/utils/api';
   import type { Card as CardType } from '$types/game';
 
   $: gameState = $gameStore.gameState;
@@ -52,6 +52,13 @@
   let dragBuildCard: CardType | null = null;
   let dragTargetCard: CardType | null = null;
   $: dragBuildValues = calculateDragBuildValues();
+
+  // Table-only build state (building with just table cards, no hand card used)
+  let showTableBuildModal = false;
+  let tableBuildValue: number = 2;
+
+  // Calculate possible table-only build values (sum of selected table cards that we can capture with a hand card)
+  $: tableBuildValues = calculateTableBuildValues(selectedTableCards, tableCards, myHand);
 
   function calculateDragBuildValues(): number[] {
     if (!dragBuildCard || !dragTargetCard) return [];
@@ -192,6 +199,35 @@
     return false;
   }
 
+  // Calculate possible build values when only table cards are selected (no hand card)
+  function calculateTableBuildValues(
+    selectedIds: string[],
+    tableCardsRef: CardType[],
+    myHandRef: CardType[]
+  ): number[] {
+    if (selectedIds.length < 2) return []; // Need at least 2 table cards to combine
+
+    const selectedCards = selectedIds
+      .map((id) => tableCardsRef.find((c) => c.id === id))
+      .filter(Boolean) as CardType[];
+
+    if (selectedCards.length < 2) return [];
+
+    // Calculate sum of selected table cards
+    const tableSum = selectedCards.reduce((sum, card) => sum + getCardValue(card), 0);
+
+    // Check if we have a card in hand that can capture this value
+    const validValues: number[] = [];
+
+    // The build value would just be the sum of the table cards
+    const hasCapturingCard = myHandRef.some((c) => getCardValues(c).includes(tableSum));
+    if (hasCapturingCard && tableSum >= 2 && tableSum <= 14) {
+      validValues.push(tableSum);
+    }
+
+    return validValues;
+  }
+
   function handleCardClick(card: CardType) {
     if (!isMyTurn || isProcessing) return;
     actionError = '';
@@ -327,6 +363,51 @@
       isProcessing = false;
     }
   }
+
+  // Handle table-only build (combining table cards without using a hand card)
+  function handleTableBuildAction() {
+    if (selectedTableCards.length < 2) {
+      actionError = 'Select at least 2 table cards to combine into a build';
+      return;
+    }
+    if (tableBuildValues.length === 0) {
+      actionError = 'No valid table build possible. You need a card in hand that matches the sum.';
+      return;
+    }
+    tableBuildValue = tableBuildValues[0];
+    showTableBuildModal = true;
+  }
+
+  async function confirmTableBuild() {
+    if (!roomId || !playerId) return;
+    isProcessing = true;
+    actionError = '';
+    showTableBuildModal = false;
+    try {
+      const response = await tableBuild(
+        roomId,
+        String(playerId),
+        selectedTableCards,
+        tableBuildValue
+      );
+
+      if (response.game_state) {
+        gameStore.setGameState(response.game_state);
+      }
+      // Don't clear selectedCard - player can still use it for trail
+      selectedTableCards = [];
+      selectedBuildIds = [];
+    } catch (err: any) {
+      actionError = err.message || 'Table build failed';
+    } finally {
+      isProcessing = false;
+    }
+  }
+
+  function cancelTableBuildModal() {
+    showTableBuildModal = false;
+  }
+
   function handleExitClick() {
     showExitConfirm = true;
   }
@@ -510,8 +591,27 @@
           {#if selectedBuildIds.length > 0}<span>
               + {selectedBuildIds.length} build{selectedBuildIds.length !== 1 ? 's' : ''}</span
             >{/if}
+          {#if tableBuildValues.length > 0}
+            <span class="table-build-sum"> (Sum: {tableBuildValues[0]})</span>
+          {/if}
         </p>
-        <p class="pre-selection-prompt">👆 Now select a card from your hand to play</p>
+
+        {#if tableBuildValues.length > 0}
+          <div class="pre-selection-actions">
+            <button
+              class="btn-action btn-table-build"
+              on:click={handleTableBuildAction}
+              disabled={isProcessing}
+            >
+              {#if isProcessing}<span class="spinner"></span>{:else}🏗️ Build ({tableBuildValues[0]}){/if}
+            </button>
+          </div>
+          <p class="pre-selection-note">Build these cards, then trail a different card</p>
+        {:else}
+          <p class="pre-selection-prompt">
+            👆 Select a card from your hand, or add more table cards to build
+          </p>
+        {/if}
       </div>
     {/if}
   </div>
@@ -524,6 +624,25 @@
       <div class="modal-buttons">
         <button class="btn-cancel" on:click={handleExitCancel}>Stay</button>
         <button class="btn-confirm btn-exit-confirm" on:click={handleExitConfirm}>Leave Game</button
+        >
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if showTableBuildModal}
+  <div class="modal-overlay" on:click={cancelTableBuildModal}>
+    <div class="modal" on:click|stopPropagation>
+      <h3 class="modal-title">🏗️ Table Build</h3>
+      <p class="modal-desc">
+        Combine {selectedTableCards.length} table cards into a build of value
+        <strong>{tableBuildValue}</strong>
+      </p>
+      <p class="modal-hint">This doesn't use a hand card, so you can still trail afterward!</p>
+      <div class="modal-buttons">
+        <button class="btn-cancel" on:click={cancelTableBuildModal}>Cancel</button>
+        <button class="btn-confirm" on:click={confirmTableBuild} disabled={isProcessing}
+          >{#if isProcessing}<span class="spinner"></span>{:else}Confirm Build{/if}</button
         >
       </div>
     </div>
@@ -1131,5 +1250,24 @@
     color: #10b981;
     font-size: 0.875rem;
     animation: pulse 2s infinite;
+  }
+  .pre-selection-actions {
+    margin: 1rem 0 0.5rem;
+  }
+  .pre-selection-note {
+    color: #9ca3af;
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+  }
+  .table-build-sum {
+    color: #10b981;
+    font-weight: 600;
+  }
+  .btn-table-build {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+  }
+  .btn-table-build:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
   }
 </style>
