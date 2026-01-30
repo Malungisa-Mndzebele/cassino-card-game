@@ -94,7 +94,8 @@
     selectedCard,
     selectedTableCards,
     selectedBuildIds,
-    builds
+    builds,
+    isPlayer1
   );
 
   function calculatePossibleBuildValues(
@@ -103,7 +104,8 @@
     handCard: typeof selectedCard,
     selectedIds: typeof selectedTableCards,
     selectedBuildIdsList: typeof selectedBuildIds,
-    buildsRef: typeof builds
+    buildsRef: typeof builds,
+    amIPlayer1: boolean
   ): number[] {
     if (!handCard) return [];
     // Need either table cards or builds selected
@@ -113,37 +115,83 @@
 
     const handCardValue = getCardValue(handCard);
     const validValues: number[] = [];
+    const myPlayerNum = amIPlayer1 ? 1 : 2;
 
     // Get selected table cards
     const selectedCards = selectedIds
       .map((id) => tableCardsRef.find((c) => c.id === id))
       .filter(Boolean) as CardType[];
 
-    // Get selected builds and their values
+    // Get selected builds
     const selectedBuilds = selectedBuildIdsList
       .map((id) => buildsRef.find((b) => b.id === id))
       .filter(Boolean);
-    const buildValueSum = selectedBuilds.reduce((sum, b) => sum + (b?.value || 0), 0);
+
+    // Check if any selected build is opponent's (can augment) or all are mine (can only add at same value)
+    const hasOpponentBuild = selectedBuilds.some((b) => b?.owner !== myPlayerNum);
+    const hasMyBuild = selectedBuilds.some((b) => b?.owner === myPlayerNum);
 
     // Calculate table cards sum
     const tableCardsSum = selectedCards.reduce((sum, card) => sum + getCardValue(card), 0);
 
-    for (let v = 2; v <= 14; v++) {
-      if (v === handCardValue) continue;
+    if (selectedBuilds.length > 0) {
+      if (hasMyBuild && !hasOpponentBuild) {
+        // OWN BUILD: Can only add cards at the SAME value (creating a multiple build)
+        // All selected builds must have the same value
+        const buildValue = selectedBuilds[0]?.value || 0;
+        const allSameValue = selectedBuilds.every((b) => b?.value === buildValue);
 
-      // Check if we have a card in hand to capture this value
-      const hasCapturingCard = myHandRef.some((c) => {
-        if (c.id === selectedCard?.id) return false;
-        const cardValues = getCardValues(c);
-        return cardValues.includes(v);
-      });
+        if (allSameValue && buildValue >= 2 && buildValue <= 14) {
+          // Check if hand card + table cards = the build value (to add to own build)
+          if (handCardValue + tableCardsSum === buildValue) {
+            // Check if we have a card in hand to capture this value
+            const hasCapturingCard = myHandRef.some((c) => {
+              if (c.id === selectedCard?.id) return false;
+              return getCardValues(c).includes(buildValue);
+            });
+            if (hasCapturingCard) {
+              validValues.push(buildValue);
+            }
+          }
+        }
+      } else if (hasOpponentBuild) {
+        // OPPONENT'S BUILD: Can augment to any valid higher value
+        const buildValueSum = selectedBuilds.reduce((sum, b) => sum + (b?.value || 0), 0);
 
-      if (!hasCapturingCard) continue;
+        for (let v = 2; v <= 14; v++) {
+          if (v === handCardValue) continue;
 
-      // Check if hand card + table cards + builds can make this value
-      // handCardValue + tableCardsSum + buildValueSum = v
-      if (handCardValue + tableCardsSum + buildValueSum === v) {
-        validValues.push(v);
+          // Check if we have a card in hand to capture this value
+          const hasCapturingCard = myHandRef.some((c) => {
+            if (c.id === selectedCard?.id) return false;
+            return getCardValues(c).includes(v);
+          });
+
+          if (!hasCapturingCard) continue;
+
+          // Check if hand card + table cards + builds can make this value
+          if (handCardValue + tableCardsSum + buildValueSum === v) {
+            validValues.push(v);
+          }
+        }
+      }
+    } else {
+      // No builds selected - just table cards (regular build)
+      for (let v = 2; v <= 14; v++) {
+        if (v === handCardValue) continue;
+
+        // Check if we have a card in hand to capture this value
+        const hasCapturingCard = myHandRef.some((c) => {
+          if (c.id === selectedCard?.id) return false;
+          return getCardValues(c).includes(v);
+        });
+
+        if (!hasCapturingCard) continue;
+
+        // Check if hand card + table cards can make this value
+        if (handCardValue + tableCardsSum === v) {
+          validValues.push(v);
+        }
       }
     }
 
