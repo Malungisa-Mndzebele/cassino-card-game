@@ -87,43 +87,62 @@
     }
     return validValues.sort((a, b) => a - b);
   }
-  // Force reactivity by explicitly depending on ALL variables used in calculation
-  // selectedCard and selectedTableCards must be in the reactive statement for proper updates
+  // Include selectedBuildIds in the reactive calculation
   $: possibleBuildValues = calculatePossibleBuildValues(
     tableCards,
     myHand,
     selectedCard,
-    selectedTableCards
+    selectedTableCards,
+    selectedBuildIds,
+    builds
   );
 
   function calculatePossibleBuildValues(
     tableCardsRef: typeof tableCards,
     myHandRef: typeof myHand,
     handCard: typeof selectedCard,
-    selectedIds: typeof selectedTableCards
+    selectedIds: typeof selectedTableCards,
+    selectedBuildIdsList: typeof selectedBuildIds,
+    buildsRef: typeof builds
   ): number[] {
-    if (!handCard || selectedIds.length === 0) {
+    if (!handCard) return [];
+    // Need either table cards or builds selected
+    if (selectedIds.length === 0 && selectedBuildIdsList.length === 0) {
       return [];
     }
+
     const handCardValue = getCardValue(handCard);
     const validValues: number[] = [];
 
+    // Get selected table cards
     const selectedCards = selectedIds
-      .map((id) => {
-        const found = tableCardsRef.find((c) => c.id === id);
-        return found;
-      })
+      .map((id) => tableCardsRef.find((c) => c.id === id))
       .filter(Boolean) as CardType[];
+
+    // Get selected builds and their values
+    const selectedBuilds = selectedBuildIdsList
+      .map((id) => buildsRef.find((b) => b.id === id))
+      .filter(Boolean);
+    const buildValueSum = selectedBuilds.reduce((sum, b) => sum + (b?.value || 0), 0);
+
+    // Calculate table cards sum
+    const tableCardsSum = selectedCards.reduce((sum, card) => sum + getCardValue(card), 0);
+
     for (let v = 2; v <= 14; v++) {
       if (v === handCardValue) continue;
+
+      // Check if we have a card in hand to capture this value
       const hasCapturingCard = myHandRef.some((c) => {
         if (c.id === selectedCard?.id) return false;
         const cardValues = getCardValues(c);
-        const matches = cardValues.includes(v);
-        return matches;
+        return cardValues.includes(v);
       });
-      const canMake = canMakeValueWithCards(v, handCard, selectedCards);
-      if (hasCapturingCard && canMake) {
+
+      if (!hasCapturingCard) continue;
+
+      // Check if hand card + table cards + builds can make this value
+      // handCardValue + tableCardsSum + buildValueSum = v
+      if (handCardValue + tableCardsSum + buildValueSum === v) {
         validValues.push(v);
       }
     }
@@ -295,8 +314,9 @@
   }
   function handleBuildAction() {
     if (!selectedCard) return;
-    if (selectedTableCards.length === 0) {
-      actionError = 'Select table cards to combine into a build';
+    // Allow building with either table cards OR builds selected (for augmenting)
+    if (selectedTableCards.length === 0 && selectedBuildIds.length === 0) {
+      actionError = 'Select table cards or a build to combine';
       return;
     }
     const handValue = getCardValue(selectedCard);
@@ -304,7 +324,12 @@
       const card = tableCards.find((c) => c.id === cardId);
       return sum + (card ? getCardValue(card) : 0);
     }, 0);
-    buildValue = handValue + tableSum;
+    // Add the value of any selected builds
+    const buildSum = selectedBuildIds.reduce((sum, buildId) => {
+      const build = builds.find((b) => b.id === buildId);
+      return sum + (build ? build.value : 0);
+    }, 0);
+    buildValue = handValue + tableSum + buildSum;
     if (possibleBuildValues.length === 0) {
       actionError = 'No valid build possible. You need a card in hand to capture the build.';
       return;
@@ -319,12 +344,14 @@
     actionError = '';
     showBuildModal = false;
     try {
+      // Combine table cards and build IDs - backend expects build IDs in target_cards too
+      const targetCards = [...selectedTableCards, ...selectedBuildIds];
       const response = await playCard(
         roomId,
         String(playerId),
         selectedCard.id,
         'build',
-        selectedTableCards,
+        targetCards,
         buildValue
       );
 
@@ -553,6 +580,9 @@
                 ? 's'
                 : ''}</span
             >{/if}
+          {#if selectedBuildIds.length > 0}<span class="with-cards"
+              >+ {selectedBuildIds.length} build{selectedBuildIds.length > 1 ? 's' : ''}</span
+            >{/if}
         </p>
         <div class="buttons">
           <button
@@ -566,7 +596,8 @@
           <button
             class="btn-action btn-build"
             on:click={handleBuildAction}
-            disabled={isProcessing || selectedTableCards.length === 0}
+            disabled={isProcessing ||
+              (selectedTableCards.length === 0 && selectedBuildIds.length === 0)}
           >
             {#if isProcessing}<span class="spinner"></span>{:else}🏗️ Build{/if}
           </button>
