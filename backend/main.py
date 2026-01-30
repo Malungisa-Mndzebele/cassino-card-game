@@ -1849,18 +1849,22 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
     elif request.action == "build":
         # Validate build
         target_cards = [card for card in table_cards if card.id in (request.target_cards or [])]
+        # Also extract builds from target_cards (for adding to existing builds)
+        target_builds = [build for build in builds if build.id in (request.target_cards or [])]
         
-        if not game_logic.validate_build(hand_card, target_cards, request.build_value or 0, player_hand):
+        if not game_logic.validate_build(hand_card, target_cards, request.build_value or 0, player_hand, target_builds):
             raise HTTPException(status_code=400, detail="Invalid build")
         
         # Execute build
         remaining_table_cards, new_build = game_logic.execute_build(
-            hand_card, target_cards, request.build_value or 0, request.player_id
+            hand_card, target_cards, request.build_value or 0, request.player_id, target_builds
         )
         
         # Update game state
         player_hand.remove(hand_card)
         table_cards = [card for card in table_cards if card not in target_cards]
+        # Remove the target builds that were incorporated into the new build
+        builds = [b for b in builds if b.id not in [tb.id for tb in target_builds]]
         builds.append(new_build)
         
     elif request.action == "trail":
