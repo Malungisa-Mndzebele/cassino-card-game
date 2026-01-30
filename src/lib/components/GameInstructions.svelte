@@ -1,14 +1,14 @@
 <script lang="ts">
   let showModal = false;
-  
+
   function openModal() {
     showModal = true;
   }
-  
+
   function closeModal() {
     showModal = false;
   }
-  
+
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       closeModal();
@@ -18,17 +18,13 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<button
-  on:click={openModal}
-  class="btn-instructions"
-  aria-label="How to Play"
->
+<button on:click={openModal} class="btn-instructions" aria-label="How to Play">
   📖 How to Play
 </button>
 
 {#if showModal}
   <!-- Modal Backdrop -->
-  <div 
+  <div
     class="modal-backdrop"
     on:click={closeModal}
     on:keydown={(e) => e.key === 'Enter' && closeModal()}
@@ -37,7 +33,7 @@
     aria-label="Close modal"
   >
     <!-- Modal Content -->
-    <div 
+    <div
       class="modal-content"
       on:click|stopPropagation
       on:keydown|stopPropagation
@@ -47,13 +43,7 @@
       tabindex="-1"
     >
       <!-- Close Button -->
-      <button
-        on:click={closeModal}
-        class="close-btn"
-        aria-label="Close"
-      >
-        ✕
-      </button>
+      <button on:click={closeModal} class="close-btn" aria-label="Close"> ✕ </button>
 
       <!-- Header -->
       <div class="modal-header">
@@ -67,7 +57,9 @@
         <section class="section">
           <h3 class="section-title">🎯 Objective</h3>
           <p class="section-text">
-            Capture cards from the table to score points. First player to reach <strong>11 points</strong> wins!
+            Capture cards from the table to score points. First player to reach <strong
+              >11 points</strong
+            > wins!
           </p>
         </section>
 
@@ -85,8 +77,10 @@
         <!-- Actions -->
         <section class="section">
           <h3 class="section-title">🎮 Your Turn Actions</h3>
-          <p class="section-text mb-3">On your turn, you must play one card from your hand. Choose one action:</p>
-          
+          <p class="section-text mb-3">
+            On your turn, you must play one card from your hand. Choose one action:
+          </p>
+
           <div class="action-card capture">
             <h4 class="action-title">⚡ Capture</h4>
             <p class="action-desc">
@@ -100,14 +94,38 @@
           </div>
 
           <div class="action-card build">
-            <h4 class="action-title">🔨 Build</h4>
+            <h4 class="action-title">🏗️ Build</h4>
             <p class="action-desc">
-              Combine your card with table cards to create a "build" for later capture:
+              Combine cards to create a "build" for later capture. There are several ways to build:
             </p>
             <ul class="action-list">
-              <li>Play a 3 on a 5 to make a "build of 8"</li>
-              <li>You must have an 8 in hand to capture it later</li>
-              <li>Opponent can steal your build if they have the matching card!</li>
+              <li>
+                <strong>Regular Build:</strong> Play a card from your hand + table cards
+                <br /><em
+                  >Example: Play a 3 on a 5 to make a "build of 8" (need an 8 in hand to capture
+                  later)</em
+                >
+              </li>
+              <li>
+                <strong>Table-Only Build:</strong> Pre-select table cards, then click Build
+                <br /><em
+                  >Example: Select a 4 and 3 on the table to make a "build of 7" (then you can still
+                  trail a card!)</em
+                >
+              </li>
+              <li>
+                <strong>Add to Your Build:</strong> Add another combination at the SAME value
+                <br /><em
+                  >Example: You have a 7 build → add a 2 from hand + 5 from table = another 7 combo</em
+                >
+              </li>
+              <li>
+                <strong>Augment Opponent's Build:</strong> Increase their build's value using ONLY
+                your hand card
+                <br /><em
+                  >Example: Opponent has a 7 build → play a 2 to make it a 9 build (now yours!)</em
+                >
+              </li>
             </ul>
           </div>
 
@@ -182,18 +200,28 @@
         <section class="section">
           <h3 class="section-title">🖱️ Controls</h3>
           <ul class="list">
-            <li><strong>Click</strong> a card from your hand to select it</li>
-            <li><strong>Click</strong> table cards to select them for capture/build</li>
-            <li>Click the <strong>Capture</strong>, <strong>Build</strong>, or <strong>Trail</strong> button</li>
+            <li>
+              <strong>Click</strong> table cards to pre-select them (you can select before choosing your
+              hand card!)
+            </li>
+            <li><strong>Click</strong> a card from your hand to select it for play</li>
+            <li><strong>Click</strong> builds to select them for capture or augment</li>
+            <li>
+              Click the <strong>Capture</strong>, <strong>Build</strong>, or <strong>Trail</strong> button
+            </li>
+            <li>
+              <em
+                >Tip: Pre-select table cards first for table-only builds, then trail a different
+                card!</em
+              >
+            </li>
           </ul>
         </section>
       </div>
 
       <!-- Footer -->
       <div class="modal-footer">
-        <button on:click={closeModal} class="btn-got-it">
-          Got it! Let's Play 🎲
-        </button>
+        <button on:click={closeModal} class="btn-got-it"> Got it! Let's Play 🎲 </button>
       </div>
     </div>
   </div>
