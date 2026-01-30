@@ -172,6 +172,26 @@
     return false;
   }
 
+  function canMakeValueWithCards(
+    targetValue: number,
+    handCard: CardType,
+    tableCards: CardType[]
+  ): boolean {
+    // Check if hand card value + sum of some/all table cards equals target value
+    const handValues = getCardValues(handCard);
+
+    for (const handValue of handValues) {
+      const neededValue = targetValue - handValue;
+      if (neededValue <= 0) continue;
+
+      // Check if table cards can sum to the needed value
+      if (canSumTo(tableCards, neededValue)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function handleCardClick(card: CardType) {
     if (!isMyTurn || isProcessing) return;
     actionError = '';
