@@ -468,13 +468,17 @@ class CasinoGameLogic:
         remaining_table_cards = []
         remaining_builds = []
         
+        # Get all possible values for the hand card (Aces can be 1 or 14)
+        hand_values = self.get_card_values(hand_card)
+        
         # Add target cards to captured pile
         for card in target_cards:
             captured_cards.append(card)
         
         # Add build cards to captured pile and remove build
+        # Check if build value matches any of the hand card's possible values
         for build in builds:
-            if build.value == hand_card.value:
+            if build.value in hand_values:
                 captured_cards.extend(build.cards)
             else:
                 remaining_builds.append(build)
