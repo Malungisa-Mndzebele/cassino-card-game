@@ -196,17 +196,18 @@
     if (!isMyTurn || isProcessing) return;
     actionError = '';
     if (selectedCard?.id === card.id) {
+      // Deselecting - clear everything
       selectedCard = null;
       selectedTableCards = [];
       selectedBuildIds = [];
     } else {
+      // Selecting a hand card - keep any pre-selected table cards/builds
       selectedCard = card;
-      selectedTableCards = [];
-      selectedBuildIds = [];
+      // Don't clear selectedTableCards and selectedBuildIds to preserve pre-selection
     }
   }
   function handleTableCardClick(card: CardType) {
-    if (!isMyTurn || !selectedCard || isProcessing) return;
+    if (!isMyTurn || isProcessing) return;
     actionError = '';
     if (selectedTableCards.includes(card.id)) {
       selectedTableCards = selectedTableCards.filter((id) => id !== card.id);
@@ -215,7 +216,7 @@
     }
   }
   function handleBuildClick(build: any) {
-    if (!isMyTurn || !selectedCard || isProcessing) return;
+    if (!isMyTurn || isProcessing) return;
     actionError = '';
     if (selectedBuildIds.includes(build.id)) {
       selectedBuildIds = selectedBuildIds.filter((id) => id !== build.id);
@@ -373,8 +374,9 @@
 
   <div class="table-area">
     <h3 class="table-title">Table ({tableCards.length} cards)</h3>
-    {#if selectedCard && isMyTurn}<p class="table-hint">
-        👆 Click or drag cards to select for capture/build
+    {#if isMyTurn}<p class="table-hint">
+        👆 {#if selectedCard}Select cards to capture/build{:else}Pre-select table cards, then pick a
+          hand card{/if}
       </p>{/if}
     <div class="table-cards">
       {#if tableCards.length === 0 && builds.length === 0}
@@ -384,14 +386,14 @@
           <button
             class="table-card-btn"
             class:selected={selectedTableCards.includes(card.id)}
-            class:selectable={selectedCard && isMyTurn}
+            class:selectable={isMyTurn}
             on:click={() => handleTableCardClick(card)}
-            disabled={!selectedCard || !isMyTurn || isProcessing}
+            disabled={!isMyTurn || isProcessing}
           >
             <Card
               {card}
               size="medium"
-              isPlayable={!!selectedCard && isMyTurn}
+              isPlayable={isMyTurn}
               isSelected={selectedTableCards.includes(card.id)}
             />
           </button>
@@ -408,7 +410,7 @@
               class:my-build={build.owner === (isPlayer1 ? 1 : 2)}
               class:selected={selectedBuildIds.includes(build.id)}
               on:click={() => handleBuildClick(build)}
-              disabled={!selectedCard || !isMyTurn || isProcessing}
+              disabled={!isMyTurn || isProcessing}
             >
               <span class="build-value">Value: {build.value}</span>
               <div class="build-cards">
@@ -496,6 +498,20 @@
             {#if isProcessing}<span class="spinner"></span>{:else}⬇️ Trail{/if}
           </button>
         </div>
+      </div>
+    {:else if !selectedCard && isMyTurn && (selectedTableCards.length > 0 || selectedBuildIds.length > 0)}
+      <div class="pre-selection-hint">
+        <p class="pre-selection-info">
+          📋 Pre-selected: <strong
+            >{selectedTableCards.length} table card{selectedTableCards.length !== 1
+              ? 's'
+              : ''}</strong
+          >
+          {#if selectedBuildIds.length > 0}<span>
+              + {selectedBuildIds.length} build{selectedBuildIds.length !== 1 ? 's' : ''}</span
+            >{/if}
+        </p>
+        <p class="pre-selection-prompt">👆 Now select a card from your hand to play</p>
       </div>
     {/if}
   </div>
@@ -1092,5 +1108,28 @@
   .btn-end-game:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  }
+
+  /* Pre-selection hint styles */
+  .pre-selection-hint {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 0.75rem;
+    text-align: center;
+  }
+  .pre-selection-info {
+    color: #3b82f6;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+  .pre-selection-info strong {
+    color: #60a5fa;
+  }
+  .pre-selection-prompt {
+    color: #10b981;
+    font-size: 0.875rem;
+    animation: pulse 2s infinite;
   }
 </style>
