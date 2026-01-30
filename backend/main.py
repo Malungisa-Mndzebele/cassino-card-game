@@ -2041,8 +2041,9 @@ async def table_build(request: TableBuildRequest, db: AsyncSession = Depends(get
     if not game_logic.validate_table_build(target_cards, request.build_value, player_hand):
         raise HTTPException(status_code=400, detail="Invalid table build. Cards must sum to build value and you need a card to capture it.")
     
-    # Execute table build
-    new_build = game_logic.execute_table_build(target_cards, request.build_value, request.player_id)
+    # Execute table build - use player number (1 or 2), not database ID
+    player_num = 1 if is_player1 else 2
+    new_build = game_logic.execute_table_build(target_cards, request.build_value, player_num)
     
     # Update game state - remove cards from table, add build
     table_cards = [card for card in table_cards if card.id not in request.target_cards]
