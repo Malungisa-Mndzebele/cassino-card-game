@@ -146,7 +146,7 @@
           if (handCardValue + tableCardsSum === buildValue) {
             // Check if we have a card in hand to capture this value
             const hasCapturingCard = myHandRef.some((c) => {
-              if (c.id === selectedCard?.id) return false;
+              if (c.id === handCard?.id) return false;
               return getCardValues(c).includes(buildValue);
             });
             if (hasCapturingCard) {
@@ -165,7 +165,7 @@
 
             // Check if we have a card in hand to capture this value
             const hasCapturingCard = myHandRef.some((c) => {
-              if (c.id === selectedCard?.id) return false;
+              if (c.id === handCard?.id) return false;
               return getCardValues(c).includes(v);
             });
 
@@ -185,7 +185,7 @@
 
         // Check if we have a card in hand to capture this value
         const hasCapturingCard = myHandRef.some((c) => {
-          if (c.id === selectedCard?.id) return false;
+          if (c.id === handCard?.id) return false;
           return getCardValues(c).includes(v);
         });
 
