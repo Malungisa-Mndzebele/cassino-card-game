@@ -33,16 +33,14 @@ test.describe('Production Game Flow', () => {
 				await expect(createButton).toBeEnabled({ timeout: 10000 });
 				await createButton.click();
 
-				// Wait for "Room Created!" heading to appear
-				await player1Page.waitForSelector('text=/Room Created/i', { timeout: 20000 });
+				// Wait for "Waiting for Opponent" view to appear
+				await player1Page.waitForSelector('text=Waiting for Opponent', { timeout: 20000 });
 
-				// Wait for the room code element to be visible
-				const roomCodeElement = player1Page.locator('.text-5xl.font-bold.tracking-widest');
-				await expect(roomCodeElement).toBeVisible({ timeout: 10000 });
-
-				// Extract room code
-				roomCode = (await roomCodeElement.textContent() || '').trim();
-				expect(roomCode).toMatch(/^[A-Z0-9]{6}$/);
+				// Extract room code from page
+				const bodyText = await player1Page.textContent('body');
+				const roomCodeMatch = bodyText?.match(/\b[A-Z0-9]{6}\b/);
+				expect(roomCodeMatch).toBeTruthy();
+				roomCode = roomCodeMatch?.[0] || '';
 
 				console.log(`Room created with code: ${roomCode}`);
 

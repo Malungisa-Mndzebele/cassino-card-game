@@ -60,8 +60,8 @@ test.describe('Live/Production E2E Tests', () => {
         const createButton = page.locator('[data-testid="create-room-test"]');
         await createButton.click();
 
-        // Wait for room to be created - look for "Room Created!" heading
-        await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+        // Wait for room to be created - app navigates to waiting room view
+        await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
 
         console.log('✅ Room created successfully on production');
     });
@@ -75,16 +75,15 @@ test.describe('Live/Production E2E Tests', () => {
         await page.locator('[data-testid="player-name-input-create-test"]').fill('CodeTest');
         await page.locator('[data-testid="create-room-test"]').click();
 
-        // Wait for room created heading
-        await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+        // Wait for waiting room view
+        await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
 
-        // Check for room code element (6-character code in the styled element)
-        const roomCodeElement = page.locator('.text-5xl.font-bold.tracking-widest');
-        await expect(roomCodeElement).toBeVisible({ timeout: 10000 });
+        // Check for room code element (6-character code)
+        const bodyText = await page.textContent('body');
+        const roomCodeMatch = bodyText?.match(/\b[A-Z0-9]{6}\b/);
         
-        const roomCode = await roomCodeElement.textContent();
-        expect(roomCode).toMatch(/^[A-Z0-9]{6}$/);
-        console.log(`✅ Room code displayed: ${roomCode}`);
+        expect(roomCodeMatch).toBeTruthy();
+        console.log(`✅ Room code displayed: ${roomCodeMatch?.[0]}`);
     });
 
     test('should show player in waiting room', async ({ page }) => {
@@ -96,11 +95,11 @@ test.describe('Live/Production E2E Tests', () => {
         await page.locator('[data-testid="player-name-input-create-test"]').fill(playerName);
         await page.locator('[data-testid="create-room-test"]').click();
 
-        // Wait for room to be created
-        await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+        // Wait for waiting room view
+        await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
 
-        // Check "Waiting for opponent" message appears
-        await expect(page.locator('text=Waiting for opponent')).toBeVisible({ timeout: 10000 });
+        // Check player name appears in the room
+        await expect(page.locator(`text=${playerName}`)).toBeVisible({ timeout: 10000 });
 
         console.log('✅ Player visible in waiting room');
     });
@@ -120,8 +119,8 @@ test.describe('Live/Production E2E Tests', () => {
         await page.locator('[data-testid="player-name-input-create-test"]').fill('WSTest');
         await page.locator('[data-testid="create-room-test"]').click();
 
-        // Wait for room creation
-        await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+        // Wait for waiting room view
+        await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
 
         // Wait a bit for WebSocket to connect
         await page.waitForTimeout(3000);

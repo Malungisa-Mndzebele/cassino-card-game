@@ -16,8 +16,8 @@ test.describe('Production Session Management', () => {
     await page.locator('[data-testid="player-name-input-create-test"]').fill('SessionTest');
     await page.locator('[data-testid="create-room-test"]').click();
     
-    // Wait for room to be created
-    await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+    // Wait for waiting room view
+    await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
     
     // Check localStorage for session token (check multiple possible keys)
     const sessionToken = await page.evaluate(() => {
@@ -44,12 +44,13 @@ test.describe('Production Session Management', () => {
     await page.locator('[data-testid="player-name-input-create-test"]').fill('RefreshTest');
     await page.locator('[data-testid="create-room-test"]').click();
     
-    // Wait for room
-    await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+    // Wait for waiting room view
+    await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
     
-    // Get room code
-    const roomCodeElement = page.locator('.text-5xl.font-bold.tracking-widest');
-    const roomCode = await roomCodeElement.textContent();
+    // Get room code from page
+    const bodyText = await page.textContent('body');
+    const roomCodeMatch = bodyText?.match(/\b[A-Z0-9]{6}\b/);
+    const roomCode = roomCodeMatch?.[0];
     
     console.log('Room code:', roomCode);
     
@@ -58,7 +59,7 @@ test.describe('Production Session Management', () => {
     await page.waitForLoadState('networkidle');
     
     // Check if we're still in the room or back to home
-    const stillInRoom = await page.locator('text=Room Created!').isVisible({ timeout: 5000 }).catch(() => false);
+    const stillInRoom = await page.locator('text=Waiting for Opponent').isVisible({ timeout: 5000 }).catch(() => false);
     const backToHome = await page.locator('text=Create New Room').isVisible({ timeout: 5000 }).catch(() => false);
     
     if (stillInRoom) {
@@ -89,8 +90,8 @@ test.describe('Production Session Management', () => {
     await page.locator('[data-testid="player-name-input-create-test"]').fill('WSSessionTest');
     await page.locator('[data-testid="create-room-test"]').click();
     
-    // Wait for room creation
-    await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+    // Wait for waiting room view
+    await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
     
     // Wait for WebSocket messages
     await page.waitForTimeout(3000);
@@ -112,11 +113,12 @@ test.describe('Production Session Management', () => {
     await page.locator('[data-testid="player-name-input-create-test"]').fill('ConcurrentTest');
     await page.locator('[data-testid="create-room-test"]').click();
     
-    await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
     
-    // Get room code
-    const roomCodeElement = page.locator('.text-5xl.font-bold.tracking-widest');
-    const roomCode = await roomCodeElement.textContent();
+    // Get room code from page
+    const bodyText = await page.textContent('body');
+    const roomCodeMatch = bodyText?.match(/\b[A-Z0-9]{6}\b/);
+    const roomCode = roomCodeMatch?.[0];
     
     console.log('Room code:', roomCode);
     
@@ -159,7 +161,7 @@ test.describe('Production Session Management', () => {
     await page.locator('[data-testid="player-name-input-create-test"]').fill('HeartbeatTest');
     await page.locator('[data-testid="create-room-test"]').click();
     
-    await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
     
     // Wait for heartbeats (they should be sent periodically)
     await page.waitForTimeout(15000);
@@ -177,10 +179,12 @@ test.describe('Production Session Management', () => {
     await page.locator('[data-testid="player-name-input-create-test"]').fill('RecoveryTest');
     await page.locator('[data-testid="create-room-test"]').click();
     
-    await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
     
-    const roomCodeElement = page.locator('.text-5xl.font-bold.tracking-widest');
-    const roomCode = await roomCodeElement.textContent();
+    // Get room code from page
+    const bodyText = await page.textContent('body');
+    const roomCodeMatch = bodyText?.match(/\b[A-Z0-9]{6}\b/);
+    const roomCode = roomCodeMatch?.[0];
     
     console.log('Room created:', roomCode);
     
@@ -211,7 +215,7 @@ test.describe('Production Session Management', () => {
     await page.locator('[data-testid="player-name-input-create-test"]').fill('CleanupTest');
     await page.locator('[data-testid="create-room-test"]').click();
     
-    await expect(page.locator('text=Room Created!')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Waiting for Opponent')).toBeVisible({ timeout: 15000 });
     
     // Leave room (if there's a leave button)
     const leaveButton = page.getByRole('button', { name: /leave|exit|quit/i });
