@@ -121,6 +121,20 @@ async def lifespan(app: FastAPI):
     # Startup
     print("🚀 Starting Casino Card Game Backend...", file=sys.stderr)
     
+    # Validate required environment variables in production
+    if not DEBUG_MODE:
+        required_vars = ["DATABASE_URL", "SESSION_SECRET_KEY"]
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        if missing_vars:
+            print(f"❌ FATAL: Missing required environment variables: {', '.join(missing_vars)}", file=sys.stderr)
+            raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
+        
+        # Validate SESSION_SECRET_KEY length
+        secret_key = os.getenv("SESSION_SECRET_KEY", "")
+        if len(secret_key) < 32:
+            print("❌ FATAL: SESSION_SECRET_KEY must be at least 32 characters", file=sys.stderr)
+            raise RuntimeError("SESSION_SECRET_KEY must be at least 32 characters")
+    
     # Initialize database tables
     try:
         await init_db()
@@ -191,7 +205,8 @@ async def lifespan(app: FastAPI):
 
 # Support mounting behind a path prefix (e.g., /cassino-api on shared hosting)
 ROOT_PATH = os.getenv("ROOT_PATH", "")
-app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path=ROOT_PATH, lifespan=lifespan, debug=True)
+DEBUG_MODE = os.getenv("DEBUG", "false").lower() == "true"
+app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path=ROOT_PATH, lifespan=lifespan, debug=DEBUG_MODE)
 
 # Add CORS middleware
 cors_origins_env = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
@@ -266,10 +281,14 @@ async def health_check():
 async def root():
     return {"message": "Casino Card Game API", "version": "1.1.0", "features": ["ai_game"]}
 
-# Debug endpoint to check waiting rooms
+# Debug endpoint to check waiting rooms (only available in debug mode)
 @app.get("/debug/waiting-rooms")
 async def get_waiting_rooms(db: AsyncSession = Depends(get_db)):
-    """Debug endpoint to see all waiting rooms"""
+    """Debug endpoint to see all waiting rooms - only available in debug mode"""
+    # Only allow in debug mode
+    if not DEBUG_MODE:
+        raise HTTPException(status_code=404, detail="Not found")
+    
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
     
@@ -286,7 +305,8 @@ async def get_waiting_rooms(db: AsyncSession = Depends(get_db)):
             "room_id": room.id,
             "phase": room.game_phase,
             "player_count": len(room.players) if room.players else 0,
-            "players": [{"id": p.id, "name": p.name} for p in (room.players or [])]
+            # Don't expose player names or IDs in production
+            "players": [{"name": p.name[:3] + "***"} for p in (room.players or [])]
         })
     
     return {
@@ -589,24 +609,19 @@ async def game_state_to_response(room: Room) -> GameStateResponse:
     
     Requirements: 4.4
     """
-    import sys
-    print(f"DEBUG game_state_to_response: Starting...", file=sys.stderr)
     from state_checksum import compute_checksum
     from datetime import datetime
     from sqlalchemy import inspect
     
     # Compute checksum before returning state
-    print(f"DEBUG game_state_to_response: Computing checksum...", file=sys.stderr)
     try:
         checksum = compute_checksum(room)
     except Exception as e:
-        print(f"DEBUG game_state_to_response: Checksum error: {e}", file=sys.stderr)
+        logger.warning(f"Checksum computation error: {e}")
         checksum = "error"
-    print(f"DEBUG game_state_to_response: Checksum done", file=sys.stderr)
     
     # Use SQLAlchemy inspect to safely access attributes without triggering lazy loads
     insp = inspect(room)
-    print(f"DEBUG game_state_to_response: Inspect done, unloaded={insp.unloaded}", file=sys.stderr)
     
     # Ensure players relationship is loaded (avoid greenlet issues)
     players_data = []
@@ -1396,25 +1411,14 @@ async def get_game_state(room_id: str, db: AsyncSession = Depends(get_db)):
 @app.post("/rooms/player-ready", response_model=StandardResponse)
 async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = Depends(get_db)):
     """Set player ready status - Fixed async datetime issue"""
-    import sys
-    
-    def debug_log(msg):
-        with open("debug.log", "a") as f:
-            f.write(f"{msg}\n")
-        print(f"DEBUG: {msg}", file=sys.stderr, flush=True)
-    
-    debug_log(f"set_player_ready called for room={request.room_id}, player={request.player_id}")
     try:
         from version_validator import validate_version
         from datetime import datetime
         
         logger.info(f"Player ready request: room_id={request.room_id}, player_id={request.player_id}, is_ready={request.is_ready}")
         
-        debug_log("Fetching room...")
         room = await get_room_or_404(db, request.room_id)
-        debug_log(f"Room fetched, id={room.id}")
         player = await get_player_or_404(db, request.room_id, request.player_id)
-        debug_log(f"Player fetched, id={player.id}")
         
         logger.info(f"Found room {room.id} with {len(room.players)} players, phase={room.game_phase}")
         
@@ -1459,21 +1463,15 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
             room.modified_by = request.player_id
         
         # Single commit for all changes
-        print(f"DEBUG: About to commit...", file=sys.stderr)
         await db.commit()
-        print(f"DEBUG: Commit done", file=sys.stderr)
         
         logger.info(f"Room {room.id} ready status: player1={room.player1_ready}, player2={room.player2_ready}, phase={room.game_phase}")
         
         # Re-fetch room with all attributes loaded fresh (don't use refresh which can cause issues)
-        print(f"DEBUG: Re-fetching room...", file=sys.stderr)
         room = await get_room_or_404(db, request.room_id)
-        print(f"DEBUG: Re-fetch done", file=sys.stderr)
         
         # Broadcast game state update to all connected clients with full state
-        print(f"DEBUG: Calling game_state_to_response...", file=sys.stderr)
         game_state_response = await game_state_to_response(room)
-        print(f"DEBUG: game_state_to_response done", file=sys.stderr)
         # Verify response model structure before broadcast
         state_dict = game_state_response.model_dump()
         
@@ -1498,9 +1496,7 @@ async def set_player_ready(request: SetPlayerReadyRequest, db: AsyncSession = De
         import traceback
         error_msg = traceback.format_exc()
         logger.error(f"Error in set_player_ready: {error_msg}")
-        with open("error_log.txt", "w") as f:
-            f.write(error_msg)
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/rooms/leave", response_model=StandardResponse)
