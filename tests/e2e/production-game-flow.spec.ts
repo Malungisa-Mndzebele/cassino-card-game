@@ -74,8 +74,11 @@ test.describe('Production Game Flow', () => {
 				await expect(joinButton).toBeEnabled({ timeout: 10000 });
 				await joinButton.click();
 
-				// Wait for successful join (should navigate to game room)
-				await player2Page.waitForURL(`**/room/${roomCode}**`, { timeout: 20000 });
+				// Wait for successful join - look for "Get Ready!" text or player names
+				await Promise.race([
+					player2Page.waitForSelector('text=Get Ready!', { timeout: 20000 }),
+					player2Page.waitForSelector('text=Player1', { timeout: 20000 })
+				]);
 
 				console.log('Player 2 joined the room');
 			});

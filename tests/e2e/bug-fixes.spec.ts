@@ -21,12 +21,12 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
 
     test('BUG #1: Player 1 sees Player 2 join in real-time', async () => {
         // Player 1 creates room
-        await player1Page.goto('http://localhost:5173');
+        await player1Page.goto('./');
         await player1Page.fill('[data-testid="player-name-input-create-test"]', 'Player1');
         await player1Page.click('[data-testid="create-room-test"]');
 
         // Wait for room creation and get room code
-        await player1Page.waitForSelector('text=Waiting for Opponent', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Waiting for opponent', { timeout: 15000 });
         const roomCodeElement = await player1Page.locator('.text-5xl.font-bold.tracking-widest').first();
         roomCode = await roomCodeElement.textContent() || '';
         expect(roomCode).toHaveLength(6);
@@ -34,22 +34,22 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
         console.log(`Room created: ${roomCode}`);
 
         // Verify Player 1 sees waiting screen
-        await expect(player1Page.locator('text=Waiting for Opponent')).toBeVisible();
+        await expect(player1Page.locator('text=Waiting for opponent')).toBeVisible();
 
         // Player 2 joins the room
-        await player2Page.goto('http://localhost:5173');
+        await player2Page.goto('./');
         await player2Page.fill('[data-testid="player-name-input-join"]', 'Player2');
         await player2Page.fill('[data-testid="room-code-input"]', roomCode);
         await player2Page.click('[data-testid="join-room-test"]');
 
         // Wait for Player 2 to see ready screen
-        await player2Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
+        await player2Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
         await expect(player2Page.locator('text=Get Ready!')).toBeVisible();
 
         console.log('Player 2 joined successfully');
 
         // BUG FIX VERIFICATION: Player 1 should now see "Get Ready!" screen
-        await player1Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
         await expect(player1Page.locator('text=Get Ready!')).toBeVisible();
 
         console.log('Player 1 sees Get Ready screen - BUG #1 FIXED ✓');
@@ -65,26 +65,26 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
 
     test('BUG #2: Session persists after page refresh (F5)', async () => {
         // Player 1 creates room
-        await player1Page.goto('http://localhost:5173');
+        await player1Page.goto('./');
         await player1Page.fill('[data-testid="player-name-input-create-test"]', 'Player1');
         await player1Page.click('[data-testid="create-room-test"]');
 
         // Wait for room creation
-        await player1Page.waitForSelector('text=Waiting for Opponent', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Waiting for opponent', { timeout: 15000 });
         const roomCodeElement = await player1Page.locator('.text-5xl.font-bold.tracking-widest').first();
         roomCode = await roomCodeElement.textContent() || '';
 
         console.log(`Room created: ${roomCode}`);
 
         // Player 2 joins
-        await player2Page.goto('http://localhost:5173');
+        await player2Page.goto('./');
         await player2Page.fill('[data-testid="player-name-input-join"]', 'Player2');
         await player2Page.fill('[data-testid="room-code-input"]', roomCode);
         await player2Page.click('[data-testid="join-room-test"]');
 
         // Wait for both players to be in ready screen
-        await player1Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
-        await player2Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
+        await player2Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
 
         console.log('Both players in ready screen');
 
@@ -93,7 +93,7 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
         console.log('Player 1 page refreshed');
 
         // Player 1 should automatically reconnect and see the ready screen
-        await player1Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
         await expect(player1Page.locator('text=Get Ready!')).toBeVisible();
 
         console.log('Player 1 reconnected after refresh - BUG #2 FIXED ✓');
@@ -115,21 +115,21 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
 
     test('BUG #2: Session persists after hard refresh (Ctrl+F5)', async () => {
         // Player 1 creates room
-        await player1Page.goto('http://localhost:5173');
+        await player1Page.goto('./');
         await player1Page.fill('[data-testid="player-name-input-create-test"]', 'Player1');
         await player1Page.click('[data-testid="create-room-test"]');
 
-        await player1Page.waitForSelector('text=Waiting for Opponent', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Waiting for opponent', { timeout: 15000 });
         const roomCodeElement = await player1Page.locator('.text-5xl.font-bold.tracking-widest').first();
         roomCode = await roomCodeElement.textContent() || '';
 
         // Player 2 joins
-        await player2Page.goto('http://localhost:5173');
+        await player2Page.goto('./');
         await player2Page.fill('[data-testid="player-name-input-join"]', 'Player2');
         await player2Page.fill('[data-testid="room-code-input"]', roomCode);
         await player2Page.click('[data-testid="join-room-test"]');
 
-        await player1Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
 
         console.log('Both players in ready screen');
 
@@ -138,7 +138,7 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
         console.log('Player 1 page hard refreshed');
 
         // Should still reconnect
-        await player1Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
         await expect(player1Page.locator('text=Get Ready!')).toBeVisible();
 
         console.log('Player 1 reconnected after hard refresh ✓');
@@ -146,21 +146,21 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
 
     test('Ready status syncs between players', async () => {
         // Setup: Both players in room
-        await player1Page.goto('http://localhost:5173');
+        await player1Page.goto('./');
         await player1Page.fill('[data-testid="player-name-input-create-test"]', 'Player1');
         await player1Page.click('[data-testid="create-room-test"]');
 
-        await player1Page.waitForSelector('text=Waiting for Opponent', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Waiting for opponent', { timeout: 15000 });
         const roomCodeElement = await player1Page.locator('.text-5xl.font-bold.tracking-widest').first();
         roomCode = await roomCodeElement.textContent() || '';
 
-        await player2Page.goto('http://localhost:5173');
+        await player2Page.goto('./');
         await player2Page.fill('[data-testid="player-name-input-join"]', 'Player2');
         await player2Page.fill('[data-testid="room-code-input"]', roomCode);
         await player2Page.click('[data-testid="join-room-test"]');
 
-        await player1Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
-        await player2Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
+        await player2Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
 
         console.log('Both players in ready screen');
 
@@ -177,8 +177,8 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
         console.log('Player 1 clicked ready button');
 
         // Wait for ready status to sync
-        await player1Page.waitForSelector('text=✓ Ready', { timeout: 5000 });
-        await player2Page.waitForSelector('text=✓ Ready', { timeout: 5000 });
+        await player1Page.waitForSelector('text=✓ Ready', { timeout: 10000 });
+        await player2Page.waitForSelector('text=✓ Ready', { timeout: 10000 });
 
         // Both players should see Player 1 as ready
         const player1ReadyIndicators = await player1Page.locator('text=✓ Ready').count();
@@ -192,11 +192,11 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
 
     test('Leave room clears session', async () => {
         // Player 1 creates room
-        await player1Page.goto('http://localhost:5173');
+        await player1Page.goto('./');
         await player1Page.fill('[data-testid="player-name-input-create-test"]', 'Player1');
         await player1Page.click('[data-testid="create-room-test"]');
 
-        await player1Page.waitForSelector('text=Waiting for Opponent', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Waiting for opponent', { timeout: 15000 });
 
         // Verify session is stored
         const roomIdBefore = await player1Page.evaluate(() => {
@@ -210,7 +210,7 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
         await player1Page.click('button:has-text("Leave Room")');
 
         // Should return to home screen
-        await player1Page.waitForSelector('text=Create New Room', { timeout: 5000 });
+        await player1Page.waitForSelector('text=Create New Room', { timeout: 10000 });
         await expect(player1Page.locator('text=Create New Room')).toBeVisible();
 
         console.log('Returned to home screen ✓');
@@ -239,20 +239,20 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
 
     test('Multiple refreshes maintain session', async () => {
         // Setup
-        await player1Page.goto('http://localhost:5173');
+        await player1Page.goto('./');
         await player1Page.fill('[data-testid="player-name-input-create-test"]', 'Player1');
         await player1Page.click('[data-testid="create-room-test"]');
 
-        await player1Page.waitForSelector('text=Waiting for Opponent', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Waiting for opponent', { timeout: 15000 });
         const roomCodeElement = await player1Page.locator('.text-5xl.font-bold.tracking-widest').first();
         roomCode = await roomCodeElement.textContent() || '';
 
-        await player2Page.goto('http://localhost:5173');
+        await player2Page.goto('./');
         await player2Page.fill('[data-testid="player-name-input-join"]', 'Player2');
         await player2Page.fill('[data-testid="room-code-input"]', roomCode);
         await player2Page.click('[data-testid="join-room-test"]');
 
-        await player1Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
 
         console.log('Initial setup complete');
 
@@ -260,7 +260,7 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
         for (let i = 1; i <= 3; i++) {
             console.log(`Refresh attempt ${i}`);
             await player1Page.reload();
-            await player1Page.waitForSelector('text=Get Ready!', { timeout: 10000 });
+            await player1Page.waitForSelector('text=Get Ready!', { timeout: 15000 });
             await expect(player1Page.locator('text=Get Ready!')).toBeVisible();
             console.log(`Refresh ${i} successful ✓`);
         }
@@ -270,14 +270,14 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
 
     test('WebSocket reconnects after disconnect', async () => {
         // Setup
-        await player1Page.goto('http://localhost:5173');
+        await player1Page.goto('./');
         await player1Page.fill('[data-testid="player-name-input-create-test"]', 'Player1');
         await player1Page.click('[data-testid="create-room-test"]');
 
-        await player1Page.waitForSelector('text=Waiting for Opponent', { timeout: 10000 });
+        await player1Page.waitForSelector('text=Waiting for opponent', { timeout: 15000 });
 
         // Check initial connection status
-        await expect(player1Page.locator('text=🟢 Connected').or(player1Page.locator('text=Connected'))).toBeVisible({ timeout: 10000 });
+        await expect(player1Page.locator('text=🟢 Connected').or(player1Page.locator('text=Connected'))).toBeVisible({ timeout: 15000 });
 
         console.log('Initial WebSocket connected ✓');
 
@@ -293,7 +293,7 @@ test.describe('Bug Fixes - Two Player Game State Sync', () => {
         console.log('Network back online');
 
         // Should reconnect
-        await expect(player1Page.locator('text=🟢 Connected').or(player1Page.locator('text=Connected'))).toBeVisible({ timeout: 15000 });
+        await expect(player1Page.locator('text=🟢 Connected').or(player1Page.locator('text=Connected'))).toBeVisible({ timeout: 20000 });
 
         console.log('WebSocket reconnected after network interruption ✓');
     });

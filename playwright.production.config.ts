@@ -7,6 +7,12 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   testMatch: ['**/e2e/**/*.spec.ts'],
+  // Exclude tests that are designed for localhost only
+  testIgnore: [
+    '**/e2e/local.spec.ts',
+    '**/e2e/websocket-test.spec.ts',
+    '**/e2e/random-join.spec.ts',
+  ],
   fullyParallel: false,
   forbidOnly: true,
   retries: 2,
@@ -24,11 +30,7 @@ export default defineConfig({
     video: 'retain-on-failure',
     actionTimeout: 15000,
     navigationTimeout: 30000,
-    // Bypass cache like incognito mode
-    extraHTTPHeaders: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-    },
+    // Note: Removed Cache-Control headers as they cause CORS issues with Google Fonts
   },
 
   timeout: 120000,
