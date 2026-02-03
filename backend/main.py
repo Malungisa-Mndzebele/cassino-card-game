@@ -202,8 +202,18 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "X-Session-Token",
+    ],
+    expose_headers=[
+        "Content-Type",
+        "X-Session-Token",
+    ],
 )
 
 @app.middleware("http")

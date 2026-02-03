@@ -1,5 +1,5 @@
 import { writable, derived, get } from 'svelte/store';
-import type { GameState, Player } from '$types/game';
+import type { GameState } from '$types/game';
 import { optimisticStateManager } from './optimisticState.svelte';
 import { syncStateManager } from './syncState.svelte';
 import { validateChecksum } from '$lib/utils/stateValidator';

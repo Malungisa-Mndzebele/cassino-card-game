@@ -12,6 +12,33 @@ Response schemas structure outgoing data to clients.
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+import re
+
+
+def sanitize_player_name(name: str) -> str:
+    """
+    Sanitize player name to prevent XSS and injection attacks.
+    
+    Args:
+        name: Raw player name input
+        
+    Returns:
+        Sanitized player name
+        
+    Raises:
+        ValueError: If name is empty or contains only invalid characters
+    """
+    if not name or not name.strip():
+        raise ValueError('Player name cannot be empty')
+    # Remove HTML tags
+    sanitized = re.sub(r'<[^>]*>', '', name.strip())
+    # Remove dangerous characters that could be used for XSS
+    sanitized = re.sub(r'[<>"\'\\/`]', '', sanitized)
+    # Remove control characters
+    sanitized = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', sanitized)
+    if not sanitized:
+        raise ValueError('Player name contains only invalid characters')
+    return sanitized[:50]  # Ensure max length after sanitization
 
 
 # Request schemas
@@ -32,9 +59,7 @@ class CreateRoomRequest(BaseModel):
     @field_validator('player_name')
     @classmethod
     def validate_player_name(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError('Player name cannot be empty')
-        return v.strip()
+        return sanitize_player_name(v)
 
 
 class JoinRoomRequest(BaseModel):
@@ -57,14 +82,15 @@ class JoinRoomRequest(BaseModel):
     def validate_room_id(cls, v: str) -> str:
         if not v or len(v) != 6:
             raise ValueError('Room ID must be exactly 6 characters')
+        # Only allow alphanumeric characters
+        if not re.match(r'^[A-Za-z0-9]+$', v):
+            raise ValueError('Room ID must contain only letters and numbers')
         return v.upper()
     
     @field_validator('player_name')
     @classmethod
     def validate_player_name(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError('Player name cannot be empty')
-        return v.strip()
+        return sanitize_player_name(v)
 
 
 class JoinRandomRoomRequest(BaseModel):
@@ -83,9 +109,7 @@ class JoinRandomRoomRequest(BaseModel):
     @field_validator('player_name')
     @classmethod
     def validate_player_name(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError('Player name cannot be empty')
-        return v.strip()
+        return sanitize_player_name(v)
 
 
 class LeaveRoomRequest(BaseModel):
@@ -224,9 +248,7 @@ class CreateAIGameRequest(BaseModel):
     @field_validator('player_name')
     @classmethod
     def validate_player_name(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError('Player name cannot be empty')
-        return v.strip()
+        return sanitize_player_name(v)
 
 
 class SyncRequest(BaseModel):

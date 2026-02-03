@@ -78,8 +78,8 @@ class Room(Base):
     )
     
     # Room status
-    status: Mapped[str] = mapped_column(String(20), default="waiting")
-    game_phase: Mapped[str] = mapped_column(String(20), default="waiting")
+    status: Mapped[str] = mapped_column(String(20), default="waiting", index=True)
+    game_phase: Mapped[str] = mapped_column(String(20), default="waiting", index=True)
     current_turn: Mapped[int] = mapped_column(Integer, default=1)
     round_number: Mapped[int] = mapped_column(Integer, default=0)
     
@@ -186,7 +186,8 @@ class Player(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     room_id: Mapped[str] = mapped_column(
         String(6),
-        ForeignKey("rooms.id", ondelete="CASCADE")
+        ForeignKey("rooms.id", ondelete="CASCADE"),
+        index=True
     )
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     ready: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -239,11 +240,13 @@ class GameSession(Base):
     )
     room_id: Mapped[str] = mapped_column(
         String(6),
-        ForeignKey("rooms.id", ondelete="CASCADE")
+        ForeignKey("rooms.id", ondelete="CASCADE"),
+        index=True
     )
     player_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("players.id", ondelete="CASCADE")
+        ForeignKey("players.id", ondelete="CASCADE"),
+        index=True
     )
     session_token: Mapped[Optional[str]] = mapped_column(
         String(256),

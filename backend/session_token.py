@@ -14,8 +14,20 @@ from typing import Optional
 import os
 
 
-# Server secret for HMAC signatures (should be in environment variable)
-SECRET_KEY = os.getenv("SESSION_SECRET_KEY", "default-secret-key-change-in-production")
+# Server secret for HMAC signatures (MUST be set in environment variable)
+_default_secret = None
+SECRET_KEY = os.getenv("SESSION_SECRET_KEY", _default_secret)
+
+# Validate secret key at module load time
+if SECRET_KEY is None:
+    import secrets as _secrets
+    # Generate a random key for development only - will change on restart
+    SECRET_KEY = _secrets.token_hex(32)
+    import sys
+    print("⚠️  WARNING: SESSION_SECRET_KEY not set! Using random key (sessions will not persist across restarts)", file=sys.stderr)
+elif len(SECRET_KEY) < 32:
+    import sys
+    print("⚠️  WARNING: SESSION_SECRET_KEY is too short (should be at least 32 characters)", file=sys.stderr)
 
 
 @dataclass

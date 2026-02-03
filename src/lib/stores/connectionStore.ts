@@ -2,7 +2,7 @@ import { writable } from 'svelte/store';
 import { gameStore } from './gameStore';
 import { ErrorHandler } from '$lib/utils/errorHandler';
 import { syncStateManager } from './syncState.svelte';
-import { applyDelta, parseStateUpdate } from '$lib/utils/deltaApplication';
+import { applyDelta } from '$lib/utils/deltaApplication';
 import { validateChecksum } from '$lib/utils/stateValidator';
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -24,7 +24,6 @@ function createConnectionStore() {
     let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
     let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
     let pollingInterval: ReturnType<typeof setInterval> | null = null;
-    let currentRoomId: string | null = null;
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
     const POLLING_INTERVAL = 2000; // Poll every 2 seconds as fallback
@@ -34,8 +33,6 @@ function createConnectionStore() {
             console.log('WebSocket already connected');
             return;
         }
-
-        currentRoomId = roomId;
 
         const apiUrl =
             typeof window !== 'undefined' && window.location.hostname === 'localhost'
@@ -342,7 +339,6 @@ function createConnectionStore() {
 
         stopHeartbeat();
         stopPolling();
-        currentRoomId = null;
 
         if (ws) {
             ws.close();
