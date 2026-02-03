@@ -849,7 +849,9 @@ async def execute_ai_move(room_id: str, ai_player_id: int, db: AsyncSession) -> 
         )
         
         ai_hand_cards.remove(hand_card)
-        ai_captured_cards.extend(captured_cards)
+        # Add captured cards with hand card on top (last in list = top of pile)
+        ai_captured_cards.extend(captured_cards[1:])  # Add captured table cards/builds first
+        ai_captured_cards.append(captured_cards[0])   # Hand card goes on top (end of list)
         table_cards = [c for c in table_cards if c not in target_cards]
         builds = remaining_builds
         
@@ -1843,7 +1845,11 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
         
         # Update game state
         player_hand.remove(hand_card)
-        player_captured.extend(captured_cards)
+        # Add captured cards with hand card on top (last in list = top of pile)
+        # captured_cards has hand_card first, then target cards - we need hand_card last
+        # So we add target/build cards first, then the hand card on top
+        player_captured.extend(captured_cards[1:])  # Add captured table cards/builds first
+        player_captured.append(captured_cards[0])   # Hand card goes on top (end of list)
         table_cards = [card for card in table_cards if card not in target_cards]
         builds = remaining_builds
         

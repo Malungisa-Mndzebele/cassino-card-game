@@ -60,8 +60,8 @@ Write-Host "=" * 70 -ForegroundColor Yellow
 Write-Host "LOCAL E2E TESTS (http://localhost:5173)" -ForegroundColor Yellow
 Write-Host "=" * 70 -ForegroundColor Yellow
 
-Write-Host "`nRunning smoke test..." -ForegroundColor Cyan
-$localResult = npx playwright test tests/e2e/fixed-smoke-test.spec.ts --reporter=list --timeout=60000
+Write-Host "`nRunning live tests..." -ForegroundColor Cyan
+$localResult = npx playwright test tests/e2e/live.spec.ts --reporter=list --timeout=60000
 $localSuccess = $LASTEXITCODE -eq 0
 
 if ($localSuccess) {

@@ -367,7 +367,9 @@ class GameService:
         )
         
         player_hand.remove(hand_card)
-        player_captured.extend(captured_cards)
+        # Add captured cards with hand card on top (last in list = top of pile)
+        player_captured.extend(captured_cards[1:])  # Add captured table cards/builds first
+        player_captured.append(captured_cards[0])   # Hand card goes on top (end of list)
         
         # Remove captured cards from table
         for card in target_cards:

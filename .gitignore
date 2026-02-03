@@ -218,6 +218,9 @@ complete-final-results.txt
 *.png
 playwright-report/
 
+# Debug output files
+output*.txt
+
 # SvelteKit
 .svelte-kit/
 !.svelte-kit/ambient.d.ts
