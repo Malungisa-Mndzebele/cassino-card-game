@@ -311,7 +311,14 @@ class CasinoGameLogic:
             # Try each possible hand card value
             for hand_value in hand_values:
                 needed_value = build_value - hand_value
-                if needed_value <= 0:
+                if needed_value == 0:
+                    # Multiple build: augmenting existing build with a card of same value
+                    # Valid only if no additional target cards are being used
+                    if len(target_cards) == 0:
+                        return True
+                    continue
+                
+                if needed_value < 0:
                     continue
                 
                 # Check if target cards sum to needed value (considering Ace dual values)

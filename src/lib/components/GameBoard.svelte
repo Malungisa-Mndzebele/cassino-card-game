@@ -58,7 +58,12 @@
   let tableBuildValue: number = 2;
 
   // Calculate possible table-only build values (sum of selected table cards that we can capture with a hand card)
-  $: tableBuildValues = calculateTableBuildValues(selectedTableCards, tableCards, myHand);
+  $: tableBuildValues = calculateTableBuildValues(
+    selectedTableCards,
+    tableCards,
+    myHand,
+    opponentCapturedCards
+  );
 
   function calculateDragBuildValues(): number[] {
     if (!dragBuildCard || !dragTargetCard) return [];
@@ -95,7 +100,8 @@
     selectedTableCards,
     selectedBuildIds,
     builds,
-    isPlayer1
+    isPlayer1,
+    opponentCapturedCards
   );
 
   function calculatePossibleBuildValues(
@@ -105,7 +111,8 @@
     selectedIds: typeof selectedTableCards,
     selectedBuildIdsList: typeof selectedBuildIds,
     buildsRef: typeof builds,
-    amIPlayer1: boolean
+    amIPlayer1: boolean,
+    opponentCapturedRef: typeof opponentCapturedCards
   ): number[] {
     if (!handCard) return [];
     // Need either table cards or builds selected
@@ -119,7 +126,10 @@
 
     // Get selected table cards
     const selectedCards = selectedIds
-      .map((id) => tableCardsRef.find((c) => c.id === id))
+      .map(
+        (id) =>
+          tableCardsRef.find((c) => c.id === id) || opponentCapturedRef.find((c) => c.id === id)
+      )
       .filter(Boolean) as CardType[];
 
     // Get selected builds
@@ -219,7 +229,8 @@
     const handValues = getCardValues(selectedCard);
     const selectedCards = selectedTableCards
       .map((id) => {
-        const found = tableCardsRef.find((c) => c.id === id);
+        const found =
+          tableCardsRef.find((c) => c.id === id) || opponentCapturedCards.find((c) => c.id === id);
         if (!found) {
         }
         return found;
@@ -273,12 +284,16 @@
   function calculateTableBuildValues(
     selectedIds: string[],
     tableCardsRef: CardType[],
-    myHandRef: CardType[]
+    myHandRef: CardType[],
+    opponentCapturedRef: CardType[]
   ): number[] {
     if (selectedIds.length < 2) return []; // Need at least 2 table cards to combine
 
     const selectedCards = selectedIds
-      .map((id) => tableCardsRef.find((c) => c.id === id))
+      .map(
+        (id) =>
+          tableCardsRef.find((c) => c.id === id) || opponentCapturedRef.find((c) => c.id === id)
+      )
       .filter(Boolean) as CardType[];
 
     if (selectedCards.length < 2) return [];
@@ -372,7 +387,9 @@
     }
     const handValue = getCardValue(selectedCard);
     const tableSum = selectedTableCards.reduce((sum, cardId) => {
-      const card = tableCards.find((c) => c.id === cardId);
+      const card =
+        tableCards.find((c) => c.id === cardId) ||
+        opponentCapturedCards.find((c) => c.id === cardId);
       return sum + (card ? getCardValue(card) : 0);
     }, 0);
     // Add the value of any selected builds
@@ -706,6 +723,23 @@
       <div class="modal-buttons">
         <button class="btn-cancel" on:click={handleExitCancel}>Stay</button>
         <button class="btn-confirm btn-exit-confirm" on:click={handleExitConfirm}>Leave Game</button
+        >
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if showBuildModal}
+  <div class="modal-overlay" on:click={cancelBuildModal}>
+    <div class="modal" on:click|stopPropagation>
+      <h3 class="modal-title">🏗️ Build {buildValue}</h3>
+      <p class="modal-desc">
+        Creating a build of value <strong>{buildValue}</strong>.
+      </p>
+      <div class="modal-buttons">
+        <button class="btn-cancel" on:click={cancelBuildModal}>Cancel</button>
+        <button class="btn-confirm" on:click={confirmBuild} disabled={isProcessing}
+          >{#if isProcessing}<span class="spinner"></span>{:else}Confirm Build{/if}</button
         >
       </div>
     </div>

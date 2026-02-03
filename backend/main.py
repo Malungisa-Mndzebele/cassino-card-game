@@ -1815,6 +1815,7 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
     is_player1 = request.player_id == players_in_room[0].id
     player_hand = player1_hand if is_player1 else player2_hand
     player_captured = player1_captured if is_player1 else player2_captured
+    opponent_captured = player2_captured if is_player1 else player1_captured
     
     # Find the card being played
     hand_card = None
@@ -1847,8 +1848,14 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
         builds = remaining_builds
         
     elif request.action == "build":
-        # Validate build
         target_cards = [card for card in table_cards if card.id in (request.target_cards or [])]
+        
+        # Check opponent's top captured card
+        opponent_top_card = None
+        if opponent_captured and opponent_captured[-1].id in (request.target_cards or []):
+            opponent_top_card = opponent_captured[-1]
+            target_cards.append(opponent_top_card)
+
         # Also extract builds from target_cards (for adding to existing builds)
         target_builds = [build for build in builds if build.id in (request.target_cards or [])]
         
@@ -1861,8 +1868,14 @@ async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)
         )
         
         # Update game state
+        # Update game state
         player_hand.remove(hand_card)
         table_cards = [card for card in table_cards if card not in target_cards]
+        
+        # Remove from opponent captured if used (check top card only)
+        if opponent_top_card:
+            opponent_captured.remove(opponent_top_card)
+
         # Remove the target builds that were incorporated into the new build
         builds = [b for b in builds if b.id not in [tb.id for tb in target_builds]]
         builds.append(new_build)
@@ -2029,17 +2042,26 @@ async def table_build(request: TableBuildRequest, db: AsyncSession = Depends(get
     player2_hand = convert_dict_to_game_cards(room.player2_hand or [])
     table_cards = convert_dict_to_game_cards(room.table_cards or [])
     builds = convert_dict_to_builds(room.builds or [])
+    player1_captured = convert_dict_to_game_cards(room.player1_captured or [])
+    player2_captured = convert_dict_to_game_cards(room.player2_captured or [])
     
     # Determine which player is playing
     players_in_room = get_sorted_players(room)
     is_player1 = request.player_id == players_in_room[0].id
     player_hand = player1_hand if is_player1 else player2_hand
+    opponent_captured = player2_captured if is_player1 else player1_captured
     
     # Find target cards on table
     target_cards = [card for card in table_cards if card.id in request.target_cards]
     
+    # Check opponent's top captured card
+    opponent_top_card = None
+    if opponent_captured and opponent_captured[-1].id in request.target_cards:
+        opponent_top_card = opponent_captured[-1]
+        target_cards.append(opponent_top_card)
+    
     if len(target_cards) != len(request.target_cards):
-        raise HTTPException(status_code=400, detail="Some target cards not found on table")
+        raise HTTPException(status_code=400, detail="Some target cards not found on table or opponent's pile")
     
     # Validate table build
     if not game_logic.validate_table_build(target_cards, request.build_value, player_hand):
@@ -2051,11 +2073,18 @@ async def table_build(request: TableBuildRequest, db: AsyncSession = Depends(get
     
     # Update game state - remove cards from table, add build
     table_cards = [card for card in table_cards if card.id not in request.target_cards]
+    
+    # Remove from opponent captured if used (check top card only)
+    if opponent_top_card:
+        opponent_captured.remove(opponent_top_card)
+        
     builds.append(new_build)
     
     # Update database
     room.table_cards = convert_game_cards_to_dict(table_cards)
     room.builds = convert_builds_to_dict(builds)
+    room.player1_captured = convert_game_cards_to_dict(player1_captured)
+    room.player2_captured = convert_game_cards_to_dict(player2_captured)
     
     # Note: We do NOT switch turns for table-only builds
     # The player still needs to play a card from their hand
