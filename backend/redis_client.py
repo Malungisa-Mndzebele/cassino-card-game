@@ -10,7 +10,10 @@ from redis.asyncio import Redis as AsyncRedis
 from typing import Optional, Any
 import json
 import os
+import logging
 from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 
 
 class RedisClient:
@@ -65,7 +68,7 @@ class RedisClient:
             await client.set(key, serialized, ex=expire)
             return True
         except Exception as e:
-            print(f"Error setting JSON in Redis: {e}")
+            logger.error(f"Error setting JSON in Redis: {e}")
             return False
 
     async def get_json(self, key: str) -> Optional[dict]:
@@ -83,7 +86,7 @@ class RedisClient:
             data = await client.get(key)
             return json.loads(data) if data else None
         except Exception as e:
-            print(f"Error getting JSON from Redis: {e}")
+            logger.error(f"Error getting JSON from Redis: {e}")
             return None
 
     async def delete(self, key: str) -> bool:
@@ -101,7 +104,7 @@ class RedisClient:
             result = await client.delete(key)
             return result > 0
         except Exception as e:
-            print(f"Error deleting from Redis: {e}")
+            logger.error(f"Error deleting from Redis: {e}")
             return False
 
     async def exists(self, key: str) -> bool:
@@ -119,7 +122,7 @@ class RedisClient:
             result = await client.exists(key)
             return result > 0
         except Exception as e:
-            print(f"Error checking existence in Redis: {e}")
+            logger.error(f"Error checking existence in Redis: {e}")
             return False
 
     async def expire(self, key: str, seconds: int) -> bool:

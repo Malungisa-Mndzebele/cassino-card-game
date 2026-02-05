@@ -12,7 +12,9 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from typing import Optional
 import os
+import logging
 
+logger = logging.getLogger(__name__)
 
 # Server secret for HMAC signatures (MUST be set in environment variable)
 _default_secret = None
@@ -23,11 +25,9 @@ if SECRET_KEY is None:
     import secrets as _secrets
     # Generate a random key for development only - will change on restart
     SECRET_KEY = _secrets.token_hex(32)
-    import sys
-    print("⚠️  WARNING: SESSION_SECRET_KEY not set! Using random key (sessions will not persist across restarts)", file=sys.stderr)
+    logger.warning("SESSION_SECRET_KEY not set! Using random key (sessions will not persist across restarts)")
 elif len(SECRET_KEY) < 32:
-    import sys
-    print("⚠️  WARNING: SESSION_SECRET_KEY is too short (should be at least 32 characters)", file=sys.stderr)
+    logger.warning("SESSION_SECRET_KEY is too short (should be at least 32 characters)")
 
 
 @dataclass
