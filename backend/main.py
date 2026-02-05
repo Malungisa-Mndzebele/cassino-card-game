@@ -67,6 +67,7 @@ from fastapi import Request
 from game_logic import CasinoGameLogic, GameCard, Build
 from ai_player import AIPlayer
 from rate_limiter import rate_limit_ip
+from request_tracking import RequestTrackingMiddleware, setup_request_tracking_logging
 
 # Note: Database tables are now managed by Alembic migrations
 # Run migrations with: alembic upgrade head
@@ -208,6 +209,9 @@ ROOT_PATH = os.getenv("ROOT_PATH", "")
 DEBUG_MODE = os.getenv("DEBUG", "false").lower() == "true"
 app = FastAPI(title="Casino Card Game API", version="1.0.0", root_path=ROOT_PATH, lifespan=lifespan, debug=DEBUG_MODE)
 
+# Add request tracking middleware (must be added first to wrap all requests)
+app.add_middleware(RequestTrackingMiddleware)
+
 # Add CORS middleware
 cors_origins_env = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
 cors_origins = [origin.strip() for origin in cors_origins_env.split(",")]
@@ -224,10 +228,15 @@ app.add_middleware(
         "Accept",
         "Origin",
         "X-Session-Token",
+        "X-CSRF-Token",
+        "X-Request-ID",
+        "X-Correlation-ID",
     ],
     expose_headers=[
         "Content-Type",
         "X-Session-Token",
+        "X-Request-ID",
+        "X-Correlation-ID",
     ],
 )
 
