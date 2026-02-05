@@ -128,8 +128,6 @@ function saveSettings() {
 async function initialize(roomId: string, playerId: string, playerName: string, wsSend: (message: any) => void) {
 	if (!browser) return;
 
-	console.log('[Communication] Initializing:', { roomId, playerId: playerId.substring(0, 20) + '...', playerName });
-
 	state.roomId = roomId;
 	state.playerId = playerId;
 	state.playerName = playerName;
@@ -139,13 +137,9 @@ async function initialize(roomId: string, playerId: string, playerName: string, 
 
 	// Add system message
 	addSystemMessage('Connected to room. You can now chat with your opponent!');
-
-	console.log('[Communication] Initialized successfully');
 }
 
 function cleanup() {
-	console.log('Cleaning up communication');
-
 	if (speakingCheckInterval) {
 		clearInterval(speakingCheckInterval);
 		speakingCheckInterval = null;
@@ -234,7 +228,6 @@ async function toggleAudio() {
 			state.isAudioEnabled = true;
 			state.isAudioMuted = false;
 			sendMediaStatus();
-			console.log('Audio unmuted');
 		} catch (error: any) {
 			handleMediaError(error, 'microphone');
 		}
@@ -247,7 +240,6 @@ async function toggleAudio() {
 		state.isAudioMuted = true;
 		state.isSpeaking = false;
 		sendMediaStatus();
-		console.log('Audio muted');
 	}
 }
 
@@ -292,7 +284,6 @@ async function toggleVideo() {
 			state.isVideoEnabled = true;
 			state.isVideoMuted = false;
 			sendMediaStatus();
-			console.log('Video enabled');
 		} catch (error: any) {
 			handleMediaError(error, 'camera');
 		}
@@ -304,7 +295,6 @@ async function toggleVideo() {
 		}
 		state.isVideoMuted = true;
 		sendMediaStatus();
-		console.log('Video disabled');
 	}
 }
 
@@ -358,11 +348,6 @@ function setVolume(volume: number) {
 
 function sendMessage(content: string) {
 	if (!content.trim() || !state.playerId || !state.playerName) {
-		console.log('[Communication] sendMessage blocked:', {
-			hasContent: !!content.trim(),
-			hasPlayerId: !!state.playerId,
-			hasPlayerName: !!state.playerName
-		});
 		return;
 	}
 
@@ -375,11 +360,9 @@ function sendMessage(content: string) {
 	};
 
 	state.messages = [...state.messages, message];
-	console.log('[Communication] Added message to local state:', message.content);
 
 	// Send via WebSocket
 	if (websocketSend) {
-		console.log('[Communication] Sending via WebSocket');
 		websocketSend({
 			type: 'chat_message',
 			data: {
@@ -388,8 +371,6 @@ function sendMessage(content: string) {
 				sender_name: message.senderName
 			}
 		});
-	} else {
-		console.warn('[Communication] websocketSend is null, cannot send message');
 	}
 
 	// Also send via data channel if available
@@ -402,8 +383,6 @@ function sendMessage(content: string) {
 }
 
 function receiveMessage(data: { id: string; content: string; sender_id: string; sender_name: string }) {
-	console.log('[Communication] Received message:', data);
-
 	const message: ChatMessage = {
 		id: data.id,
 		senderId: data.sender_id,
@@ -413,7 +392,6 @@ function receiveMessage(data: { id: string; content: string; sender_id: string; 
 	};
 
 	state.messages = [...state.messages, message];
-	console.log('[Communication] Added received message, total messages:', state.messages.length);
 
 	if (!state.isChatOpen) {
 		state.unreadCount++;
@@ -482,8 +460,6 @@ async function createOffer() {
 			type: 'webrtc_offer',
 			data: { sdp: offer.sdp, type: offer.type }
 		});
-
-		console.log('WebRTC offer created');
 	} catch (e) {
 		console.error('Failed to create offer:', e);
 		state.connectionError = 'Failed to establish connection';
@@ -503,15 +479,13 @@ async function handleOffer(offer: RTCSessionDescriptionInit) {
 
 		await addLocalTracks();
 
-		const answer = await state.peerConnection.createAnswer();
-		await state.peerConnection.setLocalDescription(answer);
+		const answer = await state.peerConnection!.createAnswer();
+		await state.peerConnection!.setLocalDescription(answer);
 
 		websocketSend({
 			type: 'webrtc_answer',
 			data: { sdp: answer.sdp, type: answer.type }
 		});
-
-		console.log('WebRTC answer created');
 	} catch (e) {
 		console.error('Failed to handle offer:', e);
 		state.connectionError = 'Failed to establish connection';
@@ -524,7 +498,6 @@ async function handleAnswer(answer: RTCSessionDescriptionInit) {
 
 	try {
 		await state.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-		console.log('WebRTC answer received');
 	} catch (e) {
 		console.error('Failed to handle answer:', e);
 	}
@@ -557,7 +530,6 @@ function setupPeerConnectionHandlers() {
 	};
 
 	state.peerConnection.ontrack = (event) => {
-		console.log('Received remote track');
 		state.remoteStream = event.streams[0];
 
 		setTimeout(() => {
@@ -569,7 +541,6 @@ function setupPeerConnectionHandlers() {
 	};
 
 	state.peerConnection.onnegotiationneeded = async () => {
-		console.log('Negotiation needed');
 		if (!state.peerConnection || state.peerConnection.signalingState !== 'stable') return;
 
 		try {
@@ -581,7 +552,6 @@ function setupPeerConnectionHandlers() {
 					type: 'webrtc_offer',
 					data: { sdp: offer.sdp, type: offer.type }
 				});
-				console.log('Renegotiation offer sent');
 			}
 		} catch (e) {
 			console.error('Failed to handle negotiation needed:', e);
@@ -620,7 +590,6 @@ function setupPeerConnectionHandlers() {
 
 function ensurePeerConnection() {
 	if (!state.peerConnection) {
-		console.log('Creating new PeerConnection');
 		state.peerConnection = new RTCPeerConnection(rtcConfiguration);
 		setupPeerConnectionHandlers();
 		return true; // Created new
@@ -636,7 +605,6 @@ async function addLocalTracks() {
 		// Check if track is already added
 		const exists = senders.some(sender => sender.track === track);
 		if (!exists) {
-			console.log(`Adding track ${track.kind} to peer connection`);
 			state.peerConnection!.addTrack(track, state.localStream!);
 		}
 	});
@@ -644,7 +612,7 @@ async function addLocalTracks() {
 
 function setupDataChannelHandlers(channel: RTCDataChannel) {
 	channel.onopen = () => {
-		console.log('Data channel opened');
+		// Data channel ready
 	};
 
 	channel.onmessage = (event) => {
@@ -664,7 +632,7 @@ function setupDataChannelHandlers(channel: RTCDataChannel) {
 	};
 
 	channel.onclose = () => {
-		console.log('Data channel closed');
+		// Data channel closed
 	};
 }
 

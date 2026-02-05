@@ -141,19 +141,14 @@ async function initialize(roomId: string, playerId: string, wsSend: (message: an
 
 	// Don't initialize if disabled
 	if (!state.isEnabled) {
-		console.log('Voice chat is disabled in settings');
 		return;
 	}
-
-	console.log('Voice chat initialized for room:', roomId);
 }
 
 /**
  * Cleanup voice chat resources
  */
 function cleanup() {
-	console.log('Cleaning up voice chat');
-
 	// Stop speaking detection
 	if (speakingCheckInterval) {
 		clearInterval(speakingCheckInterval);
@@ -220,8 +215,6 @@ async function toggleMute() {
 
 			// Broadcast mute status
 			sendMuteStatus(false);
-
-			console.log('Microphone unmuted');
 		} catch (error: any) {
 			console.error('Failed to access microphone:', error);
 
@@ -253,8 +246,6 @@ async function toggleMute() {
 
 		// Broadcast mute status
 		sendMuteStatus(true);
-
-		console.log('Microphone muted');
 	}
 
 	saveSettings();
@@ -358,8 +349,6 @@ async function createOffer() {
 				type: offer.type
 			}
 		});
-
-		console.log('WebRTC offer created and sent');
 	} catch (error) {
 		console.error('Failed to create offer:', error);
 		state.connectionError = 'Failed to establish voice connection';
@@ -405,8 +394,6 @@ async function handleOffer(offer: RTCSessionDescriptionInit) {
 				type: answer.type
 			}
 		});
-
-		console.log('WebRTC answer created and sent');
 	} catch (error) {
 		console.error('Failed to handle offer:', error);
 		state.connectionError = 'Failed to establish voice connection';
@@ -422,7 +409,6 @@ async function handleAnswer(answer: RTCSessionDescriptionInit) {
 
 	try {
 		await state.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-		console.log('WebRTC answer received and set');
 	} catch (error) {
 		console.error('Failed to handle answer:', error);
 		state.connectionError = 'Failed to establish voice connection';
@@ -437,7 +423,6 @@ async function handleIceCandidate(candidate: RTCIceCandidateInit) {
 
 	try {
 		await state.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-		console.log('ICE candidate added');
 	} catch (error) {
 		console.error('Failed to add ICE candidate:', error);
 	}
@@ -465,7 +450,6 @@ function setupPeerConnectionHandlers() {
 
 	// Track event (receiving remote stream)
 	state.peerConnection.ontrack = (event) => {
-		console.log('Received remote track');
 		state.remoteStream = event.streams[0];
 
 		// Apply volume setting
@@ -480,8 +464,6 @@ function setupPeerConnectionHandlers() {
 	// Connection state change
 	state.peerConnection.onconnectionstatechange = () => {
 		if (!state.peerConnection) return;
-
-		console.log('Connection state:', state.peerConnection.connectionState);
 
 		switch (state.peerConnection.connectionState) {
 			case 'connected':
@@ -505,8 +487,7 @@ function setupPeerConnectionHandlers() {
 
 	// ICE connection state change
 	state.peerConnection.oniceconnectionstatechange = () => {
-		if (!state.peerConnection) return;
-		console.log('ICE connection state:', state.peerConnection.iceConnectionState);
+		// ICE connection state changed
 	};
 }
 

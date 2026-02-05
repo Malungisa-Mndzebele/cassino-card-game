@@ -17,8 +17,6 @@
     
     // If we have a saved session, try to reconnect
     if ($gameStore.roomId && $gameStore.playerId) {
-      console.log('Attempting to reconnect to room:', $gameStore.roomId);
-      
       try {
         // Fetch current game state
         const { getGameState } = await import('$lib/utils/api');
@@ -38,8 +36,6 @@
   // Handler functions for GamePhases
   async function handleReady() {
     try {
-      console.log('Ready button clicked');
-      
       if (!$gameStore.roomId || !$gameStore.playerId) {
         console.error('Missing roomId or playerId!');
         alert('Error: Missing room or player information. Please refresh and try again.');

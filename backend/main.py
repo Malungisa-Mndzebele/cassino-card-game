@@ -66,6 +66,7 @@ from schemas import (
 from fastapi import Request
 from game_logic import CasinoGameLogic, GameCard, Build
 from ai_player import AIPlayer
+from rate_limiter import rate_limit_ip
 
 # Note: Database tables are now managed by Alembic migrations
 # Run migrations with: alembic upgrade head
@@ -116,92 +117,91 @@ async def lifespan(app: FastAPI):
     """
     from database import init_db, close_db
     from redis_client import redis_client
-    import sys
     
     # Startup
-    print("🚀 Starting Casino Card Game Backend...", file=sys.stderr)
+    logger.info("Starting Casino Card Game Backend...")
     
     # Validate required environment variables in production
     if not DEBUG_MODE:
         required_vars = ["DATABASE_URL", "SESSION_SECRET_KEY"]
         missing_vars = [var for var in required_vars if not os.getenv(var)]
         if missing_vars:
-            print(f"❌ FATAL: Missing required environment variables: {', '.join(missing_vars)}", file=sys.stderr)
+            logger.critical(f"Missing required environment variables: {', '.join(missing_vars)}")
             raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
         
         # Validate SESSION_SECRET_KEY length
         secret_key = os.getenv("SESSION_SECRET_KEY", "")
         if len(secret_key) < 32:
-            print("❌ FATAL: SESSION_SECRET_KEY must be at least 32 characters", file=sys.stderr)
+            logger.critical("SESSION_SECRET_KEY must be at least 32 characters")
             raise RuntimeError("SESSION_SECRET_KEY must be at least 32 characters")
     
     # Initialize database tables
     try:
         await init_db()
-        print("✅ Database initialized", file=sys.stderr)
+        logger.info("Database initialized")
     except Exception as e:
-        print(f"⚠️  Database initialization warning: {e}", file=sys.stderr)
+        logger.warning(f"Database initialization warning: {e}")
     
     # Check Redis connection
     redis_available = await redis_client.ping()
     if redis_available:
-        print("✅ Redis connected", file=sys.stderr)
+        logger.info("Redis connected")
     else:
-        print("⚠️  Redis not available (sessions and caching disabled)", file=sys.stderr)
+        logger.warning("Redis not available (sessions and caching disabled)")
     
     # Start background tasks
     try:
         await background_task_manager.start()
-        print("✅ Background tasks started", file=sys.stderr)
+        logger.info("Background tasks started")
     except Exception as e:
-        print(f"⚠️  Background tasks warning: {e}", file=sys.stderr)
+        logger.warning(f"Background tasks warning: {e}")
     
     # Start WebSocket Redis subscriber (only if Redis is available)
     if redis_available:
         try:
             await manager.start_subscriber()
-            print("✅ WebSocket subscriber started", file=sys.stderr)
+            logger.info("WebSocket subscriber started")
         except Exception as e:
-            print(f"⚠️  WebSocket subscriber warning: {e}", file=sys.stderr)
+            logger.warning(f"WebSocket subscriber warning: {e}")
     else:
-        print("ℹ️  WebSocket using local-only mode (no Redis)", file=sys.stderr)
+        logger.info("WebSocket using local-only mode (no Redis)")
     
-    print("✨ Backend ready!", file=sys.stderr)
+    logger.info("Backend ready!")
     
     yield
     
     # Shutdown
-    print("🛑 Shutting down Casino Card Game Backend...", file=sys.stderr)
+    logger.info("Shutting down Casino Card Game Backend...")
     
     # Stop WebSocket subscriber
     try:
         await manager.stop_subscriber()
-        print("✅ WebSocket subscriber stopped", file=sys.stderr)
+        logger.info("WebSocket subscriber stopped")
     except Exception as e:
-        print(f"⚠️  WebSocket subscriber cleanup warning: {e}", file=sys.stderr)
+        logger.warning(f"WebSocket subscriber cleanup warning: {e}")
     
     # Stop background tasks
     try:
         await background_task_manager.stop()
-        print("✅ Background tasks stopped", file=sys.stderr)
+        logger.info("Background tasks stopped")
     except Exception as e:
-        print(f"⚠️  Background tasks cleanup warning: {e}", file=sys.stderr)
+        logger.warning(f"Background tasks cleanup warning: {e}")
     
     # Close database connections
     try:
         await close_db()
-        print("✅ Database connections closed", file=sys.stderr)
+        logger.info("Database connections closed")
     except Exception as e:
-        print(f"⚠️  Database cleanup warning: {e}", file=sys.stderr)
+        logger.warning(f"Database cleanup warning: {e}")
     
     # Close Redis connections
     try:
         await redis_client.close()
-        print("✅ Redis connections closed", file=sys.stderr)
+        logger.info("Redis connections closed")
     except Exception as e:
-        print(f"⚠️  Redis cleanup warning: {e}", file=sys.stderr)
+        logger.warning(f"Redis cleanup warning: {e}")
     
-    print("👋 Shutdown complete", file=sys.stderr)
+    logger.info("Shutdown complete")
 
 # Support mounting behind a path prefix (e.g., /cassino-api on shared hosting)
 ROOT_PATH = os.getenv("ROOT_PATH", "")
@@ -968,6 +968,9 @@ async def execute_ai_move(room_id: str, ai_player_id: int, db: AsyncSession) -> 
 @app.post("/rooms/create", response_model=CreateRoomResponse)
 async def create_room(request: CreateRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Create a new game room"""
+    # Apply rate limiting
+    await rate_limit_ip(http_request, "room_create")
+    
     try:
         # Generate unique room ID (collision chance is negligible with 6 characters)
         room_id = generate_room_id()
@@ -1172,6 +1175,9 @@ async def create_ai_game(request: CreateAIGameRequest, http_request: Request, db
 @app.post("/rooms/join", response_model=JoinRoomResponse)
 async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Join an existing game room"""
+    # Apply rate limiting
+    await rate_limit_ip(http_request, "room_join")
+    
     # Load room with players eagerly to avoid MissingGreenlet errors
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
@@ -1256,6 +1262,9 @@ async def join_room(request: JoinRoomRequest, http_request: Request, db: AsyncSe
 @app.post("/rooms/join-random", response_model=JoinRoomResponse)
 async def join_random_room(request: JoinRandomRoomRequest, http_request: Request, db: AsyncSession = Depends(get_db), client_ip: str = Depends(get_client_ip)):
     """Join a random available game room"""
+    # Apply rate limiting
+    await rate_limit_ip(http_request, "room_join")
+    
     # Find rooms that are in waiting phase with space for another player
     from sqlalchemy import select, func
     from sqlalchemy.orm import selectinload
@@ -1766,8 +1775,11 @@ async def start_game(request: StartGameRequest, db: AsyncSession = Depends(get_d
 
 
 @app.post("/game/play-card", response_model=StandardResponse)
-async def play_card(request: PlayCardRequest, db: AsyncSession = Depends(get_db)):
+async def play_card(request: PlayCardRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
     """Play a card (capture, build, or trail) with complete game logic"""
+    # Apply rate limiting for game actions
+    await rate_limit_ip(http_request, "game_action")
+    
     from action_logger import ActionLogger
     from version_validator import validate_version
     
@@ -2192,8 +2204,7 @@ async def websocket_endpoint(
     ping_task = None
     
     # Use print for guaranteed log output with flush
-    print(f"[WS] Connection attempt for room {room_id}", flush=True)
-    print(f"[WS] Session token: {session_token[:30] if session_token else 'None'}...", flush=True)
+    logger.info(f"WebSocket connection attempt for room {room_id}")
     
     async def send_server_ping():
         """Send periodic pings to keep connection alive (Render has aggressive idle timeout)"""
@@ -2204,9 +2215,8 @@ async def websocket_endpoint(
                         "type": "server_ping",
                         "timestamp": datetime.utcnow().isoformat()
                     })
-                    print(f"[WS] Sent server ping to room {room_id}")
                 except Exception as e:
-                    print(f"[WS] Server ping failed (connection likely closed): {e}")
+                    logger.debug(f"Server ping failed (connection likely closed): {e}")
                     break
                 await asyncio.sleep(3)  # Send ping every 3 seconds (very aggressive for Render)
         except asyncio.CancelledError:
@@ -2222,15 +2232,12 @@ async def websocket_endpoint(
             )
             
             if not success:
-                print(f"[WS] Connection FAILED for room {room_id}: {error}")
                 logger.warning(f"WebSocket connection failed for room {room_id}: {error}")
                 return
             
             # Get session_id from the session data - use token as the identifier
             session_id = game_session.get("token") if game_session else None
-            print(f"[WS] Connection SUCCESS for room {room_id}")
-            print(f"[WS] Session ID: {session_id[:30] if session_id else 'None'}...")
-            logger.info(f"WebSocket connected successfully for room {room_id}, session: {session_id[:20] if session_id else 'None'}...")
+            logger.info(f"WebSocket connected for room {room_id}")
         
         # Send immediate ping to establish keep-alive before any delay
         try:
@@ -2238,9 +2245,8 @@ async def websocket_endpoint(
                 "type": "server_ping",
                 "timestamp": datetime.utcnow().isoformat()
             })
-            print(f"[WS] Sent immediate ping to room {room_id}")
         except Exception as e:
-            print(f"[WS] Failed to send immediate ping: {e}")
+            logger.debug(f"Failed to send immediate ping: {e}")
         
         # Start server-side ping task to keep connection alive
         ping_task = asyncio.create_task(send_server_ping())
@@ -2249,15 +2255,13 @@ async def websocket_endpoint(
         while True:
             try:
                 data = await websocket.receive_text()
-                print(f"[WS] Received message in room {room_id}: {data[:100]}...")
             except Exception as recv_error:
-                print(f"[WS] Error receiving message in room {room_id}: {recv_error}")
+                logger.debug(f"Error receiving message in room {room_id}: {recv_error}")
                 break
             
             try:
                 message = json.loads(data)
                 message_type = message.get("type")
-                print(f"[WS] Processing message type: {message_type}")
                 
                 # Handle different message types
                 if message_type == "ping":
@@ -2267,7 +2271,6 @@ async def websocket_endpoint(
                             "type": "pong",
                             "timestamp": datetime.utcnow().isoformat()
                         })
-                        print(f"[WS] Sent pong response")
                         
                         # Update session heartbeat in database to extend TTL
                         if session_id:
@@ -2275,15 +2278,13 @@ async def websocket_endpoint(
                                 async with AsyncSessionLocal() as heartbeat_db:
                                     session_manager = get_session_manager(heartbeat_db)
                                     await session_manager.update_heartbeat(session_id)
-                                    print(f"[WS] Updated heartbeat for session")
                             except Exception as hb_error:
-                                print(f"[WS] Failed to update heartbeat: {hb_error}")
+                                logger.debug(f"Failed to update heartbeat: {hb_error}")
                     except Exception as ping_error:
-                        print(f"[WS] Error handling ping: {ping_error}")
+                        logger.debug(f"Error handling ping: {ping_error}")
                 
                 elif message_type == "pong":
                     # Client responding to server ping - connection is alive
-                    print(f"[WS] Received pong from client")
                     pass
                 
                 elif message_type == "state_update":
@@ -2363,7 +2364,7 @@ async def websocket_endpoint(
                         exclude_session_id=session_id,
                         message=relay_message
                     )
-                    print(f"[WS] Chat message relayed: {sent}")
+                    logger.debug(f"Chat message relayed: {sent}")
                 
                 elif message_type == "media_status":
                     # Relay media status (audio/video mute state) to opponent
@@ -2380,7 +2381,6 @@ async def websocket_endpoint(
                         exclude_session_id=session_id,
                         message=relay_message
                     )
-                    print(f"[WS] Media status relayed")
                 
                 elif message_type in ["webrtc_offer", "webrtc_answer", "webrtc_ice_candidate"]:
                     # WebRTC signaling for voice/video calls
@@ -2398,12 +2398,11 @@ async def websocket_endpoint(
                         "from_player": session_id
                     }
                     
-                    sent = await manager.send_to_room_except(
+                    await manager.send_to_room_except(
                         room_id=room_id,
                         exclude_session_id=session_id,
                         message=relay_message
                     )
-                    print(f"[WS] WebRTC {message_type} relayed: {sent}")
                 
                 else:
                     # Default: broadcast to room

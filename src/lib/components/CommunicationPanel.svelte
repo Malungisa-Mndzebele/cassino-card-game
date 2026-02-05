@@ -40,14 +40,7 @@
 		const sessionToken = getSessionToken();
 		
 		if (roomId && playerId && playerName && !initialized) {
-			console.log('[CommunicationPanel] Initializing with:', { 
-				roomId, 
-				playerId, 
-				playerName,
-				hasSessionToken: !!sessionToken 
-			});
 			const wsSend = (msg: any) => {
-				console.log('[CommunicationPanel] Sending message:', msg.type);
 				connectionStore.send(msg);
 			};
 			// Use session token as the ID for message comparison (matches backend sender_id)
@@ -57,7 +50,6 @@
 	});
 	
 	onDestroy(() => {
-		console.log('[CommunicationPanel] Cleaning up');
 		communication.cleanup();
 		initialized = false;
 	});

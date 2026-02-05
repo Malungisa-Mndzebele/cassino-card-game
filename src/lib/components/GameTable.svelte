@@ -46,7 +46,6 @@
 		if (!selectedHandCard || selectedTableCards.length === 0) return;
 		
 		// TODO: Call API to play capture action
-		console.log('Capture:', selectedHandCard, selectedTableCards);
 		resetSelection();
 	}
 	
@@ -54,7 +53,6 @@
 		if (!selectedHandCard) return;
 		
 		// TODO: Show build value input dialog
-		console.log('Build:', selectedHandCard);
 		resetSelection();
 	}
 	
@@ -62,7 +60,6 @@
 		if (!selectedHandCard) return;
 		
 		// TODO: Call API to play trail action
-		console.log('Trail:', selectedHandCard);
 		resetSelection();
 	}
 	

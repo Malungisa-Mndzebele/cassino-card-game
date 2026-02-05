@@ -30,7 +30,6 @@ function createConnectionStore() {
 
     const connect = (roomId: string) => {
         if (ws?.readyState === WebSocket.OPEN) {
-            console.log('WebSocket already connected');
             return;
         }
 
@@ -43,8 +42,6 @@ function createConnectionStore() {
         const sessionToken = typeof window !== 'undefined'
             ? sessionStorage.getItem('session_token')
             : null;
-
-        console.log('WebSocket connecting with session token:', sessionToken ? sessionToken.substring(0, 30) + '...' : 'NONE');
 
         const wsUrl = sessionToken
             ? `${apiUrl}/ws/${roomId}?session_token=${encodeURIComponent(sessionToken)}`
@@ -59,14 +56,12 @@ function createConnectionStore() {
             ws = new WebSocket(wsUrl);
 
             ws.onopen = async () => {
-                console.log('WebSocket connected');
                 const wasReconnecting = reconnectAttempts > 0;
                 reconnectAttempts = 0;
                 update((s) => ({ ...s, status: 'connected', error: null }));
 
                 // Sync state on reconnection
                 if (wasReconnecting) {
-                    console.log('Reconnected, syncing state...');
                     try {
                         const currentState = gameStore.getConfirmedGameState();
                         await syncStateManager.syncOnReconnect(
@@ -85,7 +80,7 @@ function createConnectionStore() {
                             }
                         );
                     } catch (err) {
-                        console.error('Failed to sync on reconnection:', err);
+                        ErrorHandler.logError(err, 'Reconnection sync');
                     }
                 }
 
@@ -95,22 +90,17 @@ function createConnectionStore() {
 
             ws.onmessage = async (event) => {
                 try {
-                    console.log('WebSocket raw message received:', event.data.substring(0, 200));
                     const data = JSON.parse(event.data);
-                    console.log('WebSocket parsed message type:', data.type);
 
                     // Handle different message types
                     if (data.type === 'server_ping') {
                         // Respond to server ping IMMEDIATELY to keep connection alive
-                        console.log('Responding to server ping with pong');
                         if (ws?.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify({ type: 'pong', timestamp: data.timestamp }));
                         }
                         return;
                     } else if (data.type === 'game_state_update' || data.type === 'state_update') {
                         // Full state update
-                        console.log('Full state update received:', data);
-
                         if (data.game_state || data.state) {
                             // Transform snake_case to camelCase
                             const { transformGameState } = await import('$lib/utils/api');
@@ -121,7 +111,6 @@ function createConnectionStore() {
                             if (newState.checksum) {
                                 const isValid = await validateChecksum(newState, newState.checksum);
                                 if (!isValid) {
-                                    console.warn('Checksum validation failed, requesting resync');
                                     syncStateManager.recordChecksumMismatch();
 
                                     // Auto-resync if threshold reached
@@ -131,39 +120,34 @@ function createConnectionStore() {
                                             const response = await getGameState(data.room_id);
                                             await gameStore.setGameState(response.game_state);
                                         } catch (err) {
-                                            console.error('Auto-resync failed:', err);
+                                            ErrorHandler.logError(err, 'Auto-resync');
                                         }
                                     }
                                     return;
                                 }
                             }
 
-                            console.log('Updating game state from WebSocket:', newState);
                             await gameStore.setGameState(newState);
                         } else if (data.room_id) {
                             // No state in message, fetch from API
-                            console.log('No state in WebSocket message, fetching from API');
                             try {
                                 const { getGameState } = await import('$lib/utils/api');
                                 const response = await getGameState(data.room_id);
                                 await gameStore.setGameState(response.game_state);
                             } catch (err) {
-                                console.error('Failed to fetch game state:', err);
+                                ErrorHandler.logError(err, 'Fetch game state');
                             }
                         }
                     } else if (data.type === 'state_delta') {
                         // Delta update
-                        console.log('Delta update received');
-
                         const currentState = gameStore.getConfirmedGameState();
                         if (!currentState) {
-                            console.warn('No current state, requesting full state');
                             try {
                                 const { getGameState } = await import('$lib/utils/api');
                                 const response = await getGameState(data.room_id);
                                 await gameStore.setGameState(response.game_state);
                             } catch (err) {
-                                console.error('Failed to fetch game state:', err);
+                                ErrorHandler.logError(err, 'Fetch game state for delta');
                             }
                             return;
                         }
@@ -173,25 +157,22 @@ function createConnectionStore() {
                         if (result.success && result.state) {
                             await gameStore.setGameState(result.state);
                         } else {
-                            console.warn('Delta application failed:', result.error);
                             // Request full state
                             try {
                                 const { getGameState } = await import('$lib/utils/api');
                                 const response = await getGameState(data.room_id);
                                 await gameStore.setGameState(response.game_state);
                             } catch (err) {
-                                console.error('Failed to fetch game state:', err);
+                                ErrorHandler.logError(err, 'Fetch game state after delta fail');
                             }
                         }
                     } else if (data.type === 'player_joined') {
                         // Update game state when a player joins - use included state if available
-                        console.log(`Player ${data.player_name} joined the room`);
                         try {
                             if (data.game_state) {
                                 // Use the game state included in the message (more reliable)
                                 const { transformGameState } = await import('$lib/utils/api');
                                 const newState = transformGameState(data.game_state);
-                                console.log('Updating game state from player_joined message:', newState);
                                 await gameStore.setGameState(newState);
                             } else {
                                 // Fallback: fetch from API if no state included
@@ -200,7 +181,7 @@ function createConnectionStore() {
                                 await gameStore.setGameState(response.game_state);
                             }
                         } catch (err) {
-                            console.error('Failed to update game state on player join:', err);
+                            ErrorHandler.logError(err, 'Player join state update');
                         }
                     } else if (data.type === 'pong') {
                         // Calculate latency from our ping
@@ -211,7 +192,6 @@ function createConnectionStore() {
                         }
                     } else if (data.type === 'chat_message') {
                         // Handle incoming chat message
-                        console.log('[ConnectionStore] Received chat_message:', data);
                         try {
                             const { communication } = await import('./communication.svelte');
                             communication.receiveMessage({
@@ -220,52 +200,46 @@ function createConnectionStore() {
                                 sender_id: data.data.sender_id,
                                 sender_name: data.data.sender_name
                             });
-                            console.log('[ConnectionStore] Chat message forwarded to communication store');
                         } catch (err) {
-                            console.error('Failed to handle chat message:', err);
+                            ErrorHandler.logError(err, 'Chat message handling');
                         }
                     } else if (data.type === 'media_status') {
                         // Handle opponent media status update
-                        console.log('[ConnectionStore] Received media_status:', data);
                         try {
                             const { communication } = await import('./communication.svelte');
                             communication.handleOpponentMediaStatus(data.data);
                         } catch (err) {
-                            console.error('Failed to handle media status:', err);
+                            ErrorHandler.logError(err, 'Media status handling');
                         }
                     } else if (data.type === 'webrtc_offer') {
                         // Handle WebRTC offer for voice/video
-                        console.log('[ConnectionStore] Received webrtc_offer');
                         try {
                             const { communication } = await import('./communication.svelte');
                             await communication.handleOffer(data.data);
                         } catch (err) {
-                            console.error('Failed to handle WebRTC offer:', err);
+                            ErrorHandler.logError(err, 'WebRTC offer handling');
                         }
                     } else if (data.type === 'webrtc_answer') {
                         // Handle WebRTC answer
-                        console.log('[ConnectionStore] Received webrtc_answer');
                         try {
                             const { communication } = await import('./communication.svelte');
                             await communication.handleAnswer(data.data);
                         } catch (err) {
-                            console.error('Failed to handle WebRTC answer:', err);
+                            ErrorHandler.logError(err, 'WebRTC answer handling');
                         }
                     } else if (data.type === 'webrtc_ice_candidate') {
                         // Handle ICE candidate
-                        console.log('[ConnectionStore] Received webrtc_ice_candidate');
                         try {
                             const { communication } = await import('./communication.svelte');
                             await communication.handleIceCandidate(data.data);
                         } catch (err) {
-                            console.error('Failed to handle ICE candidate:', err);
+                            ErrorHandler.logError(err, 'ICE candidate handling');
                         }
                     } else if (data.type === 'error') {
                         update((s) => ({ ...s, error: data.message }));
 
                         // Handle invalid session - clear stored session and stop reconnecting
                         if (data.code === 'invalid_session' || data.code === 'wrong_room') {
-                            console.log('Session invalid, clearing stored session data');
                             if (typeof sessionStorage !== 'undefined') {
                                 sessionStorage.removeItem('session_token');
                                 sessionStorage.removeItem('cassino_room_id');
@@ -288,13 +262,11 @@ function createConnectionStore() {
             };
 
             ws.onclose = (event) => {
-                console.log('WebSocket closed', { code: event.code, reason: event.reason, wasClean: event.wasClean });
                 update((s) => ({ ...s, status: 'disconnected' }));
                 stopHeartbeat();
 
                 // Don't reconnect if session was invalid (code 1008)
                 if (event.code === 1008) {
-                    console.log('Session invalid, not reconnecting');
                     if (typeof sessionStorage !== 'undefined') {
                         sessionStorage.removeItem('session_token');
                         sessionStorage.removeItem('cassino_room_id');
@@ -312,7 +284,6 @@ function createConnectionStore() {
                 if (reconnectAttempts < maxReconnectAttempts) {
                     reconnectAttempts++;
                     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
-                    console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts})`);
 
                     reconnectTimeout = setTimeout(() => {
                         connect(roomId);
@@ -352,8 +323,6 @@ function createConnectionStore() {
     const send = (data: any) => {
         if (ws?.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(data));
-        } else {
-            console.warn('WebSocket not connected, cannot send message');
         }
     };
 
@@ -362,7 +331,6 @@ function createConnectionStore() {
         // Send first ping immediately to establish keep-alive
         if (ws?.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
-            console.log('Sent initial heartbeat ping');
         }
         // Then send every 3 seconds (Render has very aggressive idle timeout)
         heartbeatInterval = setInterval(() => {
@@ -382,7 +350,6 @@ function createConnectionStore() {
     // Polling fallback - fetches game state periodically to ensure sync even when WebSocket is unreliable
     const startPolling = (roomId: string) => {
         stopPolling();
-        console.log('Starting polling fallback for room:', roomId);
 
         // Poll immediately on start
         pollGameState(roomId);
@@ -412,13 +379,11 @@ function createConnectionStore() {
 
                 // Only update if server has newer state
                 if (newVersion > currentVersion) {
-                    console.log(`Polling: updating state from v${currentVersion} to v${newVersion}`);
                     await gameStore.setGameState(response.game_state);
                 }
             }
-        } catch (err) {
+        } catch {
             // Silently fail polling - WebSocket might still work
-            console.debug('Polling failed (this is normal if WebSocket is working):', err);
         }
     };
 

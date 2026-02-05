@@ -133,7 +133,6 @@ function createGameStore() {
                     }));
                 } else if (sessionAge >= maxSessionAge) {
                     // Clear expired session
-                    console.log('Session expired, clearing sessionStorage');
                     sessionStorage.removeItem('cassino_room_id');
                     sessionStorage.removeItem('cassino_player_id');
                     sessionStorage.removeItem('cassino_session_timestamp');
