@@ -2,7 +2,8 @@ import type {
     CreateRoomResponse,
     JoinRoomResponse,
     GameStateResponse,
-    ErrorResponse
+    ErrorResponse,
+    GameState
 } from '$types/game';
 
 const API_URL =
@@ -111,38 +112,65 @@ export async function joinRandomRoom(playerName: string): Promise<JoinRoomRespon
     };
 }
 
+// Backend state interface (snake_case from API)
+interface BackendGameState {
+    room_id?: string;
+    phase?: string;
+    round?: number;
+    players?: Array<{ id: string; name: string; score: number; hand: unknown[]; captured: unknown[] }>;
+    table_cards?: unknown[];
+    current_turn?: number;
+    deck?: unknown[];
+    player1_hand?: unknown[];
+    player2_hand?: unknown[];
+    player1_captured?: unknown[];
+    player2_captured?: unknown[];
+    player1_score?: number;
+    player2_score?: number;
+    player1_ready?: boolean;
+    player2_ready?: boolean;
+    winner?: string | number | null;
+    last_action?: unknown;
+    last_update?: string;
+    builds?: unknown[];
+    shuffle_complete?: boolean;
+    card_selection_complete?: boolean;
+    game_started?: boolean;
+    game_completed?: boolean;
+    dealing_complete?: boolean;
+    version?: number;
+    checksum?: string;
+}
+
 // Transform backend snake_case to frontend camelCase
-export function transformGameState(backendState: any): any {
+export function transformGameState(backendState: BackendGameState | null | undefined): GameState | null {
     if (!backendState) return null;
 
     return {
-        roomId: backendState.room_id,
-        phase: backendState.phase,
-        round: backendState.round,
-        players: backendState.players || [],
-        tableCards: backendState.table_cards || [],
+        roomId: backendState.room_id || '',
+        phase: (backendState.phase || 'waiting') as GameState['phase'],
+        round: backendState.round || 1,
+        players: (backendState.players || []) as GameState['players'],
+        tableCards: (backendState.table_cards || []) as GameState['tableCards'],
         currentPlayer: backendState.current_turn === 1
-            ? backendState.players?.[0]?.id
-            : backendState.players?.[1]?.id,
-        deck: backendState.deck || [],
-        player1Hand: backendState.player1_hand || [],
-        player2Hand: backendState.player2_hand || [],
-        player1Captured: backendState.player1_captured || [],
-        player2Captured: backendState.player2_captured || [],
+            ? backendState.players?.[0]?.id || ''
+            : backendState.players?.[1]?.id || '',
+        deck: (backendState.deck || []) as GameState['deck'],
+        player1Hand: (backendState.player1_hand || []) as GameState['player1Hand'],
+        player2Hand: (backendState.player2_hand || []) as GameState['player2Hand'],
+        player1Captured: (backendState.player1_captured || []) as GameState['player1Captured'],
+        player2Captured: (backendState.player2_captured || []) as GameState['player2Captured'],
         player1Score: backendState.player1_score || 0,
         player2Score: backendState.player2_score || 0,
         player1Ready: backendState.player1_ready || false,
         player2Ready: backendState.player2_ready || false,
-        winner: backendState.winner,
-        lastAction: backendState.last_action,
+        winner: backendState.winner ?? null,
+        lastAction: backendState.last_action as GameState['lastAction'],
         lastUpdate: backendState.last_update,
-        builds: backendState.builds || [],
+        builds: (backendState.builds || []) as GameState['builds'],
         shuffleComplete: backendState.shuffle_complete || false,
         cardSelectionComplete: backendState.card_selection_complete || false,
         currentTurn: backendState.current_turn || 1,
-        gameStarted: backendState.game_started || false,
-        gameCompleted: backendState.game_completed || false,
-        dealingComplete: backendState.dealing_complete || false,
         version: backendState.version || 0,
         checksum: backendState.checksum
     };

@@ -96,7 +96,13 @@ let state = $state<CommunicationState>({
 	playerName: null
 });
 
-let websocketSend: ((message: any) => void) | null = null;
+// WebSocket message type
+interface WebSocketMessage {
+	type: string;
+	data?: Record<string, unknown>;
+}
+
+let websocketSend: ((message: WebSocketMessage) => void) | null = null;
 let audioContext: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
 let speakingCheckInterval: number | null = null;
@@ -125,7 +131,7 @@ function saveSettings() {
 	}
 }
 
-async function initialize(roomId: string, playerId: string, playerName: string, wsSend: (message: any) => void) {
+async function initialize(roomId: string, playerId: string, playerName: string, wsSend: (message: WebSocketMessage) => void) {
 	if (!browser) return;
 
 	state.roomId = roomId;
@@ -228,7 +234,7 @@ async function toggleAudio() {
 			state.isAudioEnabled = true;
 			state.isAudioMuted = false;
 			sendMediaStatus();
-		} catch (error: any) {
+		} catch (error) {
 			handleMediaError(error, 'microphone');
 		}
 	} else {
@@ -284,7 +290,7 @@ async function toggleVideo() {
 			state.isVideoEnabled = true;
 			state.isVideoMuted = false;
 			sendMediaStatus();
-		} catch (error: any) {
+		} catch (error) {
 			handleMediaError(error, 'camera');
 		}
 	} else {
@@ -298,12 +304,13 @@ async function toggleVideo() {
 	}
 }
 
-function handleMediaError(error: any, device: string) {
-	console.error(`Failed to access ${device}:`, error);
+function handleMediaError(error: unknown, device: string) {
+	const err = error as Error & { name?: string };
+	console.error(`Failed to access ${device}:`, err);
 
-	if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+	if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
 		state.connectionError = `${device.charAt(0).toUpperCase() + device.slice(1)} permission denied. Please allow access in browser settings.`;
-	} else if (error.name === 'NotFoundError') {
+	} else if (err.name === 'NotFoundError') {
 		state.connectionError = `No ${device} found. Please connect a ${device} and try again.`;
 	} else {
 		state.connectionError = `Failed to access ${device}. Please check your device settings.`;

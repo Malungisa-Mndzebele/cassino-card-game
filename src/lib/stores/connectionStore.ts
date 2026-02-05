@@ -108,7 +108,7 @@ function createConnectionStore() {
                             const newState = transformGameState(rawState);
 
                             // Validate checksum if provided
-                            if (newState.checksum) {
+                            if (newState && newState.checksum) {
                                 const isValid = await validateChecksum(newState, newState.checksum);
                                 if (!isValid) {
                                     syncStateManager.recordChecksumMismatch();
@@ -118,7 +118,9 @@ function createConnectionStore() {
                                         try {
                                             const { getGameState } = await import('$lib/utils/api');
                                             const response = await getGameState(data.room_id);
-                                            await gameStore.setGameState(response.game_state);
+                                            if (response.game_state) {
+                                                await gameStore.setGameState(response.game_state);
+                                            }
                                         } catch (err) {
                                             ErrorHandler.logError(err, 'Auto-resync');
                                         }
@@ -127,7 +129,9 @@ function createConnectionStore() {
                                 }
                             }
 
-                            await gameStore.setGameState(newState);
+                            if (newState) {
+                                await gameStore.setGameState(newState);
+                            }
                         } else if (data.room_id) {
                             // No state in message, fetch from API
                             try {
@@ -161,7 +165,9 @@ function createConnectionStore() {
                             try {
                                 const { getGameState } = await import('$lib/utils/api');
                                 const response = await getGameState(data.room_id);
-                                await gameStore.setGameState(response.game_state);
+                                if (response.game_state) {
+                                    await gameStore.setGameState(response.game_state);
+                                }
                             } catch (err) {
                                 ErrorHandler.logError(err, 'Fetch game state after delta fail');
                             }
@@ -173,12 +179,16 @@ function createConnectionStore() {
                                 // Use the game state included in the message (more reliable)
                                 const { transformGameState } = await import('$lib/utils/api');
                                 const newState = transformGameState(data.game_state);
-                                await gameStore.setGameState(newState);
+                                if (newState) {
+                                    await gameStore.setGameState(newState);
+                                }
                             } else {
                                 // Fallback: fetch from API if no state included
                                 const { getGameState } = await import('$lib/utils/api');
                                 const response = await getGameState(data.room_id);
-                                await gameStore.setGameState(response.game_state);
+                                if (response.game_state) {
+                                    await gameStore.setGameState(response.game_state);
+                                }
                             }
                         } catch (err) {
                             ErrorHandler.logError(err, 'Player join state update');
@@ -320,7 +330,7 @@ function createConnectionStore() {
         reconnectAttempts = 0;
     };
 
-    const send = (data: any) => {
+    const send = (data: Record<string, unknown>) => {
         if (ws?.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(data));
         }

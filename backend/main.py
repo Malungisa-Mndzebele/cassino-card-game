@@ -1021,10 +1021,11 @@ async def create_room(request: CreateRoomRequest, http_request: Request, db: Asy
             logger.info(f"Session created successfully for player {player.id}")
         except Exception as e:
             logger.error(f"Failed to create session for player {player.id}: {e}")
-            # Continue without session - the game can still work
+            # Continue without session - use secure random token as fallback
+            import secrets
             from datetime import datetime, timedelta
             session_token = SessionToken(
-                token=f"fallback_{room_id}_{player.id}",
+                token=secrets.token_urlsafe(32),
                 room_id=room_id,
                 player_id=player.id,
                 player_name=player.name,
@@ -1133,9 +1134,10 @@ async def create_ai_game(request: CreateAIGameRequest, http_request: Request, db
             )
         except Exception as e:
             logger.error(f"Failed to create session: {e}")
+            import secrets
             from datetime import datetime, timedelta
             session_token = SessionToken(
-                token=f"fallback_{room_id}_{player.id}",
+                token=secrets.token_urlsafe(32),
                 room_id=room_id,
                 player_id=player.id,
                 player_name=player.name,
@@ -2202,6 +2204,26 @@ async def websocket_endpoint(
     session_id = None
     game_session = None
     ping_task = None
+    
+    # Apply WebSocket rate limiting
+    try:
+        from rate_limiter import check_rate_limit, RATE_LIMITS
+        client_ip = websocket.client.host if websocket.client else "127.0.0.1"
+        # Check for forwarded headers
+        forwarded_for = websocket.headers.get("x-forwarded-for")
+        if forwarded_for:
+            client_ip = forwarded_for.split(",")[0].strip()
+        
+        limit, window = RATE_LIMITS.get("websocket", (10, 60))
+        allowed, _, _ = await check_rate_limit(f"websocket:{client_ip}", limit, window)
+        
+        if not allowed:
+            logger.warning(f"WebSocket rate limit exceeded for IP {client_ip}")
+            await websocket.close(code=1008, reason="Rate limit exceeded")
+            return
+    except Exception as e:
+        logger.warning(f"WebSocket rate limit check failed: {e}")
+        # Allow connection if rate limit check fails
     
     # Use print for guaranteed log output with flush
     logger.info(f"WebSocket connection attempt for room {room_id}")

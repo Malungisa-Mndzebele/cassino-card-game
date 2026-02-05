@@ -6,6 +6,14 @@ export interface Card {
     value: number;
 }
 
+export interface Build {
+    id: string;
+    value: number;
+    cards: Card[];
+    owner: string;
+    isCompound?: boolean;
+}
+
 export interface Player {
     id: string;
     name: string;
@@ -34,7 +42,7 @@ export interface GameState {
     winner: string | number | null;
     lastAction: GameAction | null;
     lastUpdate?: string;
-    builds?: any[];
+    builds?: Build[];
     shuffleComplete?: boolean;
     cardSelectionComplete?: boolean;
     // State synchronization fields

@@ -82,8 +82,14 @@ let state = $state<VoiceChatState>({
 	playerId: null
 });
 
+// WebSocket message type
+interface WebSocketMessage {
+	type: string;
+	data?: Record<string, unknown>;
+}
+
 // WebSocket reference (will be set from outside)
-let websocketSend: ((message: any) => void) | null = null;
+let websocketSend: ((message: WebSocketMessage) => void) | null = null;
 
 // Audio context for speaking detection
 let audioContext: AudioContext | null = null;
@@ -129,7 +135,7 @@ function saveSettings() {
 /**
  * Initialize voice chat for a room
  */
-async function initialize(roomId: string, playerId: string, wsSend: (message: any) => void) {
+async function initialize(roomId: string, playerId: string, wsSend: (message: WebSocketMessage) => void) {
 	if (!browser) return;
 
 	state.roomId = roomId;
@@ -215,12 +221,13 @@ async function toggleMute() {
 
 			// Broadcast mute status
 			sendMuteStatus(false);
-		} catch (error: any) {
-			console.error('Failed to access microphone:', error);
+		} catch (error) {
+			const err = error as Error & { name?: string };
+			console.error('Failed to access microphone:', err);
 
-			if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+			if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
 				state.connectionError = 'Microphone permission denied. Please allow access in your browser settings.';
-			} else if (error.name === 'NotFoundError') {
+			} else if (err.name === 'NotFoundError') {
 				state.connectionError = 'No microphone found. Please connect a microphone and try again.';
 			} else {
 				state.connectionError = 'Failed to access microphone. Please check your device settings.';
