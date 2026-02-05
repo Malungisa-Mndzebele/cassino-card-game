@@ -10,7 +10,7 @@ export interface Build {
     id: string;
     value: number;
     cards: Card[];
-    owner: string;
+    owner: number;
     isCompound?: boolean;
 }
 
@@ -73,18 +73,18 @@ export interface CreateRoomResponse {
     room_id: string;
     player_id: string;
     player_name: string;
-    game_state: GameState;
+    game_state: GameState | null;
 }
 
 export interface JoinRoomResponse {
     room_id: string;
     player_id: string;
     player_name: string;
-    game_state: GameState;
+    game_state: GameState | null;
 }
 
 export interface GameStateResponse {
-    game_state: GameState;
+    game_state: GameState | null;
 }
 
 export interface ErrorResponse {

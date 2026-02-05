@@ -21,7 +21,9 @@
         // Fetch current game state
         const { getGameState } = await import('$lib/utils/api');
         const response = await getGameState($gameStore.roomId);
-        gameStore.setGameState(response.game_state);
+        if (response.game_state) {
+          gameStore.setGameState(response.game_state);
+        }
         
         // Reconnect WebSocket
         connectionStore.connect($gameStore.roomId);

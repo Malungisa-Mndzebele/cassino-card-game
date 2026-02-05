@@ -72,9 +72,9 @@ function createConnectionStore() {
                                 const response = await getGameState(roomId);
                                 return {
                                     success: true,
-                                    currentVersion: response.game_state.version || 0,
+                                    currentVersion: response.game_state?.version || 0,
                                     clientVersion: clientVersion || 0,
-                                    state: response.game_state,
+                                    state: response.game_state ?? undefined,
                                     requiresFullSync: false
                                 };
                             }
@@ -137,7 +137,9 @@ function createConnectionStore() {
                             try {
                                 const { getGameState } = await import('$lib/utils/api');
                                 const response = await getGameState(data.room_id);
-                                await gameStore.setGameState(response.game_state);
+                                if (response.game_state) {
+                                    await gameStore.setGameState(response.game_state);
+                                }
                             } catch (err) {
                                 ErrorHandler.logError(err, 'Fetch game state');
                             }
@@ -149,7 +151,9 @@ function createConnectionStore() {
                             try {
                                 const { getGameState } = await import('$lib/utils/api');
                                 const response = await getGameState(data.room_id);
-                                await gameStore.setGameState(response.game_state);
+                                if (response.game_state) {
+                                    await gameStore.setGameState(response.game_state);
+                                }
                             } catch (err) {
                                 ErrorHandler.logError(err, 'Fetch game state for delta');
                             }

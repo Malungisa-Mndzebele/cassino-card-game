@@ -155,7 +155,7 @@ describe('API Utils - Data Transformation', () => {
             expect(response.player_id).toBe(1);
             expect(response.player_name).toBe('Player1');
             expect(response.game_state).toBeDefined();
-            expect(response.game_state.roomId).toBe('ABC123');
+            expect(response.game_state?.roomId).toBe('ABC123');
         });
 
         it('should send correct request body', async () => {
@@ -220,7 +220,7 @@ describe('API Utils - Data Transformation', () => {
             expect(response.player_id).toBe(2);
             expect(response.player_name).toBe('Player2');
             expect(response.game_state).toBeDefined();
-            expect(response.game_state.players).toHaveLength(2);
+            expect(response.game_state?.players).toHaveLength(2);
         });
 
         it('should send correct request body', async () => {
@@ -337,8 +337,8 @@ describe('API Utils - Data Transformation', () => {
 
             expect(response.success).toBe(true);
             expect(response.message).toBe('Player ready status updated');
-            expect(response.game_state.player1Ready).toBe(true);
-            expect(response.game_state.player2Ready).toBe(false);
+            expect(response.game_state?.player1Ready).toBe(true);
+            expect(response.game_state?.player2Ready).toBe(false);
         });
 
         it('should send correct request body with is_ready', async () => {

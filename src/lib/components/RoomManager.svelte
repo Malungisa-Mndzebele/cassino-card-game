@@ -59,7 +59,9 @@
       gameStore.setRoomId(response.room_id);
       gameStore.setPlayerId(response.player_id);
       gameStore.setPlayerName(sanitized);
-      gameStore.setGameState(response.game_state);
+      if (response.game_state) {
+        gameStore.setGameState(response.game_state);
+      }
 
       showRoomCode = true;
 
@@ -89,7 +91,9 @@
       gameStore.setRoomId(response.room_id);
       gameStore.setPlayerId(response.player_id);
       gameStore.setPlayerName(sanitized);
-      gameStore.setGameState(response.game_state);
+      if (response.game_state) {
+        gameStore.setGameState(response.game_state);
+      }
 
       // Connect WebSocket (for state updates)
       await connectionStore.connect(response.room_id);
@@ -132,7 +136,9 @@
           gameStore.setRoomId(formatted);
           gameStore.setPlayerId(response.player_id);
           gameStore.setPlayerName(sanitized);
-          gameStore.setGameState(response.game_state);
+          if (response.game_state) {
+            gameStore.setGameState(response.game_state);
+          }
 
           // Connect WebSocket
           await connectionStore.connect(formatted);
@@ -172,13 +178,15 @@
         try {
           const response = await joinRandomRoom(sanitized);
 
-          gameStore.setRoomId(response.game_state.roomId);
-          gameStore.setPlayerId(response.player_id);
-          gameStore.setPlayerName(sanitized);
-          gameStore.setGameState(response.game_state);
+          if (response.game_state) {
+            gameStore.setRoomId(response.game_state.roomId);
+            gameStore.setPlayerId(response.player_id);
+            gameStore.setPlayerName(sanitized);
+            gameStore.setGameState(response.game_state);
 
-          // Connect WebSocket
-          await connectionStore.connect(response.game_state.roomId);
+            // Connect WebSocket
+            await connectionStore.connect(response.game_state.roomId);
+          }
           return;
         } catch (err: any) {
           if (err.message?.includes('Player name already taken') && attempts < 4) {

@@ -150,6 +150,10 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("Redis not available (sessions and caching disabled)")
     
+    # Setup request tracking logging
+    setup_request_tracking_logging()
+    logger.info("Request tracking logging configured")
+    
     # Start background tasks
     try:
         await background_task_manager.start()
@@ -2036,7 +2040,7 @@ async def play_card(request: PlayCardRequest, http_request: Request, db: AsyncSe
 
 
 @app.post("/game/table-build", response_model=StandardResponse)
-async def table_build(request: TableBuildRequest, db: AsyncSession = Depends(get_db)):
+async def table_build(request: TableBuildRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
     """
     Create a build from table cards only (non-standard rule).
     
@@ -2048,6 +2052,9 @@ async def table_build(request: TableBuildRequest, db: AsyncSession = Depends(get
     - Cards must sum to the declared build value
     - Player must have a card in hand that can capture the build
     """
+    # Apply rate limiting for game actions
+    await rate_limit_ip(http_request, "game_action")
+    
     from action_logger import ActionLogger
     from schemas import TableBuildRequest
     
