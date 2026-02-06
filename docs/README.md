@@ -5,7 +5,7 @@ This directory contains all project documentation organized by category.
 ## 📸 Game Preview
 
 <p align="center">
-  <img src="images/game-lobby.png" alt="Casino Card Game Lobby" width="400">
+  <img src="images/game_landing_page.png" alt="Casino Card Game Lobby" width="600">
 </p>
 
 ## 📁 Directory Structure

@@ -13,7 +13,7 @@ A real-time multiplayer implementation of the classic Casino card game. Play hea
 ## 📸 Game Preview
 
 <p align="center">
-  <img src="docs/images/game-lobby.png" alt="Casino Card Game Lobby" width="400">
+  <img src="game_landing_page.png" alt="Casino Card Game Lobby" width="600">
 </p>
 
 <p align="center">
