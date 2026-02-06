@@ -53,6 +53,10 @@ describe('API Utils - Data Transformation', () => {
             const response = await getGameState('ABC123');
             const gameState = response.game_state;
 
+            // Verify gameState is not null
+            expect(gameState).not.toBeNull();
+            if (!gameState) return; // TypeScript guard
+
             // Verify camelCase transformation
             expect(gameState.roomId).toBe('ABC123');
             expect(gameState.tableCards).toEqual([]);
@@ -102,6 +106,10 @@ describe('API Utils - Data Transformation', () => {
 
             const response = await getGameState('ABC123');
             const gameState = response.game_state;
+
+            // Verify gameState is not null
+            expect(gameState).not.toBeNull();
+            if (!gameState) return; // TypeScript guard
 
             // Verify defaults for null/undefined
             expect(gameState.tableCards).toEqual([]);
