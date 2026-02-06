@@ -20,10 +20,9 @@ def run_migrations():
     """Run database migrations before starting server"""
     print("🔄 Running database migrations...", file=sys.stderr)
     
-    # First, fix any orphaned revision references
+    # Fix orphaned revision references in alembic_version table
     # The production DB may have 'add_perf_indexes' which was renamed to '0010_perf_idx'
     try:
-        # Check current revision
         result = subprocess.run(
             ["alembic", "current"],
             cwd=backend_dir,
@@ -32,22 +31,34 @@ def run_migrations():
         )
         current_output = result.stdout + result.stderr
         
-        # If we have orphaned revision, stamp to the merge head
         if "add_perf_indexes" in current_output or "Can't locate revision" in current_output:
             print("⚠️  Fixing orphaned revision reference...", file=sys.stderr)
-            # Stamp to the latest merge head
-            subprocess.run(
-                ["alembic", "stamp", "7fa01264610a"],
+            # Use Python/SQLAlchemy to directly clean the alembic_version table
+            # and stamp to the correct merge head
+            fix_result = subprocess.run(
+                [sys.executable, "-c", """
+import os, sqlalchemy
+url = os.environ.get('DATABASE_URL', '')
+if url.startswith('postgres://'):
+    url = url.replace('postgres://', 'postgresql://', 1)
+engine = sqlalchemy.create_engine(url)
+with engine.connect() as conn:
+    conn.execute(sqlalchemy.text("DELETE FROM alembic_version"))
+    conn.execute(sqlalchemy.text("INSERT INTO alembic_version (version_num) VALUES ('7fa01264610a')"))
+    conn.commit()
+print('Fixed alembic_version table')
+"""],
                 cwd=backend_dir,
                 capture_output=True,
                 text=True
             )
-            print("✅ Fixed revision reference", file=sys.stderr)
+            print(f"✅ {fix_result.stdout.strip()}", file=sys.stderr)
+            if fix_result.stderr:
+                print(f"   {fix_result.stderr.strip()}", file=sys.stderr)
     except Exception as e:
         print(f"⚠️  Could not check/fix revision: {e}", file=sys.stderr)
     
     try:
-        # First try 'heads' (plural) to handle multiple branches
         result = subprocess.run(
             ["alembic", "upgrade", "heads"],
             cwd=backend_dir,
@@ -59,8 +70,7 @@ def run_migrations():
         if result.stdout:
             print(result.stdout, file=sys.stderr)
         return True
-    except subprocess.CalledProcessError as e:
-        # If 'heads' fails, try 'head' as fallback for single-head scenarios
+    except subprocess.CalledProcessError:
         print(f"⚠️  Multi-head upgrade failed, trying single head...", file=sys.stderr)
         try:
             result = subprocess.run(
