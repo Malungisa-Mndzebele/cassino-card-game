@@ -16,47 +16,54 @@ from dotenv import load_dotenv
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
+def fix_alembic_version_table():
+    """
+    Directly fix the alembic_version table if it contains orphaned revisions.
+    This handles cases where revision IDs were renamed but the DB still has old values.
+    """
+    import sqlalchemy
+    database_url = os.environ.get('DATABASE_URL', '')
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    
+    if not database_url:
+        return
+    
+    try:
+        engine = sqlalchemy.create_engine(database_url)
+        with engine.connect() as conn:
+            # Check what's currently in alembic_version
+            result = conn.execute(sqlalchemy.text("SELECT version_num FROM alembic_version"))
+            rows = [row[0] for row in result]
+            
+            if not rows:
+                return
+            
+            # Known orphaned revisions that need fixing
+            orphaned = {'add_perf_indexes'}
+            has_orphaned = any(r in orphaned for r in rows)
+            
+            if has_orphaned:
+                print(f"⚠️  Found orphaned revisions: {rows}", file=sys.stderr)
+                conn.execute(sqlalchemy.text("DELETE FROM alembic_version"))
+                conn.execute(sqlalchemy.text(
+                    "INSERT INTO alembic_version (version_num) VALUES ('7fa01264610a')"
+                ))
+                conn.commit()
+                print("✅ Fixed alembic_version table → stamped to 7fa01264610a", file=sys.stderr)
+            else:
+                print(f"📋 Current alembic revisions: {rows}", file=sys.stderr)
+        engine.dispose()
+    except Exception as e:
+        print(f"⚠️  Could not check/fix alembic_version: {e}", file=sys.stderr)
+
+
 def run_migrations():
     """Run database migrations before starting server"""
     print("🔄 Running database migrations...", file=sys.stderr)
     
-    # Fix orphaned revision references in alembic_version table
-    # The production DB may have 'add_perf_indexes' which was renamed to '0010_perf_idx'
-    try:
-        result = subprocess.run(
-            ["alembic", "current"],
-            cwd=backend_dir,
-            capture_output=True,
-            text=True
-        )
-        current_output = result.stdout + result.stderr
-        
-        if "add_perf_indexes" in current_output or "Can't locate revision" in current_output:
-            print("⚠️  Fixing orphaned revision reference...", file=sys.stderr)
-            # Use Python/SQLAlchemy to directly clean the alembic_version table
-            # and stamp to the correct merge head
-            fix_result = subprocess.run(
-                [sys.executable, "-c", """
-import os, sqlalchemy
-url = os.environ.get('DATABASE_URL', '')
-if url.startswith('postgres://'):
-    url = url.replace('postgres://', 'postgresql://', 1)
-engine = sqlalchemy.create_engine(url)
-with engine.connect() as conn:
-    conn.execute(sqlalchemy.text("DELETE FROM alembic_version"))
-    conn.execute(sqlalchemy.text("INSERT INTO alembic_version (version_num) VALUES ('7fa01264610a')"))
-    conn.commit()
-print('Fixed alembic_version table')
-"""],
-                cwd=backend_dir,
-                capture_output=True,
-                text=True
-            )
-            print(f"✅ {fix_result.stdout.strip()}", file=sys.stderr)
-            if fix_result.stderr:
-                print(f"   {fix_result.stderr.strip()}", file=sys.stderr)
-    except Exception as e:
-        print(f"⚠️  Could not check/fix revision: {e}", file=sys.stderr)
+    # Fix orphaned revisions before attempting upgrade
+    fix_alembic_version_table()
     
     try:
         result = subprocess.run(
@@ -71,7 +78,7 @@ print('Fixed alembic_version table')
             print(result.stdout, file=sys.stderr)
         return True
     except subprocess.CalledProcessError:
-        print(f"⚠️  Multi-head upgrade failed, trying single head...", file=sys.stderr)
+        print("⚠️  Multi-head upgrade failed, trying single head...", file=sys.stderr)
         try:
             result = subprocess.run(
                 ["alembic", "upgrade", "head"],
