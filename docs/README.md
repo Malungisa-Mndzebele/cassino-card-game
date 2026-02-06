@@ -2,7 +2,18 @@
 
 This directory contains all project documentation organized by category.
 
+## 📸 Game Preview
+
+<p align="center">
+  <img src="images/game-lobby.png" alt="Casino Card Game Lobby" width="400">
+</p>
+
 ## 📁 Directory Structure
+
+### `/images`
+Screenshots and visual assets for documentation.
+
+- **game-lobby.png** - Screenshot of the game lobby/home screen
 
 ### `/deployment`
 Documentation related to deploying the application to production environments.
