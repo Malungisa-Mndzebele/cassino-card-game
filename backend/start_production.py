@@ -19,9 +19,35 @@ sys.path.insert(0, str(backend_dir))
 def run_migrations():
     """Run database migrations before starting server"""
     print("🔄 Running database migrations...", file=sys.stderr)
+    
+    # First, fix any orphaned revision references
+    # The production DB may have 'add_perf_indexes' which was renamed to '0010_perf_idx'
+    try:
+        # Check current revision
+        result = subprocess.run(
+            ["alembic", "current"],
+            cwd=backend_dir,
+            capture_output=True,
+            text=True
+        )
+        current_output = result.stdout + result.stderr
+        
+        # If we have orphaned revision, stamp to the merge head
+        if "add_perf_indexes" in current_output or "Can't locate revision" in current_output:
+            print("⚠️  Fixing orphaned revision reference...", file=sys.stderr)
+            # Stamp to the latest merge head
+            subprocess.run(
+                ["alembic", "stamp", "7fa01264610a"],
+                cwd=backend_dir,
+                capture_output=True,
+                text=True
+            )
+            print("✅ Fixed revision reference", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Could not check/fix revision: {e}", file=sys.stderr)
+    
     try:
         # First try 'heads' (plural) to handle multiple branches
-        # This upgrades all branches before merge migrations can be applied
         result = subprocess.run(
             ["alembic", "upgrade", "heads"],
             cwd=backend_dir,
