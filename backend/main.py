@@ -124,11 +124,18 @@ async def lifespan(app: FastAPI):
     
     # Validate required environment variables in production
     if not DEBUG_MODE:
-        required_vars = ["DATABASE_URL", "SESSION_SECRET_KEY"]
+        required_vars = ["DATABASE_URL"]
         missing_vars = [var for var in required_vars if not os.getenv(var)]
         if missing_vars:
             logger.critical(f"Missing required environment variables: {', '.join(missing_vars)}")
             raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
+        
+        # Generate SESSION_SECRET_KEY if not set (log warning)
+        if not os.getenv("SESSION_SECRET_KEY"):
+            import secrets
+            generated_key = secrets.token_urlsafe(48)
+            os.environ["SESSION_SECRET_KEY"] = generated_key
+            logger.warning("SESSION_SECRET_KEY not set - generated ephemeral key. Set this in environment for persistent sessions.")
         
         # Validate SESSION_SECRET_KEY length
         secret_key = os.getenv("SESSION_SECRET_KEY", "")
