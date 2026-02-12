@@ -233,8 +233,15 @@
       <p class="text-center text-gray-300 mb-4">Create or join a game room to start playing</p>
       
       <!-- How to Play Button -->
-      <div class="flex justify-center mb-6">
+      <div class="flex justify-center gap-3 mb-6">
         <GameInstructions />
+        <a 
+          href="/cassino/rules" 
+          class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+          target="_blank"
+        >
+          📖 Full Rules & Strategy
+        </a>
       </div>
 
       <!-- Create New Room Section -->

@@ -1,17 +1,23 @@
 {
-  "name": "Cassino Card Game - KhasinoGaming",
-  "short_name": "Cassino",
-  "description": "Classic Cassino card game - play online with friends at KhasinoGaming",
+  "name": "Casino Card Game - Play Online Multiplayer",
+  "short_name": "Casino Game",
+  "description": "Play the classic Casino card game online with friends. Real-time multiplayer, free to play, no download required. Capture cards, build combinations, and score points!",
   "start_url": "/cassino/",
   "scope": "/cassino/",
   "display": "standalone",
-  "background_color": "#065f46",
-  "theme_color": "#065f46",
-  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "any",
   "categories": ["games", "entertainment", "social"],
   "lang": "en",
   "dir": "ltr",
   "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
     {
       "src": "/favicon-16x16.png",
       "sizes": "16x16",
@@ -23,12 +29,45 @@
       "sizes": "32x32",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "screenshots": [],
   "related_applications": [],
   "prefer_related_applications": false,
-  "shortcuts": [],
+  "shortcuts": [
+    {
+      "name": "Create Room",
+      "short_name": "Create",
+      "description": "Create a new game room",
+      "url": "/cassino/?action=create",
+      "icons": []
+    },
+    {
+      "name": "Join Room",
+      "short_name": "Join",
+      "description": "Join an existing game room",
+      "url": "/cassino/?action=join",
+      "icons": []
+    }
+  ],
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "edge_side_panel": {
     "preferred_width": 400

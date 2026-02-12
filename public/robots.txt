@@ -1,0 +1,15 @@
+# Robots.txt for Casino Card Game
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://khasinogaming.com/cassino/sitemap.xml
+
+# Block backend API endpoints from crawling
+Disallow: /api/
+Disallow: /ws/
+
+# Allow all game pages
+Allow: /cassino/
+Allow: /cassino/room/
+Allow: /cassino/game/

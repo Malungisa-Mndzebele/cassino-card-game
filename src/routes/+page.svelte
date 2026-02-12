@@ -91,8 +91,10 @@
 </script>
 
 <svelte:head>
-  <title>Casino</title>
-  <meta name="description" content="Multiplayer Casino Card Game - Play with friends online!" />
+  <title>Casino Card Game - Play Free Online Multiplayer | KhasinoGaming</title>
+  <meta name="description" content="Play the classic Casino card game online with friends. Real-time multiplayer, free to play, no download required. Capture cards, build combinations, and score points to win!" />
+  <meta name="keywords" content="casino card game online, play casino card game, multiplayer card game, free card game, cassino game, real-time card game" />
+  <link rel="canonical" href="https://khasinogaming.com/cassino/" />
 </svelte:head>
 
 <div class="app-container">

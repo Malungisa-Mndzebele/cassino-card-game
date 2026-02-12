@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { gameStore } from '$stores/gameStore';
 	import { connectionStore } from '$stores/connectionStore';
+	import Analytics from '$lib/components/Analytics.svelte';
 
 	onMount(() => {
 		// Initialize stores
@@ -15,6 +16,9 @@
 		};
 	});
 </script>
+
+<!-- Google Analytics -->
+<Analytics />
 
 <slot />
 

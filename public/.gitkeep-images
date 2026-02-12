@@ -1,0 +1,30 @@
+# Placeholder for Social Media Images
+
+## Required Images
+
+Place the following images in this directory (public/):
+
+### SEO Images
+- og-image.png (1200x630px) - Open Graph image for Facebook/LinkedIn
+- twitter-card.png (1200x675px) - Twitter card image
+
+### Favicons
+- favicon-16x16.png (16x16px)
+- favicon-32x32.png (32x32px)
+- apple-touch-icon.png (180x180px)
+
+### PWA Icons
+- icon-192x192.png (192x192px)
+- icon-512x512.png (512x512px)
+
+## Quick Links
+
+- Design specs: ../docs/SOCIAL_MEDIA_IMAGE_SPECS.md
+- SEO guide: ../docs/SEO_GUIDE.md
+- Checklist: ../docs/SEO_CHECKLIST.md
+
+## Tools
+
+- Canva: https://www.canva.com
+- Favicon Generator: https://realfavicongenerator.net
+- Image Optimizer: https://tinypng.com
