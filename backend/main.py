@@ -890,7 +890,7 @@ async def execute_ai_move(room_id: str, ai_player_id: int, db: AsyncSession) -> 
         target_builds = [b for b in builds if b.id in move.target_cards]
         
         captured_cards, remaining_builds, _ = game_logic.execute_capture(
-            hand_card, target_cards, target_builds, ai_player_id
+            hand_card, target_cards, target_builds, builds, ai_player_id
         )
         
         ai_hand_cards.remove(hand_card)
@@ -1880,7 +1880,7 @@ async def play_card(request: PlayCardRequest, http_request: Request, db: AsyncSe
         
         # Execute capture
         captured_cards, remaining_builds, remaining_table_cards = game_logic.execute_capture(
-            hand_card, target_cards, target_builds, request.player_id
+            hand_card, target_cards, target_builds, builds, request.player_id
         )
         
         # Update game state

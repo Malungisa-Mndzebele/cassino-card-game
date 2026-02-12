@@ -469,26 +469,33 @@ class CasinoGameLogic:
         
         return False
     
-    def execute_capture(self, hand_card: GameCard, target_cards: List[GameCard], builds: List[Build], player_id: int) -> Tuple[List[GameCard], List[Build], List[GameCard]]:
-        """Execute a capture move"""
+    def execute_capture(self, hand_card: GameCard, target_cards: List[GameCard], target_builds: List[Build], all_builds: List[Build], player_id: int) -> Tuple[List[GameCard], List[Build], List[GameCard]]:
+        """Execute a capture move
+        
+        Args:
+            hand_card: The card being played from hand
+            target_cards: Table cards being captured
+            target_builds: Builds being captured (filtered list)
+            all_builds: All builds on the table
+            player_id: ID of the player making the capture
+            
+        Returns:
+            Tuple of (captured_cards, remaining_builds, remaining_table_cards)
+        """
         captured_cards = [hand_card]
         remaining_table_cards = []
-        remaining_builds = []
-        
-        # Get all possible values for the hand card (Aces can be 1 or 14)
-        hand_values = self.get_card_values(hand_card)
         
         # Add target cards to captured pile
         for card in target_cards:
             captured_cards.append(card)
         
-        # Add build cards to captured pile and remove build
-        # Check if build value matches any of the hand card's possible values
-        for build in builds:
-            if build.value in hand_values:
-                captured_cards.extend(build.cards)
-            else:
-                remaining_builds.append(build)
+        # Add targeted build cards to captured pile
+        target_build_ids = {build.id for build in target_builds}
+        for build in target_builds:
+            captured_cards.extend(build.cards)
+        
+        # Return all builds except the captured ones
+        remaining_builds = [build for build in all_builds if build.id not in target_build_ids]
         
         return captured_cards, remaining_builds, remaining_table_cards
     

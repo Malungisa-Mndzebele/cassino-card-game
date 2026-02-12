@@ -363,7 +363,7 @@ class GameService:
             raise ValueError("Invalid capture")
         
         captured_cards, remaining_builds, _ = self.game_logic.execute_capture(
-            hand_card, target_cards, target_builds, player_id
+            hand_card, target_cards, target_builds, builds, player_id
         )
         
         player_hand.remove(hand_card)

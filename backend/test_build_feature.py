@@ -220,7 +220,8 @@ def test_capture_build():
     captured, remaining_builds, remaining_table = logic.execute_capture(
         hand_card=hand_card_5,
         target_cards=[],
-        builds=[build],
+        target_builds=[build],
+        all_builds=[build],
         player_id=1
     )
     
