@@ -587,24 +587,29 @@ def convert_builds_to_dict(builds: List[Build]) -> List[Dict[str, Any]]:
     """
     Convert Build objects to dictionary format for JSON storage.
     
+    Uses the Build.to_dict() method which includes support for multi-component builds.
+    
     Args:
         builds (list): List of Build objects
     
     Returns:
-        list: List of build dictionaries with id, cards, value, owner keys
+        list: List of build dictionaries with id, cards, value, owner, components, is_multi_component keys
     
     Example:
         >>> card = GameCard("5_hearts", "hearts", "5", 5)
         >>> build = Build("build_1", [card], 8, 1)
         >>> convert_builds_to_dict([build])
-        [{'id': 'build_1', 'cards': [...], 'value': 8, 'owner': 1}]
+        [{'id': 'build_1', 'cards': [...], 'value': 8, 'owner': 1, 'components': [], 'is_multi_component': False}]
     """
-    return [{"id": build.id, "cards": convert_game_cards_to_dict(build.cards), "value": build.value, "owner": build.owner} for build in builds]
+    return [build.to_dict() for build in builds]
 
 
 def convert_dict_to_builds(builds_dict: List[Dict[str, Any]]) -> List[Build]:
     """
     Convert dictionary format to Build objects.
+    
+    Uses the Build.from_dict() method which supports both legacy single-component
+    and new multi-component builds for backward compatibility.
     
     Args:
         builds_dict (list): List of build dictionaries
@@ -618,7 +623,7 @@ def convert_dict_to_builds(builds_dict: List[Dict[str, Any]]) -> List[Build]:
         >>> builds[0].value
         8
     """
-    return [Build(id=build["id"], cards=convert_dict_to_game_cards(build["cards"]), value=build["value"], owner=build["owner"]) for build in builds_dict]
+    return [Build.from_dict(build) for build in builds_dict]
 
 async def game_state_to_response(room: Room) -> GameStateResponse:
     """
@@ -1833,7 +1838,9 @@ async def play_card(request: PlayCardRequest, http_request: Request, db: AsyncSe
         action_data={
             "card_id": request.card_id,
             "target_cards": request.target_cards,
-            "build_value": request.build_value
+            "build_value": request.build_value,
+            "components": request.components,
+            "target_builds": request.target_builds
         }
     )
     
@@ -1892,48 +1899,92 @@ async def play_card(request: PlayCardRequest, http_request: Request, db: AsyncSe
         player_captured.append(captured_cards[0])   # Hand card goes on top (end of list)
         table_cards = [card for card in table_cards if card not in target_cards]
         builds = remaining_builds
-        
+
     elif request.action == "build":
         target_cards = [card for card in table_cards if card.id in (request.target_cards or [])]
-        
+
         # Check opponent's top captured card
         opponent_top_card = None
         if opponent_captured and opponent_captured[-1].id in (request.target_cards or []):
             opponent_top_card = opponent_captured[-1]
             target_cards.append(opponent_top_card)
 
-        # Also extract builds from target_cards (for adding to existing builds)
-        target_builds = [build for build in builds if build.id in (request.target_cards or [])]
-        
-        if not game_logic.validate_build(hand_card, target_cards, request.build_value or 0, player_hand, target_builds):
-            raise HTTPException(status_code=400, detail="Invalid build")
-        
-        # Execute build
-        remaining_table_cards, new_build = game_logic.execute_build(
-            hand_card, target_cards, request.build_value or 0, request.player_id, target_builds
-        )
-        
-        # Update game state
-        # Update game state
-        player_hand.remove(hand_card)
-        table_cards = [card for card in table_cards if card not in target_cards]
-        
-        # Remove from opponent captured if used (check top card only)
-        if opponent_top_card:
-            opponent_captured.remove(opponent_top_card)
+        # Extract builds from target_cards or request.target_builds (for augmenting existing builds)
+        target_build_ids = (request.target_builds or []) + (request.target_cards or [])
+        target_builds = [build for build in builds if build.id in target_build_ids]
 
-        # Remove the target builds that were incorporated into the new build
+        # Handle Multi-Component Build
+        if request.components:
+            # Parse components: each is a list of card IDs → list of GameCard lists
+            build_components = []
+            available_cards_map = {c.id: c for c in table_cards}
+            if opponent_top_card:
+                available_cards_map[opponent_top_card.id] = opponent_top_card
+            available_cards_map[hand_card.id] = hand_card
+
+            for component_ids in request.components:
+                component_cards_list = []
+                for cid in component_ids:
+                    if cid in available_cards_map:
+                        component_cards_list.append(available_cards_map[cid])
+                    else:
+                        raise HTTPException(status_code=400, detail=f"Card {cid} not found for build component")
+                build_components.append(component_cards_list)
+
+            # Validate multi-component build
+            val_is_valid, val_error = game_logic.validate_multi_component_build(
+                hand_card,
+                build_components,
+                request.build_value,
+                player_hand,
+                table_cards + ([opponent_top_card] if opponent_top_card else []),
+                target_builds
+            )
+            if not val_is_valid:
+                raise HTTPException(status_code=400, detail=f"Invalid multi-component build: {val_error}")
+
+            # Execute multi-component build
+            remaining_table_cards, new_build = game_logic.execute_multi_component_build(
+                hand_card,
+                build_components,
+                request.build_value,
+                request.player_id,
+                target_builds
+            )
+
+            # Update state for multi-component build
+            player_hand.remove(hand_card)
+            used_card_ids = {card.id for comp in new_build.components for card in comp.cards}
+            table_cards = [c for c in table_cards if c.id not in used_card_ids]
+            if opponent_top_card and opponent_top_card.id in used_card_ids:
+                opponent_captured.remove(opponent_top_card)
+
+        else:
+            # Standard single-component build logic
+            if not game_logic.validate_build(hand_card, target_cards, request.build_value or 0, player_hand, target_builds):
+                raise HTTPException(status_code=400, detail="Invalid build")
+
+            remaining_table_cards, new_build = game_logic.execute_build(
+                hand_card, target_cards, request.build_value or 0, request.player_id, target_builds
+            )
+
+            player_hand.remove(hand_card)
+            table_cards = [card for card in table_cards if card not in target_cards]
+            if opponent_top_card:
+                opponent_captured.remove(opponent_top_card)
+
+        # Remove target builds that were incorporated, then add the new build
         builds = [b for b in builds if b.id not in [tb.id for tb in target_builds]]
         builds.append(new_build)
-        
+
     elif request.action == "trail":
         # Execute trail
         new_table_cards = game_logic.execute_trail(hand_card)
-        
+
         # Update game state
         player_hand.remove(hand_card)
         table_cards.extend(new_table_cards)
-        
+
     else:
         raise HTTPException(status_code=400, detail="Invalid action")
     
@@ -1951,7 +2002,9 @@ async def play_card(request: PlayCardRequest, http_request: Request, db: AsyncSe
         "action": request.action,
         "target_cards": request.target_cards,
         "build_value": request.build_value,
-        "player_id": request.player_id
+        "player_id": request.player_id,
+        "components": request.components,
+        "target_builds": request.target_builds
     }
     room.last_action = request.action
     

@@ -9,7 +9,7 @@ Request schemas validate incoming data from clients.
 Response schemas structure outgoing data to clients.
 """
 
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, model_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import re
@@ -150,7 +150,9 @@ class PlayCardRequest(BaseModel):
         card_id: Card being played (format: "rank_suit")
         action: Action type (capture, build, or trail)
         target_cards: Target card IDs for capture/build
-        build_value: Build value for build action
+        components: List of card-ID groups for multi-component builds
+        target_builds: Existing build IDs to augment
+        build_value: Build value for build action (1-14)
         client_version: Optional client version for conflict detection
     """
     room_id: str = Field(..., min_length=6, max_length=6)
@@ -158,6 +160,8 @@ class PlayCardRequest(BaseModel):
     card_id: str = Field(..., min_length=1)
     action: str = Field(..., pattern="^(capture|build|trail)$")
     target_cards: Optional[List[str]] = None
+    components: Optional[List[List[str]]] = None
+    target_builds: Optional[List[str]] = None
     build_value: Optional[int] = Field(None, ge=1, le=14)
     client_version: Optional[int] = Field(None, ge=0)
     
@@ -167,6 +171,19 @@ class PlayCardRequest(BaseModel):
         if v not in ['capture', 'build', 'trail']:
             raise ValueError('Action must be capture, build, or trail')
         return v
+        
+    @model_validator(mode='after')
+    def validate_build_action(self) -> 'PlayCardRequest':
+        if self.action == 'build':
+            if self.build_value is None:
+                raise ValueError('Build value is required for build action')
+            
+            if self.components is not None:
+                if len(self.components) < 1:
+                    raise ValueError('Components list cannot be empty if provided')
+            
+        return self
+
 
 
 

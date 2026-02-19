@@ -5,7 +5,7 @@ Complete game mechanics for capture, build, trail, scoring, and win conditions
 
 import random
 from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class GameCard:
@@ -25,23 +25,120 @@ class GameCard:
 
 
 @dataclass
+class BuildComponent:
+    """
+    Represents a single component within a multi-component build.
+    
+    Each component is an independent group of cards that sums to the
+    build's target value. Multi-component builds allow players to create
+    multiple card groups in a single action, all summing to the same value.
+    
+    Attributes:
+        cards (List[GameCard]): Cards in this component
+        sum_value (int): Calculated sum of cards in this component
+        ace_values_used (Dict[str, int]): Maps Ace card IDs to their used value (1 or 14)
+    """
+    cards: List[GameCard]
+    sum_value: int
+    ace_values_used: Dict[str, int] = field(default_factory=dict)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Serialize component for API response.
+        
+        Returns:
+            dict: Dictionary representation with cards, sum_value, and ace_values_used
+        """
+        return {
+            'cards': [{'id': card.id, 'suit': card.suit, 'rank': card.rank, 'value': card.value} 
+                     for card in self.cards],
+            'sum_value': self.sum_value,
+            'ace_values_used': self.ace_values_used
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'BuildComponent':
+        """
+        Deserialize component from database/cache.
+        
+        Args:
+            data: Dictionary containing component data
+            
+        Returns:
+            BuildComponent: Reconstructed component object
+        """
+        cards = [GameCard(id=c['id'], suit=c['suit'], rank=c['rank'], value=c['value']) 
+                for c in data['cards']]
+        return cls(
+            cards=cards,
+            sum_value=data['sum_value'],
+            ace_values_used=data.get('ace_values_used', {})
+        )
+
+
+@dataclass
 class Build:
     """
     Represents a build combination in the game.
     
+    Supports both single-component (legacy) and multi-component builds.
     A build is a combination of cards that can only be captured by a card matching
     the build's value. Builds are owned by the player who created them.
     
     Attributes:
         id (str): Unique build identifier
-        cards (list): List of GameCard objects in the build
+        cards (List[GameCard]): All cards in the build (flattened from components)
         value (int): Target value for capturing this build
-        owner (int): Player ID who created the build
+        owner (int): Player ID who created/owns the build
+        components (List[BuildComponent]): Component groupings (empty for legacy builds)
+        is_multi_component (bool): True if build has multiple components
     """
     id: str
     cards: List[GameCard]
     value: int
     owner: int
+    components: List[BuildComponent] = field(default_factory=list)
+    is_multi_component: bool = False
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Serialize build for API response.
+        
+        Returns:
+            dict: Dictionary representation with all build data including components
+        """
+        return {
+            'id': self.id,
+            'cards': [{'id': card.id, 'suit': card.suit, 'rank': card.rank, 'value': card.value} 
+                     for card in self.cards],
+            'value': self.value,
+            'owner': self.owner,
+            'components': [comp.to_dict() for comp in self.components],
+            'is_multi_component': self.is_multi_component
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Build':
+        """
+        Deserialize build from database/cache.
+        
+        Args:
+            data: Dictionary containing build data
+            
+        Returns:
+            Build: Reconstructed build object
+        """
+        cards = [GameCard(id=c['id'], suit=c['suit'], rank=c['rank'], value=c['value']) 
+                for c in data['cards']]
+        components = [BuildComponent.from_dict(c) for c in data.get('components', [])]
+        return cls(
+            id=data['id'],
+            cards=cards,
+            value=data['value'],
+            owner=data['owner'],
+            components=components,
+            is_multi_component=data.get('is_multi_component', False)
+        )
 
 
 class CasinoGameLogic:
@@ -469,6 +566,191 @@ class CasinoGameLogic:
         
         return False
     
+    def validate_component(
+        self,
+        component_cards: List[GameCard],
+        target_value: int,
+        hand_card: Optional[GameCard] = None
+    ) -> Tuple[bool, Optional[str], Dict[str, int]]:
+        """
+        Validate that a component's cards sum to target value.
+        
+        Handles Ace dual values by trying all possible combinations.
+        A component is valid if all its cards sum to the target value,
+        considering Aces can be either 1 or 14.
+        
+        Args:
+            component_cards: Cards in the component
+            target_value: Required sum
+            hand_card: If provided, must be included in component
+        
+        Returns:
+            Tuple of (is_valid, error_message, ace_values_used)
+            ace_values_used maps Ace card IDs to their used value (1 or 14)
+        
+        Example:
+            >>> logic = CasinoGameLogic()
+            >>> cards = [GameCard("A_spades", "spades", "A", 1),
+            ...          GameCard("3_diamonds", "diamonds", "3", 3)]
+            >>> is_valid, error, ace_vals = logic.validate_component(cards, 4, None)
+            >>> is_valid
+            True
+            >>> ace_vals
+            {'A_spades': 1}
+        """
+        # Check for empty component
+        if not component_cards:
+            return False, "Component contains no cards", {}
+        
+        # If hand_card is provided, verify it's in the component
+        if hand_card is not None:
+            hand_card_ids = {hand_card.id}
+            component_card_ids = {card.id for card in component_cards}
+            if hand_card.id not in component_card_ids:
+                return False, f"Hand card {hand_card.id} not found in component", {}
+        
+        # Find all Aces in the component
+        ace_cards = [card for card in component_cards if card.rank == 'A']
+        non_ace_cards = [card for card in component_cards if card.rank != 'A']
+        
+        # Calculate sum of non-Ace cards
+        non_ace_sum = sum(card.value for card in non_ace_cards)
+        
+        # If no Aces, just check if sum matches
+        if not ace_cards:
+            actual_sum = non_ace_sum
+            if actual_sum == target_value:
+                return True, None, {}
+            else:
+                return False, f"Component sum {actual_sum} does not match target value {target_value}", {}
+        
+        # Try all 2^n combinations of Ace values (1 or 14)
+        num_aces = len(ace_cards)
+        for ace_combo in range(2**num_aces):
+            total = non_ace_sum
+            ace_values_used = {}
+            
+            for i, ace_card in enumerate(ace_cards):
+                # Use 1 or 14 based on the bit
+                if ace_combo & (1 << i):
+                    ace_value = 14
+                else:
+                    ace_value = 1
+                total += ace_value
+                ace_values_used[ace_card.id] = ace_value
+            
+            if total == target_value:
+                return True, None, ace_values_used
+        
+        # No valid Ace combination found
+        return False, f"Component cards cannot sum to target value {target_value}", {}
+
+    def validate_multi_component_build(
+        self,
+        hand_card: GameCard,
+        components: List[List[GameCard]],
+        build_value: int,
+        player_hand: List[GameCard],
+        table_cards: List[GameCard],
+        target_builds: List[Build] = None
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Validate if a multi-component build is legal.
+
+        A multi-component build is valid if:
+        1. Player has a capturing card in hand matching build_value
+        2. Each component independently sums to build_value
+        3. Hand card is included in exactly one component
+        4. All component cards are available on table
+        5. If augmenting, all target builds have matching value
+
+        Args:
+            hand_card: Card being played from hand
+            components: List of card groups, each forming a component
+            build_value: Declared value of the build
+            player_hand: Player's complete hand
+            table_cards: Cards currently on the table
+            target_builds: Existing builds to augment (optional)
+
+        Returns:
+            Tuple of (is_valid, error_message)
+
+        Example:
+            >>> logic = CasinoGameLogic()
+            >>> hand_card = GameCard("5_hearts", "hearts", "5", 5)
+            >>> comp1 = [GameCard("3_spades", "spades", "3", 3),
+            ...          GameCard("2_diamonds", "diamonds", "2", 2)]
+            >>> comp2 = [hand_card]
+            >>> player_hand = [hand_card, GameCard("5_clubs", "clubs", "5", 5)]
+            >>> table_cards = [GameCard("3_spades", "spades", "3", 3),
+            ...                GameCard("2_diamonds", "diamonds", "2", 2)]
+            >>> is_valid, error = logic.validate_multi_component_build(
+            ...     hand_card, [comp1, comp2], 5, player_hand, table_cards)
+            >>> is_valid
+            True
+        """
+        if target_builds is None:
+            target_builds = []
+
+        # Validate we have at least one component
+        if not components:
+            return False, "No components provided"
+
+        # 1. Validate player has capturing card in hand matching build_value
+        has_capturing_card = False
+        for card in player_hand:
+            if card.id != hand_card.id:
+                card_values = self.get_card_values(card)
+                if build_value in card_values:
+                    has_capturing_card = True
+                    break
+
+        if not has_capturing_card:
+            return False, f"No card in hand can capture build value {build_value}"
+
+        # 5. If augmenting, validate all target builds have matching value
+        if target_builds:
+            for build in target_builds:
+                if build.value != build_value:
+                    return False, f"Target build has value {build.value}, expected {build_value}"
+
+        # Track which component contains the hand card
+        hand_card_component_count = 0
+
+        # Create a set of available table card IDs for validation
+        available_table_card_ids = {card.id for card in table_cards}
+
+        # 2. Validate each component independently
+        for i, component_cards in enumerate(components):
+            # Validate component using validate_component
+            is_valid, error_msg, ace_values = self.validate_component(
+                component_cards,
+                build_value,
+                None  # Don't enforce hand_card presence here, we'll check separately
+            )
+
+            if not is_valid:
+                return False, f"Component {i + 1}: {error_msg}"
+
+            # 3. Check if hand card is in this component
+            component_card_ids = {card.id for card in component_cards}
+            if hand_card.id in component_card_ids:
+                hand_card_component_count += 1
+
+            # 4. Check all component cards are available on table (except hand card)
+            for card in component_cards:
+                if card.id != hand_card.id and card.id not in available_table_card_ids:
+                    return False, f"Card {card.id} in component {i + 1} is not available on table"
+
+        # 3. Ensure hand card is included in exactly one component
+        if hand_card_component_count == 0:
+            return False, "Hand card must be included in exactly one component"
+        elif hand_card_component_count > 1:
+            return False, f"Hand card appears in {hand_card_component_count} components, must be in exactly one"
+        
+        return True, None
+
+    
     def execute_capture(self, hand_card: GameCard, target_cards: List[GameCard], target_builds: List[Build], all_builds: List[Build], player_id: int) -> Tuple[List[GameCard], List[Build], List[GameCard]]:
         """Execute a capture move
         
@@ -523,6 +805,112 @@ class CasinoGameLogic:
             build_id += "_aug"
             
         new_build = Build(id=build_id, cards=build_cards, value=build_value, owner=player_id)
+        
+        return remaining_table_cards, new_build
+    
+    def execute_multi_component_build(
+        self,
+        hand_card: GameCard,
+        components: List[List[GameCard]],
+        build_value: int,
+        player_id: int,
+        target_builds: List[Build] = None
+    ) -> Tuple[List[GameCard], Build]:
+        """
+        Execute a multi-component build move.
+        
+        Creates a new Build object with component metadata. Each component is
+        validated and stored with its ace_values_used mapping. All component
+        cards are flattened into the build.cards list.
+        
+        When augmenting existing builds, the new components are merged with
+        the existing build's components.
+        
+        Args:
+            hand_card: Card being played from hand
+            components: List of card groups forming components
+            build_value: Build value
+            player_id: Player creating the build
+            target_builds: Existing builds to augment (optional)
+        
+        Returns:
+            Tuple of (remaining_table_cards, new_build)
+            
+        Example:
+            >>> logic = CasinoGameLogic()
+            >>> hand_card = GameCard("5_hearts", "hearts", "5", 5)
+            >>> comp1 = [GameCard("3_spades", "spades", "3", 3),
+            ...          GameCard("2_diamonds", "diamonds", "2", 2)]
+            >>> comp2 = [hand_card]
+            >>> remaining, build = logic.execute_multi_component_build(
+            ...     hand_card, [comp1, comp2], 5, 1)
+            >>> build.is_multi_component
+            True
+            >>> len(build.components)
+            2
+        """
+        if target_builds is None:
+            target_builds = []
+        
+        # Create BuildComponent objects for each component
+        build_components = []
+        all_build_cards = []
+        
+        for component_cards in components:
+            # Validate component and get ace values used
+            is_valid, error_msg, ace_values_used = self.validate_component(
+                component_cards,
+                build_value,
+                None
+            )
+            
+            # Create BuildComponent with ace values
+            component = BuildComponent(
+                cards=component_cards,
+                sum_value=build_value,
+                ace_values_used=ace_values_used
+            )
+            build_components.append(component)
+            
+            # Add cards to flattened list
+            all_build_cards.extend(component_cards)
+        
+        # If augmenting, merge with existing build components
+        if target_builds:
+            for build in target_builds:
+                # Add existing build's components
+                if build.components:
+                    build_components.extend(build.components)
+                else:
+                    # Legacy build without components - create a single component
+                    legacy_component = BuildComponent(
+                        cards=build.cards,
+                        sum_value=build.value,
+                        ace_values_used={}
+                    )
+                    build_components.append(legacy_component)
+                
+                # Add existing build's cards to flattened list
+                all_build_cards.extend(build.cards)
+        
+        # Generate unique build ID with timestamp to avoid collisions across turns
+        import time
+        build_id = f"build_{player_id}_{len(all_build_cards)}_{build_value}_{int(time.time() * 1000)}"
+        if target_builds:
+            build_id += "_aug"
+        
+        # Create new Build with component metadata
+        new_build = Build(
+            id=build_id,
+            cards=all_build_cards,
+            value=build_value,
+            owner=player_id,
+            components=build_components,
+            is_multi_component=True
+        )
+        
+        # Return empty list for remaining_table_cards (cards are removed by caller)
+        remaining_table_cards = []
         
         return remaining_table_cards, new_build
     
