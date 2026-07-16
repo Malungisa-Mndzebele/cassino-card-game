@@ -8,7 +8,6 @@ automatic fallback and connection pooling.
 Environment Variables:
     DATABASE_URL: Full database connection string
     ENVIRONMENT: "production" or other (determines SQLite fallback)
-    RENDER: Set to "true" in Render environment (indicates production)
 
 Example:
     >>> from database import get_db, async_engine
@@ -26,7 +25,7 @@ import sys
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (if it exists)
-# In production (Render), environment variables come from dashboard settings
+# In production, environment variables are supplied by the host / process manager
 try:
     load_dotenv()
 except (UnicodeDecodeError, Exception):

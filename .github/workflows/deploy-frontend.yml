@@ -40,19 +40,15 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_URL: https://cassino-game-backend.onrender.com
-          VITE_WS_URL: wss://cassino-game-backend.onrender.com
+          # Configure the backend endpoint via repo variables (Settings > Secrets and variables > Actions).
+          # If unset, the frontend falls back to the same origin as the deployed site.
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_WS_URL: ${{ vars.VITE_WS_URL }}
         run: |
-          echo "Building with API URL: $VITE_API_URL"
-          echo "Building with WebSocket URL: $VITE_WS_URL"
+          echo "Building with API URL: ${VITE_API_URL:-<same-origin fallback>}"
+          echo "Building with WebSocket URL: ${VITE_WS_URL:-<same-origin fallback>}"
           npm run build
           echo "✅ Build complete"
-          # Verify API URL is in the build
-          if grep -r "cassino-game-backend.onrender.com" build/ > /dev/null 2>&1; then
-            echo "✅ API URL found in build"
-          else
-            echo "⚠️ Warning: API URL not found in build - will use default"
-          fi
 
       - name: Deploy to khasinogaming.com via FTP
         uses: SamKirkland/FTP-Deploy-Action@4.3.3
@@ -74,5 +70,7 @@ jobs:
       - name: Verify deployment
         run: |
           echo "✅ Frontend deployed to https://khasinogaming.com/cassino/"
-          echo "🔗 Backend URL: https://cassino-game-backend.onrender.com"
+          echo "🔗 Backend URL: ${VITE_API_URL:-<same-origin fallback>}"
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
 

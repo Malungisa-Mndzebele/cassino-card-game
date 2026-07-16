@@ -8,8 +8,8 @@ import { test, expect, Page, Browser, BrowserContext } from '@playwright/test';
 
 // Configuration
 const CONFIG = {
-    PRODUCTION_URL: 'https://khasinogaming.com/cassino/',
-    BACKEND_URL: 'https://cassino-game-backend.onrender.com',
+    PRODUCTION_URL: process.env.PRODUCTION_URL || 'https://khasinogaming.com/cassino/',
+    BACKEND_URL: process.env.VITE_API_URL || 'http://localhost:8000',
     TIMEOUTS: {
         DEFAULT: 10000,
         LONG: 15000,

@@ -1,12 +1,20 @@
-# 🎮 Casino Card Game - Multiplayer Online
+# 🎮 Casino Card Game — Serverless P2P
 
-A real-time multiplayer implementation of the classic Casino card game. Play head-to-head matches with friends, capture cards, build combinations, and compete for the highest score!
+A peer-to-peer implementation of the classic Casino card game. Two players connect
+their browsers **directly** — no server, no accounts — capture cards, build
+combinations, and compete for the highest score.
 
 **Live Demo:** https://khasinogaming.com/cassino/
 
+> **Serverless & peer-to-peer.** The entire game engine runs in the browser and
+> players connect over a direct WebRTC data channel using copy/paste connection
+> codes. The site is a static bundle you can host anywhere — there is **no backend
+> to run or pay for**. (The `backend/` FastAPI service is legacy and no longer
+> required; see [Architecture](#-architecture).)
+
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/Malungisa-Mndzebele/cassino-card-game)
-[![Backend](https://img.shields.io/badge/backend-render-blueviolet)](https://cassino-game-backend.onrender.com)
-[![Frontend](https://img.shields.io/badge/frontend-live-success)](https://khasinogaming.com/cassino/)
+[![Architecture](https://img.shields.io/badge/architecture-P2P%20WebRTC-blueviolet)](#-architecture)
+[![Frontend](https://img.shields.io/badge/frontend-static-success)](https://khasinogaming.com/cassino/)
 
 ---
 
@@ -28,25 +36,43 @@ A real-time multiplayer implementation of the classic Casino card game. Play hea
 
 1. **Install Dependencies**
 ```bash
-npm run install:all
+npm install
 ```
 
-2. **Start Backend**
-```bash
-npm run start:backend
-# Backend runs on http://localhost:8000
-```
-
-3. **Start Frontend** (in a new terminal)
+2. **Start the app** (that's it — no backend needed)
 ```bash
 npm run dev
-# Frontend runs on http://localhost:5173
+# Runs on http://localhost:5173
 ```
 
-4. **Play the Game**
-- Open http://localhost:5173
-- Create a room or join with a friend
-- Enjoy!
+3. **Play the Game** — see [How to play (peer-to-peer)](#-how-to-play-peer-to-peer).
+
+### Build for production
+```bash
+npm run build      # outputs a static site to build/
+```
+Deploy the contents of `build/` to any static host (FTP, nginx, S3, GitHub Pages…).
+
+---
+
+## 🎮 How to play (peer-to-peer)
+
+There is no matchmaking server — players connect directly by exchanging two short
+codes (via chat, email, or any channel you like):
+
+1. **Player 1** clicks **Host a Game** and copies the **invite code**, then sends it
+   to Player 2.
+2. **Player 2** clicks **Join a Game**, pastes the invite code, and copies the
+   generated **reply code** back to Player 1.
+3. **Player 1** pastes the reply code and clicks **Connect**.
+
+The browsers now hold a direct WebRTC connection and the game begins. One browser
+(the host) runs the authoritative game engine and keeps both sides in sync.
+
+> **Network note:** connection discovery uses free public **STUN** servers, which
+> works on most home/office networks. Very restrictive/symmetric-NAT networks
+> (some corporate/mobile) would need a **TURN relay** (a server) to connect — the
+> one thing pure copy/paste signaling can't work around.
 
 ---
 
@@ -86,35 +112,27 @@ Score the most points by capturing cards from the table. First player to 11 poin
 
 ## 🛠️ Technology Stack
 
-### Frontend
-- **SvelteKit** with TypeScript
-- **Svelte 5** with runes for reactivity
-- **Vite** for fast builds
-- **TailwindCSS** for styling
-- **Lucide Svelte** for icons
-- **WebSocket** for real-time updates
-
-### Backend
-- **FastAPI** (Python 3.11+)
-- **SQLAlchemy** ORM
-- **SQLite** (dev) / **PostgreSQL** (production)
-- **WebSocket** for real-time communication
-- **Alembic** for database migrations
+### Frontend (the whole app)
+- **SvelteKit** with TypeScript, **Svelte 5** runes
+- **Vite** for fast builds, **TailwindCSS** for styling
+- **In-browser game engine** (`src/lib/engine/`) — the rules, ported from the
+  legacy Python service, run entirely client-side
+- **WebRTC data channels** (`src/lib/p2p/`) for direct browser-to-browser play
+  with manual (copy/paste) signaling and public STUN
 
 ### Testing
-- **Vitest** with **Svelte Testing Library** for component tests
+- **Vitest** for engine, store, and component tests
 - **Playwright** for E2E tests
-- **Pytest** for backend tests
 
-### Infrastructure
-- **Redis** for session management and caching
-- **PostgreSQL** for production database
-- **SQLite** for local development
+### Legacy backend (not required)
+- **FastAPI** / **SQLAlchemy** / **PostgreSQL** — the original client-server
+  implementation, kept in `backend/` for reference. The live game no longer uses
+  it.
 
 ### Deployment
-- **Backend**: Render
-- **Frontend**: khasinogaming.com (FTP)
-- **CI/CD**: GitHub Actions
+- **Static build only** — deploy `build/` to any static host (FTP, nginx, S3,
+  GitHub Pages…). No server, database, or Redis required.
+- **CI/CD**: GitHub Actions (build + FTP deploy)
 
 ---
 
@@ -212,382 +230,103 @@ Tests are organized by category:
 
 ## 🚢 Deployment
 
-### Production URLs
-- **Frontend**: https://khasinogaming.com/cassino/
-- **Backend API (Render)**: https://cassino-game-backend.onrender.com
-- **Backend API (Render)**: https://cassino-game-backend.onrender.com
-- **Health Check**: https://cassino-game-backend.onrender.com/health
+The game is a **static site** — build it and drop the output on any static host.
+There is no backend, database, or environment configuration to deploy.
 
-### Prerequisites
-- Node.js 18+ and npm
-- Python 3.11+
-- Render account (for backend deployment)
-- FTP credentials (for frontend)
-
----
-
-### Backend Deployment (Render)
-
-#### Quick Start (3 Steps)
-
-**See [RENDER_QUICK_START.md](docs/deployment/RENDER_QUICK_START.md) for detailed instructions**
-
-1. **Create Render Account** (5 min)
-   - Go to https://render.com
-   - Sign up with GitHub account
-
-2. **Deploy via Blueprint** (10-15 min)
-   - Click "New +" → "Blueprint"
-   - Select your repository
-   - Click "Apply"
-
-3. **Verify Deployment** (5 min)
-   ```bash
-   curl https://cassino-game-backend.onrender.com/health
-   ```
-
-#### What Gets Deployed
-
-The `render.yaml` blueprint automatically creates:
-- **Web Service**: FastAPI backend (Python 3.11, Port 10000)
-- **PostgreSQL**: Database instance (Free tier)
-- **Redis**: Cache instance (Free tier)
-
-All environment variables are automatically linked between services.
-
-#### Deployment Documentation
-
-- **[RENDER_QUICK_START.md](RENDER_QUICK_START.md)** - 3-step quick start guide
-- **[RENDER_DEPLOYMENT_GUIDE.md](RENDER_DEPLOYMENT_GUIDE.md)** - Comprehensive instructions
-- **[RENDER_DEPLOYMENT_CHECKLIST.md](RENDER_DEPLOYMENT_CHECKLIST.md)** - Verification checklist
-- **[RENDER_DEPLOYMENT_STATUS.md](RENDER_DEPLOYMENT_STATUS.md)** - Current status
-
-#### Manual Deployment Steps
-
-If Blueprint deployment doesn't work:
-
-1. **Create PostgreSQL Database**
-   - Dashboard → "New +" → "PostgreSQL"
-   - Name: `cassino-db`, Region: Oregon, Plan: Free
-
-2. **Create Redis Instance**
-   - Dashboard → "New +" → "Redis"
-   - Name: `cassino-redis`, Region: Oregon, Plan: Free
-
-3. **Create Web Service**
-   - Dashboard → "New +" → "Web Service"
-   - Connect to GitHub repository
-   - Build: `pip install -r backend/requirements.txt`
-   - Start: `python backend/start_production.py`
-   - Link DATABASE_URL and REDIS_URL from services above
-
-#### Environment Variables
-
-Automatically configured via `render.yaml`:
-- `PYTHON_VERSION`: 3.11.0
-- `DATABASE_URL`: Auto-injected from PostgreSQL
-- `REDIS_URL`: Auto-injected from Redis
-- `CORS_ORIGINS`: https://khasinogaming.com
-- `ENVIRONMENT`: production
-- `PORT`: 10000
-
-#### Database Migrations
-
-Migrations run automatically on deployment via `start_production.py`:
-```python
-# Automatic migration on startup
-🔄 Running database migrations...
-✅ Migrations completed successfully
-```
-
-#### Monitoring
-
+### Build
 ```bash
-# View logs in Render dashboard
-# Or use Render CLI
-render logs cassino-game-backend
-
-# Check health
-curl https://cassino-game-backend.onrender.com/health
+npm install
+npm run build      # outputs to build/
 ```
 
----
+### Deploy
+Upload the contents of `build/` to your host:
 
+- **FTP / shared hosting** (e.g. khasinogaming.com): `npm run deploy:ftp` (set
+  `FTP_HOST` / `FTP_USER` / `FTP_PASSWORD` in `.env`), or upload `build/` manually
+  to your web root (e.g. `/public_html/cassino/`).
+- **nginx / Apache / S3 / GitHub Pages / Netlify / Vercel**: serve the `build/`
+  directory as static files.
 
+The app is served under the `/cassino/` base path in production (configured in
+`svelte.config.js`). Change or remove `paths.base` there if you deploy at a
+different path.
 
-### Frontend Deployment (FTP)
+### CI/CD
+`.github/workflows/deploy-frontend.yml` builds the static site and deploys it via
+FTP on push to `main`/`master`. No build-time environment variables are required.
 
-#### Setup FTP Credentials
-Create `.env` file in project root:
-```bash
-# FTP Configuration
-FTP_HOST=your-ftp-host.com
-FTP_USER=your-username
-FTP_PASSWORD=your-password
-FTP_PORT=21
-FTP_SECURE=false
-```
-
-#### Deploy Frontend
-```bash
-# 1. Build production bundle
-npm run build
-
-# 2. Deploy via FTP (automated)
-npm run deploy:ftp
-
-# 3. Verify deployment
-npm run test:production
-```
-
-#### Manual FTP Deployment
-If automated deployment fails:
-1. Build: `npm run build`
-2. Upload contents of `dist/` folder to `/public_html/cassino/` on your FTP server
-3. Ensure `index.html` is in the cassino directory
-4. Verify at https://khasinogaming.com/cassino/
-
-#### Frontend Configuration
-The app is configured for `/cassino/` base path in `vite.config.ts`:
-```typescript
-export default defineConfig({
-  base: '/cassino/',  // Important: matches deployment path
-  // ...
-})
-```
-
----
-
-### Deployment Verification
-
-#### Test Production Backend
-```bash
-# Run production smoke tests
-npm run test:production
-
-# Test Render deployment
-curl https://cassino-game-backend.onrender.com/health
-curl https://cassino-game-backend.onrender.com/
-
-
-```
-
-#### Test Production Frontend
-```bash
-# Run live deployment tests
-npm run test:live
-
-# Or visit directly
-open https://khasinogaming.com/cassino/
-```
-
----
-
-### Deployment Checklist
-
-**Before Deploying:**
-- [ ] All tests passing locally (`node run-all-tests.js`)
-- [ ] Code committed to repository
-- [ ] Environment variables configured
-- [ ] Database migrations created (if needed)
-
-**Backend Deployment (Render):**
-- [ ] Blueprint deployment successful
-- [ ] All services running (PostgreSQL, Redis, Web Service)
-- [ ] Migrations run automatically on startup
-- [ ] Health check passes: `curl https://cassino-game-backend.onrender.com/health`
-- [ ] Logs show no errors in Render dashboard
-
-**Frontend Deployment:**
-- [ ] Build successful: `npm run build`
-- [ ] FTP credentials in `.env`
-- [ ] Deploy successful: `npm run deploy:ftp`
-- [ ] Site loads: https://khasinogaming.com/cassino/
-- [ ] Production tests pass: `npm run test:live`
-
----
-
-### Rollback Procedure
-
-#### Backend Rollback (Render)
-```bash
-# Via Render Dashboard:
-# 1. Go to service → "Events" tab
-# 2. Find previous successful deployment
-# 3. Click "Rollback to this version"
-
-# Or redeploy previous commit:
-git revert HEAD
-git push origin main
-# Render auto-deploys from main branch
-```
-
-#### Frontend Rollback
-```bash
-# Checkout previous version
-git checkout <previous-commit>
-
-# Rebuild and redeploy
-npm run build
-npm run deploy:ftp
-```
-
----
-
-### Monitoring
-
-#### Backend Monitoring (Render)
-```bash
-# View logs in Render Dashboard
-# Service → "Logs" tab
-
-# Check metrics
-# Service → "Metrics" tab (CPU, Memory, Requests)
-
-# Access shell
-# Service → "Shell" tab
-
-# Or use Render CLI
-render logs cassino-game-backend
-```
-
-#### Frontend Monitoring
-- Check browser console for errors
-- Run production tests: `npm run test:production`
-- Monitor via hosting provider dashboard
+### Verify
+Open the deployed URL, click **Host a Game**, and complete the copy/paste
+handshake with a second browser/device (see
+[How to play](#-how-to-play-peer-to-peer)).
 
 ---
 
 ## ⚙️ Configuration
 
-### Environment Variables
+The app needs **no runtime configuration** — no environment variables, database,
+or API endpoint. The only build-time setting is the base path in
+`svelte.config.js`:
 
-#### Backend (`backend/.env`)
-```bash
-# Database
-DATABASE_URL=sqlite:///./test_casino_game.db  # Dev
-# DATABASE_URL=postgresql://...               # Production (auto-injected on Render)
-
-# Redis (optional for dev)
-REDIS_URL=redis://localhost:6379              # Dev
-# REDIS_URL=redis://...                       # Production (auto-injected on Render)
-
-# Server
-HOST=0.0.0.0
-PORT=8000                                      # Dev
-# PORT=10000                                   # Production (Render)
-
-# CORS
-CORS_ORIGINS=http://localhost:5173,https://khasinogaming.com
+```js
+kit: {
+  paths: {
+    base: process.env.NODE_ENV === 'production' ? '/cassino' : ''
+  }
+}
 ```
+Change or remove `paths.base` if you deploy at a different path (or the site root).
 
-#### Frontend (`.env`)
-```bash
-# API URLs (auto-configured in production build)
-VITE_API_URL=http://localhost:8000                          # Dev
-# VITE_API_URL=https://cassino-game-backend.onrender.com   # Production (Render)
-
-VITE_WS_URL=ws://localhost:8000                             # Dev
-# VITE_WS_URL=wss://cassino-game-backend.onrender.com      # Production (Render)
-```
-
-### Vite Configuration (`vite.config.ts`)
-```typescript
-export default defineConfig({
-  base: '/cassino/',  // Base path for production
-  // ... other config
-})
-```
-
----
-
-## 🔌 API Reference
-
-### REST Endpoints
-
-#### Health Check
-```
-GET /health
-Response: { "status": "healthy", "database": "connected" }
-```
-
-#### Room Management
-```
-POST /rooms/create
-Body: { "player_name": "string", "max_players": 2 }
-
-POST /rooms/join
-Body: { "room_code": "string", "player_name": "string" }
-
-POST /rooms/join-random
-Body: { "player_name": "string" }
-
-GET /rooms/{room_id}/state
-Response: Current game state
-```
-
-#### Game Actions
-```
-POST /rooms/player-ready
-Body: { "room_id": "string", "player_id": "string" }
-
-POST /game/start-shuffle
-POST /game/select-face-up-cards
-POST /game/play-card
-POST /game/reset
-```
-
-### WebSocket
-```
-WS /ws/{room_id}
-
-Events:
-- game_state_update
-- player_joined
-- player_ready
-- game_started
-- card_played
-- round_ended
-```
+STUN servers (used for WebRTC NAT discovery) are configured in
+`src/lib/p2p/peer.ts` — they default to Google's free public servers. Add a TURN
+server there if you need to support restrictive/symmetric-NAT networks.
 
 ---
 
 ## 🏗️ Architecture
 
-### Frontend Architecture
+The game is **fully client-side and peer-to-peer**. One browser (the host) runs
+the authoritative game engine; both browsers exchange messages over a direct
+WebRTC data channel.
+
 ```
-SvelteKit App
-  ├── Svelte Stores (State Management)
-  │   ├── gameStore.ts (game state)
-  │   ├── connectionStore.ts (WebSocket)
-  │   └── voiceChat.svelte.ts (voice chat)
-  │
-  ├── Routes (SvelteKit)
-  │   ├── / (Lobby)
-  │   ├── /room/[id] (Waiting Room)
-  │   └── /game/[id] (Game Table)
-  │
-  └── Components
-      ├── GameBoard.svelte (drag-and-drop)
-      ├── GamePhases.svelte
-      ├── Card.svelte
-      └── UI Components
+ Player 1 (host)                                   Player 2 (guest)
+┌───────────────────────────┐                    ┌──────────────────────────┐
+│ RoomController (engine)    │   WebRTC data      │ UI + gameStore           │
+│  ├─ authoritative state    │◀─── channel ──────▶│  ├─ sends action requests │
+│  ├─ applies every action   │   (copy/paste       │  └─ renders broadcast     │
+│  └─ broadcasts new state   │    signaling)       │      state                │
+└───────────────────────────┘                    └──────────────────────────┘
+        gameEngine.ts (pure rules) — capture / build / trail / scoring
 ```
 
-### Backend Architecture
+### Key modules
 ```
-FastAPI Server
-  ├── REST API (main.py)
-  ├── Service Layer
-  │   ├── RoomService
-  │   ├── GameService
-  │   └── PlayerService
-  ├── WebSocket Manager
-  ├── Game Logic Engine (game_logic.py)
-  ├── Session Manager (Redis)
-  ├── Cache Manager (Redis)
-  └── Database Models (SQLAlchemy)
+src/lib/
+  ├── engine/
+  │   ├── gameEngine.ts       # Pure Casino rules (ported from backend/game_logic.py)
+  │   └── roomController.ts   # Authoritative game state + action handlers
+  ├── p2p/
+  │   ├── peer.ts             # WebRTC data channel + manual (copy/paste) signaling
+  │   └── session.ts          # Ties peer + engine + gameStore together
+  ├── stores/
+  │   ├── gameStore.ts        # Reactive game state
+  │   └── connectionStore.ts  # Reflects the P2P connection status
+  ├── utils/api.ts            # Same action API as before, now routed through the P2P session
+  └── components/             # GameBoard, GamePhases, Card, RoomManager (lobby), …
 ```
+
+- **Host authority:** the host applies every move (its own directly, the guest's
+  from a forwarded request) and broadcasts the resulting state, so the two
+  browsers can never disagree.
+- **No server:** all state lives in memory in the host's tab. Closing it ends the
+  game (there is nothing to persist to, and reloading can't restore a peer
+  connection).
+
+> The `backend/` FastAPI service is the **legacy** client-server implementation.
+> It still runs and its tests pass, but the live game no longer depends on it. The
+> browser engine in `src/lib/engine/` is a faithful port of `backend/game_logic.py`.
 
 ---
 
@@ -633,10 +372,9 @@ npm run test:e2e:debug
 All documentation is organized in the [`docs/`](docs/) directory:
 
 ### 🚀 [Deployment Documentation](docs/deployment/)
-- **[RENDER_QUICK_START.md](docs/deployment/RENDER_QUICK_START.md)** - Quick 3-step Render deployment
-- **[RENDER_DEPLOYMENT_STATUS.md](docs/deployment/RENDER_DEPLOYMENT_STATUS.md)** - Current deployment status
+- **[Deployment guide](#-deployment)** (above) - Self-hosted backend + static frontend
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Full deployment reference
 - **[DEPLOYMENT_SUMMARY.md](docs/deployment/DEPLOYMENT_SUMMARY.md)** - Deployment architecture overview
-- **[check-render-deployment.md](docs/deployment/check-render-deployment.md)** - Deployment verification
 
 ### 💻 [Development Documentation](docs/development/)
 - **[QUICK_START.md](docs/development/QUICK_START.md)** - Get started with development
@@ -694,17 +432,13 @@ MIT License - feel free to use and modify!
 - Classic Casino card game rules
 - FastAPI framework
 - Svelte and SvelteKit communities
-- Render for backend hosting
 
 ---
 
 ## 📞 Support
 
 - **Live Site**: https://khasinogaming.com/cassino/
-- **Backend API (Render)**: https://cassino-game-backend.onrender.com
-
 - **Issues**: [GitHub Issues](https://github.com/Malungisa-Mndzebele/cassino-card-game/issues)
-- **Render Docs**: https://render.com/docs
 
 ---
 

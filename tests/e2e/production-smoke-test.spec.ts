@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-const PRODUCTION_URL = 'https://khasinogaming.com/cassino';
-const BACKEND_URL = 'https://cassino-game-backend.onrender.com';
+const PRODUCTION_URL = process.env.PRODUCTION_URL || 'https://khasinogaming.com/cassino';
+const BACKEND_URL = process.env.VITE_API_URL || 'http://localhost:8000';
 
 test.describe('Production Smoke Tests', () => {
   test('should load production site successfully', async ({ page }) => {

@@ -2305,7 +2305,7 @@ async def websocket_endpoint(
     logger.info(f"WebSocket connection attempt for room {room_id}")
     
     async def send_server_ping():
-        """Send periodic pings to keep connection alive (Render has aggressive idle timeout)"""
+        """Send periodic pings to keep the connection alive through proxies/load balancers with idle timeouts"""
         try:
             while True:
                 try:
@@ -2316,7 +2316,7 @@ async def websocket_endpoint(
                 except Exception as e:
                     logger.debug(f"Server ping failed (connection likely closed): {e}")
                     break
-                await asyncio.sleep(3)  # Send ping every 3 seconds (very aggressive for Render)
+                await asyncio.sleep(3)  # Send ping every 3 seconds to survive aggressive idle timeouts
         except asyncio.CancelledError:
             pass
     

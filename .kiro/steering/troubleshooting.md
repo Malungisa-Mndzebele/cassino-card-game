@@ -236,22 +236,22 @@ redis-cli config set maxmemory-policy allkeys-lru
 3. Fix TypeScript errors shown in output
 4. Verify all dependencies are in package.json
 
-#### Backend Won't Start on Render
-**Symptom**: Deployment succeeds but app crashes
+#### Backend Won't Start (self-hosted)
+**Symptom**: Service starts but the app crashes on boot
 
 **Cause**: Missing environment variables or database connection
 
 **Solution**:
 ```bash
-# Check Render logs in dashboard
-# Or use Render CLI
-render logs
+# Check service logs
+journalctl -u cassino-backend -f      # systemd
+docker compose logs -f backend        # docker
 
-# Verify environment variables are set in Render dashboard
-# Settings → Environment → Environment Variables
+# Verify environment variables are set (backend/.env or process manager)
+# Required: DATABASE_URL; recommended: CORS_ORIGINS, ENVIRONMENT
 
 # Check health endpoint
-curl https://your-app.onrender.com/health
+curl https://your-backend-host/health
 ```
 
 #### Frontend Assets Not Loading
@@ -446,7 +446,7 @@ psql -c "SELECT count(*) FROM pg_stat_activity;"
 ## Getting More Help
 
 ### Log Locations
-- **Backend logs**: stdout (check terminal or Render dashboard logs)
+- **Backend logs**: stdout (terminal, `journalctl`, or `docker compose logs`)
 - **Frontend logs**: Browser DevTools Console
 - **Redis logs**: Redis server output
 - **Database logs**: SQLite/PostgreSQL logs

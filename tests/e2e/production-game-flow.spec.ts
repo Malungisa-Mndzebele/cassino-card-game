@@ -253,7 +253,8 @@ test.describe('Production Game Flow', () => {
 
 	test('health check and API connectivity', async ({ request }) => {
 		await test.step('Backend health check', async () => {
-			const response = await request.get('https://cassino-game-backend.onrender.com/health');
+			const backendUrl = process.env.VITE_API_URL || 'http://localhost:8000';
+			const response = await request.get(`${backendUrl}/health`);
 			expect(response.ok()).toBeTruthy();
 
 			const health = await response.json();

@@ -38,8 +38,8 @@
 
 ## Deployment
 
-- **Backend**: Render with PostgreSQL and Redis managed instances
-- **Frontend**: FTP deployment to khasinogaming.com
+- **Backend**: Self-hosted FastAPI/Uvicorn (any Python 3.11+ host) with PostgreSQL and optional Redis
+- **Frontend**: Static build; FTP deployment to khasinogaming.com (or any static host)
 - **CI/CD**: GitHub Actions for automated testing and deployment
 - **Base Path**: Frontend deployed at `/cassino/` subdirectory
 
@@ -101,8 +101,8 @@ cd backend && python start_production.py
 
 ### Deployment
 ```bash
-# Deploy backend to Render (automatic via git push)
-git push origin main
+# Deploy backend: pull on the server, install deps, restart the service
+#   git pull && pip install -r backend/requirements.txt && <restart service>
 
 # Deploy frontend via FTP
 npm run deploy:ftp

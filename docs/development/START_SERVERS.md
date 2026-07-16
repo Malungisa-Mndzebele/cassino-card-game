@@ -191,7 +191,7 @@ redis-cli ping
 
 For production deployment:
 - Redis is **required** for session management
-- Use managed Redis service (e.g., Render Redis, AWS ElastiCache)
+- Use a managed or self-hosted Redis service (e.g., AWS ElastiCache, Redis Cloud, or your own instance)
 - Configure Redis URL in environment variables
 - Enable Redis persistence (RDB or AOF)
 

@@ -1,15 +1,15 @@
-import type {
-    CreateRoomResponse,
-    JoinRoomResponse,
-    GameStateResponse,
-    ErrorResponse,
-    GameState
-} from '$types/game';
+/**
+ * Game API — serverless P2P edition.
+ *
+ * The game has no backend. Every action is routed through the P2P session
+ * (src/lib/p2p/session.ts): the host applies it to the in-browser authoritative
+ * engine and broadcasts the new state; the guest forwards it to the host. The
+ * function signatures are kept identical to the old HTTP client so the game
+ * components did not have to change.
+ */
 
-const API_URL =
-    typeof window !== 'undefined' && window.location.hostname === 'localhost'
-        ? 'http://localhost:8000'
-        : 'https://cassino-game-backend.onrender.com';
+import type { GameStateResponse, GameState } from '$types/game';
+import * as session from '$lib/p2p/session';
 
 class APIError extends Error {
     constructor(
@@ -21,103 +21,12 @@ class APIError extends Error {
     }
 }
 
-async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_URL}${endpoint}`;
-
-    try {
-        const response = await fetch(url, {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-
-        if (!response.ok) {
-            const error: ErrorResponse = await response.json();
-            throw new APIError(error.detail || 'API request failed', response.status);
-        }
-
-        return await response.json();
-    } catch (error) {
-        if (error instanceof APIError) {
-            throw error;
-        }
-        throw new APIError('Network error', 0);
-    }
-}
-
-export async function createRoom(playerName: string): Promise<CreateRoomResponse> {
-    const response = await fetchAPI<any>('/rooms/create', {
-        method: 'POST',
-        body: JSON.stringify({
-            player_name: playerName,
-            max_players: 2
-        })
-    });
-
-    // Store session token if provided
-    if (response.session_token && typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('session_token', response.session_token);
-    }
-
-    return {
-        room_id: response.room_id,
-        player_id: response.player_id,
-        player_name: playerName,
-        game_state: transformGameState(response.game_state)
-    };
-}
-
-export async function joinRoom(roomCode: string, playerName: string): Promise<JoinRoomResponse> {
-    const response = await fetchAPI<any>('/rooms/join', {
-        method: 'POST',
-        body: JSON.stringify({
-            room_id: roomCode,
-            player_name: playerName
-        })
-    });
-
-    // Store session token if provided
-    if (response.session_token && typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('session_token', response.session_token);
-    }
-
-    return {
-        room_id: roomCode,
-        player_id: response.player_id,
-        player_name: playerName,
-        game_state: transformGameState(response.game_state)
-    };
-}
-
-export async function joinRandomRoom(playerName: string): Promise<JoinRoomResponse> {
-    const response = await fetchAPI<any>('/rooms/join-random', {
-        method: 'POST',
-        body: JSON.stringify({
-            player_name: playerName
-        })
-    });
-
-    // Store session token if provided
-    if (response.session_token && typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('session_token', response.session_token);
-    }
-
-    return {
-        room_id: response.game_state?.room_id || '',
-        player_id: response.player_id,
-        player_name: playerName,
-        game_state: transformGameState(response.game_state)
-    };
-}
-
-// Backend state interface (snake_case from API)
+// Backend state interface (snake_case, as produced by the in-browser engine).
 interface BackendGameState {
     room_id?: string;
     phase?: string;
     round?: number;
-    players?: Array<{ id: string; name: string; score: number; hand: unknown[]; captured: unknown[] }>;
+    players?: Array<{ id: string; name: string; ready?: boolean }>;
     table_cards?: unknown[];
     current_turn?: number;
     deck?: unknown[];
@@ -142,7 +51,7 @@ interface BackendGameState {
     checksum?: string;
 }
 
-// Transform backend snake_case to frontend camelCase
+// Transform engine snake_case state to frontend camelCase.
 export function transformGameState(backendState: BackendGameState | null | undefined): GameState | null {
     if (!backendState) return null;
 
@@ -152,9 +61,10 @@ export function transformGameState(backendState: BackendGameState | null | undef
         round: backendState.round || 1,
         players: (backendState.players || []) as GameState['players'],
         tableCards: (backendState.table_cards || []) as GameState['tableCards'],
-        currentPlayer: backendState.current_turn === 1
-            ? backendState.players?.[0]?.id || ''
-            : backendState.players?.[1]?.id || '',
+        currentPlayer:
+            backendState.current_turn === 1
+                ? backendState.players?.[0]?.id || ''
+                : backendState.players?.[1]?.id || '',
         deck: (backendState.deck || []) as GameState['deck'],
         player1Hand: (backendState.player1_hand || []) as GameState['player1Hand'],
         player2Hand: (backendState.player2_hand || []) as GameState['player2Hand'],
@@ -176,173 +86,77 @@ export function transformGameState(backendState: BackendGameState | null | undef
     };
 }
 
-export async function getGameState(roomId: string): Promise<GameStateResponse> {
-    const response = await fetchAPI<any>(`/rooms/${roomId}/state`);
+/** Standard action result shape used across the game components. */
+function result(state: unknown, message = '') {
     return {
-        game_state: transformGameState(response)
+        success: true,
+        message,
+        game_state: transformGameState(state as BackendGameState | null)
     };
 }
 
-export async function setPlayerReady(roomId: string, playerId: string, ready: boolean) {
-    const response = await fetchAPI<any>('/rooms/player-ready', {
-        method: 'POST',
-        body: JSON.stringify({
-            room_id: roomId,
-            player_id: playerId,
-            is_ready: ready
-        })
-    });
-
-    return {
-        success: response.success,
-        message: response.message,
-        game_state: transformGameState(response.game_state)
-    };
+export async function getGameState(_roomId: string): Promise<GameStateResponse> {
+    return { game_state: transformGameState(session.getState() as BackendGameState | null) };
 }
 
-export async function startShuffle(roomId: string, playerId: string) {
-    return fetchAPI('/game/start-shuffle', {
-        method: 'POST',
-        body: JSON.stringify({
-            room_id: roomId,
-            player_id: playerId
-        })
-    });
+export async function setPlayerReady(_roomId: string, playerId: string, ready: boolean) {
+    const state = await session.performAction('setReady', { playerId, ready });
+    return result(state, 'Player ready status updated');
 }
 
-export async function selectFaceUpCards(
-    roomId: string,
-    playerId: string,
-    selectedCards: number[]
-) {
-    return fetchAPI('/game/select-face-up-cards', {
-        method: 'POST',
-        body: JSON.stringify({
-            room_id: roomId,
-            player_id: playerId,
-            selected_cards: selectedCards
-        })
-    });
+export async function startShuffle(_roomId: string, playerId: string) {
+    const state = await session.performAction('startShuffle', { playerId });
+    return result(state, 'Shuffle started');
 }
 
-export async function startGame(roomId: string, playerId: string) {
-    const response = await fetchAPI<any>('/game/start', {
-        method: 'POST',
-        body: JSON.stringify({
-            room_id: roomId,
-            player_id: playerId
-        })
-    });
+export async function selectFaceUpCards(_roomId: string, playerId: string, _selectedCards: number[]) {
+    const state = await session.performAction('selectFaceUpCards', { playerId });
+    return result(state, 'Cards dealt successfully');
+}
 
-    return {
-        success: response.success,
-        message: response.message,
-        game_state: transformGameState(response.game_state)
-    };
+export async function startGame(_roomId: string, playerId: string) {
+    const state = await session.performAction('startGame', { playerId });
+    return result(state, 'Game started! Cards have been dealt.');
 }
 
 export async function playCard(
-    roomId: string,
+    _roomId: string,
     playerId: string,
     cardIdOrIndex: number | string,
     action: 'capture' | 'build' | 'trail',
     targetCards?: string[],
-    buildValue?: number
+    buildValue?: number,
+    components?: string[][],
+    targetBuilds?: string[]
 ) {
-    const response = await fetchAPI<any>('/game/play-card', {
-        method: 'POST',
-        body: JSON.stringify({
-            room_id: roomId,
-            player_id: parseInt(playerId, 10),
-            card_id: typeof cardIdOrIndex === 'string' ? cardIdOrIndex : undefined,
-            card_index: typeof cardIdOrIndex === 'number' ? cardIdOrIndex : undefined,
-            action,
-            target_cards: targetCards,
-            build_value: buildValue
-        })
+    const state = await session.performAction('playCard', {
+        playerId,
+        cardId: String(cardIdOrIndex),
+        action,
+        targetCards,
+        buildValue,
+        components,
+        targetBuilds
     });
-
-    return {
-        success: response.success,
-        message: response.message,
-        game_state: transformGameState(response.game_state)
-    };
+    return result(state, 'Card played successfully');
 }
 
-
-export async function tableBuild(
-    roomId: string,
-    playerId: string,
-    targetCards: string[],
-    buildValue: number
-) {
-    const response = await fetchAPI<any>('/game/table-build', {
-        method: 'POST',
-        body: JSON.stringify({
-            room_id: roomId,
-            player_id: parseInt(playerId, 10),
-            target_cards: targetCards,
-            build_value: buildValue
-        })
-    });
-
-    return {
-        success: response.success,
-        message: response.message,
-        game_state: transformGameState(response.game_state)
-    };
+export async function tableBuild(_roomId: string, playerId: string, targetCards: string[], buildValue: number) {
+    const state = await session.performAction('tableBuild', { playerId, targetCards, buildValue });
+    return result(state, 'Table build created');
 }
 
-export async function resetGame(roomId: string, playerId: string) {
-    return fetchAPI('/game/reset', {
-        method: 'POST',
-        body: JSON.stringify({
-            room_id: roomId,
-            player_id: playerId
-        })
-    });
+export async function resetGame(_roomId: string, playerId: string) {
+    const state = await session.performAction('reset', { playerId });
+    return result(state, 'Game reset');
 }
 
-export async function leaveRoom(roomId: string, playerId: string) {
-    const response = await fetchAPI<any>('/rooms/leave', {
-        method: 'POST',
-        body: JSON.stringify({
-            room_id: roomId,
-            player_id: playerId
-        })
-    });
-
-    // Clear session token from sessionStorage
+export async function leaveRoom(_roomId: string, _playerId: string) {
+    session.teardown();
     if (typeof sessionStorage !== 'undefined') {
         sessionStorage.removeItem('session_token');
     }
-
-    return {
-        success: response.success,
-        message: response.message
-    };
-}
-
-export async function createAIGame(playerName: string, difficulty: 'easy' | 'medium' | 'hard' = 'medium'): Promise<CreateRoomResponse> {
-    const response = await fetchAPI<any>('/rooms/create-ai-game', {
-        method: 'POST',
-        body: JSON.stringify({
-            player_name: playerName,
-            difficulty: difficulty
-        })
-    });
-
-    // Store session token if provided
-    if (response.session_token && typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('session_token', response.session_token);
-    }
-
-    return {
-        room_id: response.room_id,
-        player_id: response.player_id,
-        player_name: playerName,
-        game_state: transformGameState(response.game_state)
-    };
+    return { success: true, message: 'Left the game' };
 }
 
 export { APIError };

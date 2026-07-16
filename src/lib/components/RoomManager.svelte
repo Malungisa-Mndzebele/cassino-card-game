@@ -1,483 +1,236 @@
 <script lang="ts">
-  import { gameStore } from '$stores/gameStore';
-  import { connectionStore } from '$stores/connectionStore';
-  import {
-    createRoom,
-    joinRoom,
-    joinRandomRoom,
-    createAIGame,
-    validatePlayerName,
-    validateRoomCode,
-    formatRoomCode,
-    sanitizePlayerName,
-    copyToClipboard,
-  } from '$utils';
+  import { onMount } from 'svelte';
+  import { validatePlayerName, sanitizePlayerName, copyToClipboard } from '$utils';
+  import { startHost, hostAcceptAnswer, startGuest } from '$lib/p2p/session';
   import { ErrorHandler, formatErrorForDisplay } from '$lib/utils/errorHandler';
   import ErrorNotification from '$lib/components/ErrorNotification.svelte';
   import GameInstructions from '$lib/components/GameInstructions.svelte';
-  import { onMount } from 'svelte';
 
-  // Component state
+  type Mode = 'menu' | 'host' | 'guest';
+
   let playerName = '';
-  let roomCode = '';
-  let isCreating = false;
-  let isJoining = false;
-  let isCreatingAI = false;
+  let mode: Mode = 'menu';
+  let busy = false;
   let error = '';
   let errorType: any = undefined;
   let errorTitle = '';
-  let showRoomCode = false;
-  let copied = false;
-  let aiDifficulty: 'easy' | 'medium' | 'hard' = 'medium';
-  let showAIOptions = false;
 
-  // Load saved player name
+  // Host flow
+  let offerCode = '';
+  let answerInput = '';
+  let hostConnecting = false;
+
+  // Guest flow
+  let offerInput = '';
+  let answerCode = '';
+
+  let copiedOffer = false;
+  let copiedAnswer = false;
+
   onMount(() => {
     const saved = localStorage.getItem('cassino_player_name');
-    if (saved) {
-      playerName = saved;
-    }
+    if (saved) playerName = saved;
   });
 
-  // Reactive validation
   $: playerNameValid = validatePlayerName(playerName).valid;
-  $: roomCodeValid = roomCode.length === 0 || validateRoomCode(roomCode).valid;
-  $: canCreateOrJoinRandom = playerNameValid && !isCreating && !isJoining && !isCreatingAI;
-  $: canJoinRoom =
-    playerNameValid && roomCodeValid && roomCode.length === 6 && !isCreating && !isJoining && !isCreatingAI;
 
-  async function handleCreateRoom() {
+  function showError(err: any) {
+    ErrorHandler.logError(err, 'RoomManager');
+    const formatted = formatErrorForDisplay(err);
+    error = formatted.message;
+    errorType = formatted.type;
+    errorTitle = formatted.title;
+  }
+
+  async function handleHost() {
     error = '';
-    isCreating = true;
-
+    busy = true;
     try {
-      const sanitized = sanitizePlayerName(playerName);
-      localStorage.setItem('cassino_player_name', sanitized);
-
-      const response = await createRoom(sanitized);
-
-      gameStore.setRoomId(response.room_id);
-      gameStore.setPlayerId(response.player_id);
-      gameStore.setPlayerName(sanitized);
-      if (response.game_state) {
-        gameStore.setGameState(response.game_state);
-      }
-
-      showRoomCode = true;
-
-      // Connect WebSocket
-      await connectionStore.connect(response.room_id);
-    } catch (err: any) {
-      ErrorHandler.logError(err, 'handleCreateRoom');
-      const formatted = formatErrorForDisplay(err);
-      error = formatted.message;
-      errorType = formatted.type;
-      errorTitle = formatted.title;
+      const name = sanitizePlayerName(playerName);
+      localStorage.setItem('cassino_player_name', name);
+      const { offerCode: code } = await startHost(name);
+      offerCode = code;
+      mode = 'host';
+    } catch (err) {
+      showError(err);
     } finally {
-      isCreating = false;
+      busy = false;
     }
   }
 
-  async function handleCreateAIGame() {
+  async function handleHostConnect() {
     error = '';
-    isCreatingAI = true;
-
+    hostConnecting = true;
     try {
-      const sanitized = sanitizePlayerName(playerName);
-      localStorage.setItem('cassino_player_name', sanitized);
-
-      const response = await createAIGame(sanitized, aiDifficulty);
-
-      gameStore.setRoomId(response.room_id);
-      gameStore.setPlayerId(response.player_id);
-      gameStore.setPlayerName(sanitized);
-      if (response.game_state) {
-        gameStore.setGameState(response.game_state);
-      }
-
-      // Connect WebSocket (for state updates)
-      await connectionStore.connect(response.room_id);
-    } catch (err: any) {
-      ErrorHandler.logError(err, 'handleCreateAIGame');
-      
-      // Check if it's a 404 error (feature not deployed yet)
-      if (err.message === 'Not Found' || err.status === 404) {
-        error = 'AI game mode is coming soon! The feature is being deployed. Please try Quick Match or Create Room for now.';
-        errorType = 'info';
-        errorTitle = 'Coming Soon';
-        showAIOptions = false;
-      } else {
-        const formatted = formatErrorForDisplay(err);
-        error = formatted.message;
-        errorType = formatted.type;
-        errorTitle = formatted.title;
-      }
+      await hostAcceptAnswer(answerInput.trim());
+      // On success the peer opens, the session sets gameStore.roomId, and the
+      // page swaps to the game view. If it never opens, the user can retry.
+    } catch (err) {
+      showError(err);
     } finally {
-      isCreatingAI = false;
+      hostConnecting = false;
     }
   }
 
-  async function handleJoinRoom() {
+  async function handleStartGuest() {
     error = '';
-    isJoining = true;
-
+    busy = true;
     try {
-      let sanitized = sanitizePlayerName(playerName);
-      const formatted = formatRoomCode(roomCode);
-
-      localStorage.setItem('cassino_player_name', sanitized);
-
-      // Try to join, if name is taken, append a number
-      let attempts = 0;
-      while (attempts < 5) {
-        try {
-          const response = await joinRoom(formatted, sanitized);
-
-          gameStore.setRoomId(formatted);
-          gameStore.setPlayerId(response.player_id);
-          gameStore.setPlayerName(sanitized);
-          if (response.game_state) {
-            gameStore.setGameState(response.game_state);
-          }
-
-          // Connect WebSocket
-          await connectionStore.connect(formatted);
-          return;
-        } catch (err: any) {
-          if (err.message?.includes('Player name already taken') && attempts < 4) {
-            // Append a random number and try again
-            attempts++;
-            sanitized = `${sanitizePlayerName(playerName)}${Math.floor(Math.random() * 1000)}`;
-          } else {
-            throw err;
-          }
-        }
-      }
-    } catch (err: any) {
-      ErrorHandler.logError(err, 'handleJoinRoom');
-      const formatted = formatErrorForDisplay(err);
-      error = formatted.message;
-      errorType = formatted.type;
-      errorTitle = formatted.title;
+      const name = sanitizePlayerName(playerName);
+      localStorage.setItem('cassino_player_name', name);
+      const { answerCode: code } = await startGuest(name, offerInput.trim());
+      answerCode = code;
+    } catch (err) {
+      showError(err);
     } finally {
-      isJoining = false;
+      busy = false;
     }
   }
 
-  async function handleJoinRandom() {
+  async function copy(text: string, which: 'offer' | 'answer') {
+    const ok = await copyToClipboard(text);
+    if (!ok) return;
+    if (which === 'offer') {
+      copiedOffer = true;
+      setTimeout(() => (copiedOffer = false), 2000);
+    } else {
+      copiedAnswer = true;
+      setTimeout(() => (copiedAnswer = false), 2000);
+    }
+  }
+
+  function backToMenu() {
+    mode = 'menu';
+    offerCode = '';
+    answerInput = '';
+    offerInput = '';
+    answerCode = '';
     error = '';
-    isJoining = true;
-
-    try {
-      let sanitized = sanitizePlayerName(playerName);
-      localStorage.setItem('cassino_player_name', sanitized);
-
-      // Try to join, if name is taken, append a number
-      let attempts = 0;
-      while (attempts < 5) {
-        try {
-          const response = await joinRandomRoom(sanitized);
-
-          if (response.game_state) {
-            gameStore.setRoomId(response.game_state.roomId);
-            gameStore.setPlayerId(response.player_id);
-            gameStore.setPlayerName(sanitized);
-            gameStore.setGameState(response.game_state);
-
-            // Connect WebSocket
-            await connectionStore.connect(response.game_state.roomId);
-          }
-          return;
-        } catch (err: any) {
-          if (err.message?.includes('Player name already taken') && attempts < 4) {
-            // Append a random number and try again
-            attempts++;
-            sanitized = `${sanitizePlayerName(playerName)}${Math.floor(Math.random() * 1000)}`;
-          } else {
-            throw err;
-          }
-        }
-      }
-    } catch (err: any) {
-      ErrorHandler.logError(err, 'handleJoinRandom');
-      const formatted = formatErrorForDisplay(err);
-      error = formatted.message;
-      errorType = formatted.type;
-      errorTitle = formatted.title;
-    } finally {
-      isJoining = false;
-    }
-  }
-
-  async function handleCopyRoomCode() {
-    if ($gameStore.roomId) {
-      const success = await copyToClipboard($gameStore.roomId);
-      if (success) {
-        copied = true;
-        setTimeout(() => (copied = false), 2000);
-      }
-    }
-  }
-
-  function handleRoomCodeInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    roomCode = formatRoomCode(input.value);
   }
 </script>
 
 <div class="room-manager">
-  {#if !$gameStore.roomId}
-    <!-- Room Creation/Joining UI -->
-    <div class="casino-bg backdrop-casino rounded-xl p-8 max-w-md mx-auto shadow-2xl">
-      <h1 class="text-4xl font-bold text-center mb-2 text-casino-gold">Casino Card Game</h1>
-      <p class="text-center text-gray-300 mb-4">Create or join a game room to start playing</p>
-      
-      <!-- How to Play Button -->
-      <div class="flex justify-center gap-3 mb-6">
-        <GameInstructions />
-        <a 
-          href="/cassino/rules" 
-          class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-          target="_blank"
-        >
-          📖 Full Rules & Strategy
-        </a>
-      </div>
+  <div class="casino-bg backdrop-casino rounded-xl p-8 max-w-lg mx-auto shadow-2xl w-full">
+    <h1 class="text-4xl font-bold text-center mb-2 text-casino-gold">Casino Card Game</h1>
+    <p class="text-center text-gray-300 mb-4">Play head-to-head — no server, no sign-up.</p>
 
-      <!-- Create New Room Section -->
-      <section class="mb-6">
-        <h2 class="text-2xl font-semibold text-casino-gold mb-4">Create New Room</h2>
+    <div class="flex justify-center gap-3 mb-6">
+      <GameInstructions />
+      <a
+        href="/cassino/rules"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+        target="_blank"
+      >
+        📖 Full Rules & Strategy
+      </a>
+    </div>
 
-        <!-- Player Name Input -->
-        <div class="mb-4">
-          <label for="playerName" class="block text-sm font-medium text-gray-200 mb-2">
-            Your Name
-          </label>
-          <input
-            id="playerName"
-            data-testid="player-name-input-create-test"
-            type="text"
-            bind:value={playerName}
-            placeholder="Enter your name"
-            maxlength="20"
-            class="input-field"
-            disabled={isCreating || isJoining}
-          />
-          {#if playerName && !playerNameValid}
-            <p class="text-red-400 text-sm mt-1">
-              Name must be 1-20 characters (letters, numbers, spaces only)
-            </p>
-          {/if}
-        </div>
-
-        <!-- Create Room Button -->
-        <button
-          data-testid="create-room-test"
-          on:click={handleCreateRoom}
-          disabled={!canCreateOrJoinRandom}
-          class="btn-primary w-full mb-4"
-        >
-          {#if isCreating}
-            <span class="inline-block animate-spin mr-2">⚙</span>
-            Creating Room...
-          {:else}
-            🎲 Create Room
-          {/if}
-        </button>
-
-        <!-- Join Random Button -->
-        <button
-          data-testid="join-random-test"
-          on:click={handleJoinRandom}
-          disabled={!canCreateOrJoinRandom}
-          class="btn-primary w-full bg-purple-600 hover:bg-purple-700"
-        >
-          {#if isJoining}
-            <span class="inline-block animate-spin mr-2">⚙</span>
-            Joining...
-          {:else}
-            🎯 Quick Match
-          {/if}
-        </button>
-
-        <!-- Play vs Computer Button -->
-        <div class="mt-4">
-          {#if !showAIOptions}
-            <button
-              on:click={() => showAIOptions = true}
-              disabled={!canCreateOrJoinRandom}
-              class="btn-primary w-full bg-orange-600 hover:bg-orange-700"
-            >
-              🤖 Play vs Computer
-            </button>
-          {:else}
-            <div class="bg-gray-700 rounded-lg p-4">
-              <h3 class="text-lg font-semibold text-casino-gold mb-3">Select Difficulty</h3>
-              
-              <div class="flex gap-2 mb-4">
-                <button
-                  on:click={() => aiDifficulty = 'easy'}
-                  class="flex-1 py-2 px-3 rounded-lg font-medium transition-all {aiDifficulty === 'easy' ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}"
-                >
-                  😊 Easy
-                </button>
-                <button
-                  on:click={() => aiDifficulty = 'medium'}
-                  class="flex-1 py-2 px-3 rounded-lg font-medium transition-all {aiDifficulty === 'medium' ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}"
-                >
-                  🎯 Medium
-                </button>
-                <button
-                  on:click={() => aiDifficulty = 'hard'}
-                  class="flex-1 py-2 px-3 rounded-lg font-medium transition-all {aiDifficulty === 'hard' ? 'bg-red-600 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}"
-                >
-                  🔥 Hard
-                </button>
-              </div>
-              
-              <div class="flex gap-2">
-                <button
-                  on:click={() => showAIOptions = false}
-                  class="flex-1 py-2 px-4 rounded-lg bg-gray-600 text-gray-300 hover:bg-gray-500"
-                >
-                  Cancel
-                </button>
-                <button
-                  on:click={handleCreateAIGame}
-                  disabled={!canCreateOrJoinRandom}
-                  class="flex-1 py-2 px-4 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold"
-                >
-                  {#if isCreatingAI}
-                    <span class="inline-block animate-spin mr-2">⚙</span>
-                    Starting...
-                  {:else}
-                    Start Game
-                  {/if}
-                </button>
-              </div>
-            </div>
-          {/if}
-        </div>
-      </section>
-
-      <!-- Divider -->
-      <div class="relative mb-6">
-        <div class="absolute inset-0 flex items-center">
-          <div class="w-full border-t border-gray-600"></div>
-        </div>
-        <div class="relative flex justify-center text-sm">
-          <span class="px-4 bg-gray-800 text-gray-400">OR</span>
-        </div>
-      </div>
-
-      <!-- Join Existing Room Section -->
-      <section>
-        <h2 class="text-2xl font-semibold text-casino-gold mb-4">Join Existing Room</h2>
-
-        <!-- Player Name Input for Join -->
-        <div class="mb-4">
-          <label for="playerNameJoin" class="block text-sm font-medium text-gray-200 mb-2">
-            Your Name
-          </label>
-          <input
-            id="playerNameJoin"
-            data-testid="player-name-input-join"
-            type="text"
-            bind:value={playerName}
-            placeholder="Enter your name"
-            maxlength="20"
-            class="input-field"
-            disabled={isCreating || isJoining}
-          />
-        </div>
-
-        <!-- Join Room Input -->
-        <div class="mb-4">
-          <label for="roomCode" class="block text-sm font-medium text-gray-200 mb-2">
-            Room Code
-          </label>
-          <input
-            id="roomCode"
-            data-testid="room-code-input"
-            type="text"
-            bind:value={roomCode}
-            on:input={handleRoomCodeInput}
-            placeholder="ABC123"
-            maxlength="6"
-            class="input-field uppercase"
-            disabled={isCreating || isJoining}
-          />
-          {#if roomCode && !roomCodeValid}
-            <p class="text-red-400 text-sm mt-1">Room code must be exactly 6 characters</p>
-          {/if}
-        </div>
-
-        <!-- Join Room Button -->
-        <button
-          data-testid="join-room-test"
-          on:click={handleJoinRoom}
-          disabled={!canJoinRoom}
-          class="btn-primary w-full bg-green-600 hover:bg-green-700"
-        >
-          {#if isJoining}
-            <span class="inline-block animate-spin mr-2">⚙</span>
-            Joining...
-          {:else}
-            🚪 Join Room
-          {/if}
-        </button>
-      </section>
-
-      <!-- Error Message -->
-      {#if error}
-        <div class="mt-4">
-          <ErrorNotification
-            bind:error
-            type={errorType}
-            title={errorTitle}
-            dismissible={true}
-            autoDismiss={true}
-          />
-        </div>
+    <!-- Name -->
+    <div class="mb-6">
+      <label for="playerName" class="block text-sm font-medium text-gray-200 mb-2">Your Name</label>
+      <input
+        id="playerName"
+        data-testid="player-name-input-create-test"
+        type="text"
+        bind:value={playerName}
+        placeholder="Enter your name"
+        maxlength="20"
+        class="input-field"
+        disabled={mode !== 'menu'}
+      />
+      {#if playerName && !playerNameValid}
+        <p class="text-red-400 text-sm mt-1">Name must be 1-20 characters (letters, numbers, spaces only)</p>
       {/if}
     </div>
-  {:else}
-    <!-- Room Created - Show Code -->
-    <div class="casino-bg backdrop-casino rounded-xl p-8 max-w-md mx-auto shadow-2xl">
-      <h2 class="text-3xl font-bold text-center mb-4 text-casino-gold">Room Created!</h2>
 
-      <p class="text-center text-gray-300 mb-6">Share this code with your opponent:</p>
-
-      <!-- Room Code Display -->
-      <div class="bg-gray-900 rounded-lg p-6 mb-6 border-2 border-casino-gold">
-        <p class="text-center text-5xl font-bold tracking-widest text-casino-gold">
-          {$gameStore.roomId}
+    {#if mode === 'menu'}
+      <!-- Connection instructions -->
+      <div class="bg-black/20 rounded-lg p-4 mb-6 text-sm text-gray-300 leading-relaxed">
+        <p class="mb-1">
+          One player <strong>hosts</strong> and gets an <em>invite code</em> to share (chat, email, etc.).
+          The other player <strong>joins</strong> with that code and sends back a <em>reply code</em>.
         </p>
+        <p>Once both codes are exchanged, you're connected directly — peer to peer.</p>
       </div>
 
-      <!-- Copy Button -->
-      <button on:click={handleCopyRoomCode} class="btn-primary w-full mb-4">
-        {#if copied}
-          ✅ Copied!
-        {:else}
-          📋 Copy Room Code
-        {/if}
+      <button
+        data-testid="create-room-test"
+        on:click={handleHost}
+        disabled={!playerNameValid || busy}
+        class="btn-primary w-full mb-3"
+      >
+        {busy ? 'Preparing…' : '🎲 Host a Game'}
       </button>
 
-      <p class="text-center text-gray-400 text-sm">Waiting for opponent to join...</p>
+      <button
+        data-testid="join-room-test"
+        on:click={() => (mode = 'guest')}
+        disabled={!playerNameValid}
+        class="btn-secondary w-full"
+      >
+        🔗 Join a Game
+      </button>
+    {:else if mode === 'host'}
+      <!-- Step 1: share invite code -->
+      <section class="mb-5">
+        <h2 class="text-lg font-semibold text-casino-gold mb-2">1. Send this invite code to your friend</h2>
+        <textarea readonly rows="4" class="input-field font-mono text-xs resize-none" bind:value={offerCode}></textarea>
+        <button on:click={() => copy(offerCode, 'offer')} class="btn-secondary w-full mt-2">
+          {copiedOffer ? '✅ Copied!' : '📋 Copy invite code'}
+        </button>
+      </section>
 
-      <!-- Connection Status -->
-      <div class="mt-4 text-center">
-        {#if $connectionStore.status === 'connected'}
-          <span class="text-green-400">🟢 Connected</span>
-        {:else if $connectionStore.status === 'connecting'}
-          <span class="text-yellow-400">🟡 Connecting...</span>
-        {:else}
-          <span class="text-red-400">🔴 Disconnected</span>
-        {/if}
+      <!-- Step 2: paste reply code -->
+      <section class="mb-2">
+        <h2 class="text-lg font-semibold text-casino-gold mb-2">2. Paste their reply code</h2>
+        <textarea
+          rows="4"
+          bind:value={answerInput}
+          placeholder="Paste the reply code from your friend here…"
+          class="input-field font-mono text-xs resize-none"
+        ></textarea>
+        <button on:click={handleHostConnect} disabled={!answerInput.trim() || hostConnecting} class="btn-primary w-full mt-2">
+          {hostConnecting ? 'Connecting…' : '🤝 Connect'}
+        </button>
+      </section>
+
+      <button on:click={backToMenu} class="text-gray-400 text-sm mt-4 hover:text-gray-200">← Back</button>
+    {:else if mode === 'guest'}
+      {#if !answerCode}
+        <!-- Step 1: paste invite code -->
+        <section>
+          <h2 class="text-lg font-semibold text-casino-gold mb-2">1. Paste your friend's invite code</h2>
+          <textarea
+            rows="4"
+            bind:value={offerInput}
+            placeholder="Paste the invite code here…"
+            class="input-field font-mono text-xs resize-none"
+          ></textarea>
+          <button on:click={handleStartGuest} disabled={!offerInput.trim() || busy} class="btn-primary w-full mt-2">
+            {busy ? 'Generating reply…' : '➡️ Generate reply code'}
+          </button>
+        </section>
+      {:else}
+        <!-- Step 2: send back reply code -->
+        <section>
+          <h2 class="text-lg font-semibold text-casino-gold mb-2">2. Send this reply code back to your friend</h2>
+          <textarea readonly rows="4" class="input-field font-mono text-xs resize-none" bind:value={answerCode}></textarea>
+          <button on:click={() => copy(answerCode, 'answer')} class="btn-secondary w-full mt-2">
+            {copiedAnswer ? '✅ Copied!' : '📋 Copy reply code'}
+          </button>
+          <p class="text-center text-gray-400 text-sm mt-3">Waiting for your friend to connect…</p>
+        </section>
+      {/if}
+
+      <button on:click={backToMenu} class="text-gray-400 text-sm mt-4 hover:text-gray-200">← Back</button>
+    {/if}
+
+    {#if error}
+      <div class="mt-4">
+        <ErrorNotification bind:error type={errorType} title={errorTitle} dismissible={true} autoDismiss={true} />
       </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -489,27 +242,8 @@
     padding: 2rem 1rem;
   }
 
-  /* Additional component-specific styles */
-  input:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
   button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  .animate-spin {
-    animation: spin 1s linear infinite;
   }
 </style>

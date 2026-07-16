@@ -160,26 +160,27 @@ SESSION_SECRET_KEY=  # For session token signing
 
 ### Frontend (`.env`)
 ```bash
-# API URLs (auto-configured in production)
+# API URLs (leave unset to use same origin as the deployed site)
 VITE_API_URL=http://localhost:8000                    # Dev
-# VITE_API_URL=https://your-app.onrender.com         # Production
+# VITE_API_URL=https://your-backend-host             # Production
 
 VITE_WS_URL=ws://localhost:8000                       # Dev
-# VITE_WS_URL=wss://your-app.onrender.com            # Production
+# VITE_WS_URL=wss://your-backend-host                # Production
 ```
 
 ## Deployment
 
-### Backend (Render)
-- Deploy: Automatic via `git push origin main`
-- Run migrations: Automatic on deployment (configured in render.yaml)
-- Health check: `https://your-app.onrender.com/health`
-- Set environment variables: Render dashboard → Settings → Environment
+### Backend (self-hosted FastAPI)
+- Deploy: pull latest on server, `pip install -r backend/requirements.txt`, restart service
+- Run migrations: Automatic on startup via `backend/start_production.py`
+- Health check: `https://your-backend-host/health`
+- Set environment variables: `backend/.env` or your process manager / CI secrets
+- Reverse proxy must forward HTTP + WebSocket (`/ws/`)
 
-### Frontend (FTP)
-- Build: `npm run build`
-- Deploy: `npm run deploy:ftp`
-- Base path: `/cassino/` (configured in `vite.config.ts`)
+### Frontend (static build)
+- Build: `npm run build` (set `VITE_API_URL`/`VITE_WS_URL`, or rely on same-origin)
+- Deploy: `npm run deploy:ftp` (or upload `build/` to any static host)
+- Base path: `/cassino/` (configured in `svelte.config.js`)
 - Verify: `https://khasinogaming.com/cassino/`
 
 ## API Endpoints

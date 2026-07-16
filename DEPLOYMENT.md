@@ -1,35 +1,48 @@
 # Casino Card Game - Deployment Guide
 
+> **⚠️ The live game is now serverless (peer-to-peer).** It ships as a static
+> SvelteKit build with the game engine and networking running entirely in the
+> browser — see the README's [Deployment](README.md#-deployment) and
+> [Architecture](README.md#-architecture) sections. To deploy the game, you only
+> need to build the static site and upload `build/` to any static host; **no
+> backend is required.**
+>
+> The guide below documents the **legacy** client-server backend (`backend/`),
+> kept for reference. You do not need any of it to run or deploy the current game.
+
 ## Overview
 
-This guide provides comprehensive instructions for deploying the Casino Card Game application to production. The application uses a two-tier deployment architecture:
+This guide provides comprehensive instructions for deploying the Casino Card Game application to production. The application is **host-agnostic** and uses a two-tier deployment architecture:
 
-- **Backend**: Deployed on Render with PostgreSQL and Redis managed services
-- **Frontend**: Deployed via FTP to khasinogaming.com with static file hosting
+- **Backend**: A self-hosted FastAPI service (run it on any VPS, container host, or your own machine) backed by PostgreSQL (or SQLite for small setups) and optional Redis.
+- **Frontend**: A static SvelteKit build deployable to any static host (e.g. khasinogaming.com via FTP). It resolves the backend endpoint from `VITE_API_URL`/`VITE_WS_URL`, falling back to the same origin when those are unset.
 
 ## Architecture Overview
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │    │     Backend      │    │   Databases     │
-│ (Static Files)  │───▶│   (Render)       │───▶│ PostgreSQL +    │
-│ khasinogaming   │    │ FastAPI + Redis  │    │ Redis (Render)  │
-│ .com/cassino/   │    │                  │    │                 │
+│   Frontend      │    │     Backend      │    │   Data stores   │
+│ (Static Files)  │───▶│  FastAPI /       │───▶│ PostgreSQL or   │
+│ any static host │    │  Uvicorn         │    │ SQLite          │
+│ (e.g. /cassino/)│    │  (self-hosted)   │    │ + optional Redis│
 └─────────────────┘    └──────────────────┘    └─────────────────┘
+        │                        ▲
+        └── VITE_API_URL / VITE_WS_URL (or same-origin via reverse proxy) ──┘
 ```
 
 ## Prerequisites
 
-### Required Accounts
-- [Render](https://render.com) account (free tier available)
-- FTP access to your web hosting provider
-- [GitHub](https://github.com) account (for CI/CD)
+### Required
+- A server or machine to run the backend (any OS with Python 3.11+)
+- A static host / web server for the frontend build (FTP, nginx, S3, etc.)
+- [GitHub](https://github.com) account (optional, for CI/CD)
 
 ### Required Software
 - **Node.js** 18+ and npm 8+
 - **Python** 3.11+
 - **Git** for version control
-- **FTP client** (or use automated deployment)
+- **PostgreSQL** (recommended for production) or SQLite (small setups)
+- **Redis** (optional — the backend degrades gracefully without it)
 
 ### Environment Setup
 ```bash
@@ -48,116 +61,101 @@ cd ..
 
 ---
 
-## Backend Deployment (Render)
+## Backend Deployment (self-hosted)
 
-### Method 1: Blueprint Deployment (Recommended)
+The backend is a standard FastAPI app served by Uvicorn. Deploy it to any host
+that runs Python 3.11+.
 
-The easiest way to deploy is using Render's Blueprint feature with the included `render.yaml` configuration.
+### Step 1: Provision data stores
+- **PostgreSQL** (recommended): create a database and note its connection string.
+- **SQLite** (small/single-server setups): no setup needed — used automatically
+  when `DATABASE_URL` is unset in development.
+- **Redis** (optional): improves multi-instance coordination; the app runs without it.
 
-#### Step 1: Create Render Account
-1. Go to [render.com](https://render.com)
-2. Click "Sign Up" and choose "Sign up with GitHub"
-3. Authorize Render to access your repositories
+### Step 2: Configure environment
+Create `backend/.env` (or export these in your process manager):
 
-#### Step 2: Deploy via Blueprint
-1. In Render dashboard, click "New +" → "Blueprint"
-2. Select your GitHub repository
-3. Render will detect the `render.yaml` file
-4. Review the services that will be created:
-   - `cassino-game-backend` (Web Service)
-   - `cassino-db` (PostgreSQL Database)
-   - `cassino-redis` (Redis Instance)
-5. Click "Apply" to start deployment
+| Variable | Example | Notes |
+|----------|---------|-------|
+| `DATABASE_URL` | `postgresql://user:pass@host:5432/cassino` | Required in production |
+| `REDIS_URL` | `redis://localhost:6379` | Optional |
+| `CORS_ORIGINS` | `https://your-frontend-domain` | Comma-separated allowed origins |
+| `ENVIRONMENT` | `production` | Enables production behavior |
+| `PORT` | `8000` | Any port; match your reverse proxy |
 
-#### Step 3: Monitor Deployment
-Watch the deployment logs for these key messages:
+### Step 3: Run migrations + start the server
+`start_production.py` runs Alembic migrations automatically, then starts Uvicorn:
+```bash
+cd backend
+python start_production.py
+```
+On startup you should see:
 ```
 🔄 Running database migrations...
 ✅ Migrations completed successfully
 ✅ Database initialized
-✅ Redis connected
 ✅ Background tasks started
-✅ WebSocket subscriber started
 ✨ Backend ready!
 INFO: Application startup complete.
 ```
-
-#### Step 4: Verify Deployment
+Alternatively, run Uvicorn directly under a process manager (systemd, pm2, supervisor):
 ```bash
-# Test health endpoint
-curl https://cassino-game-backend.onrender.com/health
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
+```
 
-# Expected response:
-{
-  "status": "healthy",
-  "database": "connected", 
-  "redis": "connected",
-  "timestamp": "2024-01-01T12:00:00Z"
+### Step 4: Reverse proxy (recommended)
+Terminate TLS and forward both HTTP and WebSocket traffic. Serving the frontend
+and API on the **same origin** means the frontend needs no `VITE_API_URL`.
+
+nginx example:
+```nginx
+server {
+    server_name your-domain;
+
+    # Static frontend
+    location /cassino/ { root /var/www; try_files $uri $uri/ /cassino/index.html; }
+
+    # API
+    location /rooms/  { proxy_pass http://127.0.0.1:8000; }
+    location /game/   { proxy_pass http://127.0.0.1:8000; }
+    location /api/    { proxy_pass http://127.0.0.1:8000; }
+    location /health  { proxy_pass http://127.0.0.1:8000; }
+
+    # WebSocket
+    location /ws/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
 }
 ```
 
-### Method 2: Manual Service Creation
+### Step 5: Verify Deployment
+```bash
+curl https://your-backend-host/health
+# Expected:
+{
+  "status": "healthy",
+  "database": "connected",
+  "redis": "connected",
+  "timestamp": "2026-01-01T12:00:00Z"
+}
+```
+(`redis: disconnected` with `status: degraded` is normal when Redis is not configured.)
 
-If Blueprint deployment fails, you can create services manually:
+### Docker (optional)
 
-#### Create PostgreSQL Database
-1. In Render dashboard: "New +" → "PostgreSQL"
-2. Name: `cassino-db`
-3. Database Name: `cassino`
-4. User: `cassino_user`
-5. Region: Oregon (US West)
-6. Plan: Free
-7. Click "Create Database"
-
-#### Create Redis Instance
-1. In Render dashboard: "New +" → "Redis"
-2. Name: `cassino-redis`
-3. Region: Oregon (US West)
-4. Plan: Free
-5. Click "Create Redis"
-
-#### Create Web Service
-1. In Render dashboard: "New +" → "Web Service"
-2. Connect your GitHub repository
-3. Configure service:
-   - **Name**: `cassino-game-backend`
-   - **Environment**: Python
-   - **Region**: Oregon (US West)
-   - **Branch**: `main` or `master`
-   - **Root Directory**: Leave empty
-   - **Build Command**: `pip install -r backend/requirements.txt`
-   - **Start Command**: `python backend/start_production.py`
-
-#### Configure Environment Variables
-Add these environment variables to the web service:
-
-| Variable | Value | Source |
-|----------|-------|---------|
-| `PYTHON_VERSION` | `3.11.0` | Manual |
-| `DATABASE_URL` | | From `cassino-db` → Info → Internal Database URL |
-| `REDIS_URL` | | From `cassino-redis` → Info → Internal Redis URL |
-| `CORS_ORIGINS` | `https://khasinogaming.com,http://khasinogaming.com` | Manual |
-| `ENVIRONMENT` | `production` | Manual |
-| `PORT` | `10000` | Manual |
-
-### Deployment Configuration Details
-
-The `render.yaml` file configures:
-
-```yaml
-services:
-  - type: web
-    name: cassino-game-backend
-    env: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: python backend/start_production.py
-    healthCheckPath: /health
-    autoDeploy: true  # Automatic deployment on git push
+A `Dockerfile` and `docker-compose.yml` are included to run the backend with
+PostgreSQL and Redis:
+```bash
+docker compose up -d      # backend + postgres + redis
+docker compose logs -f backend
 ```
 
 ### Database Migrations
 
-Migrations run automatically on deployment via `start_production.py`:
+Migrations run automatically on startup via `start_production.py`:
 
 ```python
 def run_migrations():
@@ -170,19 +168,14 @@ def run_migrations():
         check=True
     )
 ```
+Run them manually if needed: `cd backend && alembic upgrade head`.
 
 ### Monitoring and Logs
 
-#### View Logs
-1. Go to Render dashboard
-2. Select `cassino-game-backend` service
-3. Click "Logs" tab
-4. Monitor for errors or performance issues
-
-#### Health Monitoring
-- Health check endpoint: `/health`
-- Automatic restart on health check failure
-- Uptime monitoring via Render dashboard
+- **Logs**: follow your process manager (`journalctl -u cassino-backend -f`) or
+  `docker compose logs -f backend`.
+- **Health**: poll `/health`; wire it into your uptime monitor and configure your
+  process manager to restart on failure.
 
 ---
 
@@ -216,8 +209,8 @@ export default {
 Create a `.env` file in the project root:
 
 ```env
-VITE_API_URL=https://cassino-game-backend.onrender.com
-VITE_WS_URL=wss://cassino-game-backend.onrender.com
+VITE_API_URL=https://your-backend-host
+VITE_WS_URL=wss://your-backend-host
 ```
 
 #### Step 2: Build for Production
@@ -270,8 +263,8 @@ jobs:
     steps:
       - name: Build frontend
         env:
-          VITE_API_URL: https://cassino-game-backend.onrender.com
-          VITE_WS_URL: wss://cassino-game-backend.onrender.com
+          VITE_API_URL: https://your-backend-host
+          VITE_WS_URL: wss://your-backend-host
         run: npm run build
       
       - name: Deploy via FTP
@@ -316,8 +309,8 @@ Automatic deployment occurs when:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `VITE_API_URL` | Backend API URL | `https://cassino-game-backend.onrender.com` |
-| `VITE_WS_URL` | WebSocket URL | `wss://cassino-game-backend.onrender.com` |
+| `VITE_API_URL` | Backend API URL | `https://your-backend-host` |
+| `VITE_WS_URL` | WebSocket URL | `wss://your-backend-host` |
 
 ---
 
@@ -326,13 +319,13 @@ Automatic deployment occurs when:
 ### GitHub Actions Workflows
 
 #### Backend Deployment
-- **Trigger**: Push to main/master branch
-- **Platform**: Render (automatic via git integration)
-- **Process**: 
-  1. Render detects git push
-  2. Builds using `render.yaml` configuration
-  3. Runs migrations automatically
-  4. Deploys to production
+- **Trigger**: Manual, or your own CI step / server pull on push to main/master
+- **Platform**: self-hosted (systemd, Docker, pm2, or your CI of choice)
+- **Process**:
+  1. Pull the latest code on the server (`git pull`)
+  2. Install dependencies (`pip install -r backend/requirements.txt`)
+  3. Restart the service — `start_production.py` runs migrations automatically
+  4. Verify `/health`
 
 #### Frontend Deployment
 - **Trigger**: Push to main/master branch (frontend files only)
@@ -348,12 +341,12 @@ Automatic deployment occurs when:
 #### Backend Status
 ```bash
 # Check service health
-curl https://cassino-game-backend.onrender.com/health
+curl https://your-backend-host/health
 
 # Check API root
-curl https://cassino-game-backend.onrender.com/
+curl https://your-backend-host/
 
-# Monitor logs via Render dashboard
+# Monitor logs via your process manager (journalctl / docker logs)
 ```
 
 #### Frontend Status
@@ -386,11 +379,13 @@ alembic upgrade head
 ```
 
 #### Production Migrations
-Migrations run automatically on Render deployment via `start_production.py`. Manual migration:
+Migrations run automatically on startup via `start_production.py`. To run or inspect manually on the server:
 
 ```bash
-# Connect to Render service (if needed)
-# Migrations run automatically, but you can check status:
+cd backend
+
+# Apply latest migrations
+alembic upgrade head
 
 # View migration history
 alembic history
@@ -401,18 +396,18 @@ alembic current
 
 ### Database Backup and Recovery
 
-#### Backup (via Render Dashboard)
-1. Go to Render dashboard
-2. Select `cassino-db` database
-3. Click "Backups" tab
-4. Click "Create Backup"
-5. Download backup file
+#### Backup (PostgreSQL)
+```bash
+# Dump the database
+pg_dump "$DATABASE_URL" > cassino-backup-$(date +%F).sql
+```
+For SQLite, simply copy the `.db` file while the server is stopped.
 
 #### Restore from Backup
-1. Create new database instance
-2. Upload backup file
-3. Update `DATABASE_URL` environment variable
-4. Restart web service
+```bash
+# Restore into a fresh database, then point DATABASE_URL at it and restart
+psql "$DATABASE_URL" < cassino-backup-YYYY-MM-DD.sql
+```
 
 ---
 
@@ -422,14 +417,13 @@ alembic current
 
 #### Automated Health Checks
 - **Endpoint**: `/health`
-- **Frequency**: Every 30 seconds (Render default)
-- **Timeout**: 30 seconds
-- **Failure Action**: Automatic service restart
+- **Frequency**: configure in your uptime monitor / load balancer (e.g. every 30s)
+- **Failure Action**: configure your process manager to restart on failure
 
 #### Manual Health Checks
 ```bash
 # Backend health
-curl https://cassino-game-backend.onrender.com/health
+curl https://your-backend-host/health
 
 # Expected response:
 {
@@ -454,18 +448,21 @@ curl -I https://khasinogaming.com/cassino/
 - **Error Rate**: Monitor 4xx/5xx error rates
 
 #### Monitoring Tools
-- **Render Dashboard**: Built-in metrics and logs
+- **Process manager / host metrics**: CPU, memory, restarts (systemd, Docker, your VPS panel)
 - **Browser DevTools**: Frontend performance monitoring
 - **Health Endpoint**: Custom health checks
 
 ### Log Management
 
-#### Backend Logs (Render)
+#### Backend Logs (self-hosted)
 ```bash
-# View logs via Render dashboard:
-# 1. Go to cassino-game-backend service
-# 2. Click "Logs" tab
-# 3. Filter by log level or search terms
+# systemd
+journalctl -u cassino-backend -f
+
+# Docker
+docker compose logs -f backend
+
+# Filter by log level or search terms with grep
 
 # Key log messages to monitor:
 # - "✨ Backend ready!" - Successful startup
@@ -502,11 +499,10 @@ curl -I https://khasinogaming.com/cassino/
 # Check requirements.txt includes all dependencies
 pip freeze > backend/requirements.txt
 
-# Verify Python version in render.yaml
-env:
-  PYTHON_VERSION: 3.11.0
+# Verify Python version on the server
+python --version   # should be 3.11+
 
-# Check build logs in Render dashboard
+# Check build/startup logs in your process manager
 ```
 
 #### Database Connection Errors
@@ -521,8 +517,8 @@ env:
 # Verify DATABASE_URL format
 postgresql://user:password@host:port/database
 
-# Check database service status in Render dashboard
-# Restart database service if needed
+# Check the database is reachable and running
+# Restart the database service if needed
 # Check connection pool settings
 ```
 
@@ -554,7 +550,7 @@ redis://host:port
 ```bash
 # Check migration files for syntax errors
 # Test migrations locally first
-# Review migration logs in Render dashboard
+# Review startup/migration logs from your process manager
 
 # Manual migration (if needed):
 # 1. Connect to database
@@ -613,7 +609,7 @@ grep -r "cassino-game-backend" build/
 CORS_ORIGINS=https://khasinogaming.com
 
 # Test API directly
-curl https://cassino-game-backend.onrender.com/health
+curl https://your-backend-host/health
 ```
 
 ### WebSocket Issues
@@ -628,7 +624,7 @@ curl https://cassino-game-backend.onrender.com/health
 **Solutions**:
 ```bash
 # Verify WebSocket URL
-wss://cassino-game-backend.onrender.com
+wss://your-backend-host
 
 # Test WebSocket connection in browser DevTools
 # Check Network tab for WebSocket connections
@@ -643,7 +639,7 @@ wss://cassino-game-backend.onrender.com
 
 #### Environment Variables
 - Never commit sensitive environment variables to git
-- Use Render's environment variable management
+- Store secrets outside the repo (env file with restricted permissions, secrets manager, or CI secrets)
 - Rotate database passwords regularly
 
 #### CORS Configuration
@@ -669,7 +665,7 @@ CORS_ORIGINS=https://khasinogaming.com,http://khasinogaming.com
 #### Content Security Policy
 Consider adding CSP headers to your web server:
 ```
-Content-Security-Policy: default-src 'self'; connect-src 'self' https://cassino-game-backend.onrender.com wss://cassino-game-backend.onrender.com
+Content-Security-Policy: default-src 'self'; connect-src 'self' https://your-backend-host wss://your-backend-host
 ```
 
 ---
@@ -732,21 +728,20 @@ export default defineConfig({
 
 ### Backend Rollback
 
-#### Via Render Dashboard
-1. Go to `cassino-game-backend` service
-2. Click "Deploys" tab
-3. Find previous successful deployment
-4. Click "Redeploy" on that version
-
-#### Via Git
+#### On the server
 ```bash
-# Revert to previous commit
+# Check out the previous known-good commit and restart
+git checkout <previous-commit>
+pip install -r backend/requirements.txt
+# restart the service (systemd/pm2/docker) — migrations re-run on startup
+```
+
+#### Via Git history
+```bash
+# Revert the offending commit
 git revert <commit-hash>
 git push origin main
-
-# Or reset to specific commit
-git reset --hard <commit-hash>
-git push --force origin main
+# then pull + restart on the server
 ```
 
 ### Frontend Rollback
@@ -782,11 +777,8 @@ alembic downgrade -1
 
 #### Data Rollback
 ```bash
-# Restore from backup (via Render dashboard)
-# 1. Go to cassino-db service
-# 2. Click "Backups" tab
-# 3. Select backup to restore
-# 4. Click "Restore"
+# Restore from a database backup (see Database Backup and Recovery above)
+psql "$DATABASE_URL" < cassino-backup-YYYY-MM-DD.sql
 ```
 
 ---
@@ -812,17 +804,18 @@ alembic downgrade -1
 - [ ] E2E tests passing
 - [ ] Performance testing complete
 
-### Backend Deployment (Render)
+### Backend Deployment (self-hosted)
 
 #### Service Configuration
-- [ ] Render account set up
-- [ ] GitHub repository connected
-- [ ] Blueprint deployment successful OR manual services created
-- [ ] Environment variables configured
-- [ ] Health check endpoint configured
+- [ ] Server provisioned with Python 3.11+
+- [ ] Dependencies installed (`pip install -r backend/requirements.txt`)
+- [ ] Database reachable and `DATABASE_URL` set
+- [ ] Environment variables configured (`CORS_ORIGINS`, `ENVIRONMENT`, `PORT`, ...)
+- [ ] Process manager / service configured to auto-restart
+- [ ] Reverse proxy forwards HTTP + WebSocket (`/ws/`)
 
 #### Verification
-- [ ] All services running (green status in dashboard)
+- [ ] Service running and staying up
 - [ ] Health endpoint returns 200 OK
 - [ ] Database migrations completed successfully
 - [ ] Redis connection working
@@ -910,9 +903,9 @@ alembic downgrade -1
 - **Architecture Documentation**: `.kiro/specs/complete-app-documentation/`
 
 ### External Resources
-- **Render Documentation**: https://render.com/docs
 - **SvelteKit Documentation**: https://kit.svelte.dev
 - **FastAPI Documentation**: https://fastapi.tiangolo.com
+- **Uvicorn Deployment**: https://www.uvicorn.org/deployment/
 - **PostgreSQL Documentation**: https://www.postgresql.org/docs/
 - **Redis Documentation**: https://redis.io/docs/
 
@@ -920,8 +913,8 @@ alembic downgrade -1
 
 #### For Deployment Issues
 1. Check this deployment guide
-2. Review service logs in Render dashboard
-3. Check GitHub Actions workflow logs
+2. Review service logs (`journalctl` / `docker compose logs`)
+3. Check your CI workflow logs (if used)
 4. Test components individually (database, Redis, API, frontend)
 
 #### For Application Issues
@@ -930,24 +923,16 @@ alembic downgrade -1
 3. Test with curl/Postman
 4. Check WebSocket connections in browser DevTools
 
-#### Emergency Contacts
-- **Render Support**: https://render.com/support
-- **GitHub Support**: https://support.github.com
-- **Hosting Provider Support**: Contact your FTP hosting provider
-
 ---
 
 ## Conclusion
 
-This deployment guide provides comprehensive instructions for deploying the Casino Card Game application to production. The deployment architecture using Render for backend services and FTP for frontend hosting provides a reliable, scalable, and cost-effective solution.
+This deployment guide provides comprehensive instructions for deploying the Casino Card Game application to production. The application is self-hosted: a FastAPI backend you run on any Python 3.11+ host and a static frontend deployable to any static host or CDN.
 
-Key benefits of this deployment approach:
-- **Automated deployments** via GitHub integration
-- **Managed database and Redis** services
-- **Health monitoring** and automatic restarts
-- **Scalable architecture** that can grow with usage
-- **Cost-effective** using free tiers where possible
+Key characteristics of this deployment approach:
+- **Host-agnostic** — no lock-in to any specific PaaS
+- **Same-origin friendly** — a reverse proxy can serve app + API with zero build config
+- **Graceful degradation** — runs with or without Redis
+- **Automatic migrations** on startup via `start_production.py`
 
 Follow the checklists and procedures in this guide to ensure successful deployments and maintain a stable production environment.
-
-For questions or issues not covered in this guide, refer to the support resources or contact the development team.

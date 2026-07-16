@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { gameStore, currentPlayer, player1Score, player2Score } from '$stores/gameStore';
+	import { gameStore, player1Score, player2Score } from '$stores/gameStore';
 	import { connectionStore } from '$stores/connectionStore';
 	import { copyToClipboard, formatElapsedTime } from '$utils/helpers';
 	import { onMount, onDestroy } from 'svelte';
@@ -39,7 +39,11 @@
 	$: players = $gameStore.gameState?.players || [];
 	$: player1 = players[0];
 	$: player2 = players[1];
-	$: isMyTurn = $currentPlayer?.id === $gameStore.playerId;
+	// Turn ownership: match GameBoard's logic. The `currentPlayer` derived store
+	// resolves to *my* player, not the player to move, so compute from currentTurn.
+	$: amPlayer1 = String(player1?.id) === String($gameStore.playerId);
+	$: currentTurn = $gameStore.gameState?.currentTurn || 1;
+	$: isMyTurn = (amPlayer1 && currentTurn === 1) || (!amPlayer1 && currentTurn === 2);
 	$: gamePhase = $gameStore.gameState?.phase || 'waiting';
 	$: roundNumber = $gameStore.gameState?.round || 0;
 </script>

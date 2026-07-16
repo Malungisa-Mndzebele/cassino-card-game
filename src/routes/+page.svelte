@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { gameStore } from '$stores/gameStore';
   import { connectionStore } from '$stores/connectionStore';
+  import * as session from '$lib/p2p/session';
   import { RoomManager, GameHeader, Card, GamePhases, GameBoard, CommunicationPanel } from '$components';
 
   // Reactive state
@@ -11,25 +12,16 @@
   $: hasOpponent = players.length >= 2;
   $: phase = gameState?.phase || 'waiting';
 
-  // Initialize store and attempt reconnection on mount
-  onMount(async () => {
+  // Initialize store on mount.
+  // A peer-to-peer connection cannot survive a page reload (there is no server
+  // to reconnect to), so any restored room without a live session is cleared and
+  // the player returns to the lobby.
+  onMount(() => {
     gameStore.initialize();
-    
-    // If we have a saved session, try to reconnect
-    if ($gameStore.roomId && $gameStore.playerId) {
-      try {
-        // Fetch current game state
-        const { getGameState } = await import('$lib/utils/api');
-        const response = await getGameState($gameStore.roomId);
-        if (response.game_state) {
-          gameStore.setGameState(response.game_state);
-        }
-        
-        // Reconnect WebSocket
-        connectionStore.connect($gameStore.roomId);
-      } catch (err) {
-        console.error('Failed to reconnect:', err);
-        // Clear invalid session
+
+    if ($gameStore.roomId) {
+      const { getState } = session;
+      if (!getState()) {
         gameStore.reset();
       }
     }
@@ -113,16 +105,8 @@
           <!-- Waiting for Opponent -->
           <div class="waiting-screen">
             <div class="waiting-content">
-              <h2 class="text-3xl font-bold text-casino-gold mb-4">Waiting for Opponent...</h2>
-              <p class="text-gray-300 mb-6">Share this room code with a friend:</p>
-
-              <div
-                class="bg-gray-900 rounded-lg p-4 mb-6 border-2 border-casino-gold inline-block min-w-[200px]"
-              >
-                <p class="text-4xl font-bold tracking-widest text-casino-gold">
-                  {$gameStore.roomId}
-                </p>
-              </div>
+              <h2 class="text-3xl font-bold text-casino-gold mb-4">Connecting to your opponent…</h2>
+              <p class="text-gray-300 mb-6">Setting up your peer-to-peer game.</p>
 
               <div class="animate-pulse text-6xl mb-6">🎴</div>
 
@@ -159,7 +143,7 @@
 
       <!-- Footer -->
       <footer class="game-footer">
-        <p class="text-gray-500 text-sm">Casino Card Game v2.0 - SvelteKit Migration in Progress</p>
+        <p class="text-gray-500 text-sm">Casino Card Game · Play free online</p>
       </footer>
       
       <!-- Communication Panel (Voice/Video/Chat) -->
